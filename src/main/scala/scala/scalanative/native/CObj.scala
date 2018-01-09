@@ -29,7 +29,7 @@ object CObj {
     override def annotationName = "CObj"
     override def supportsClasses: Boolean = true
     override def supportsTraits: Boolean = true
-    override def supportsObjects: Boolean = false
+    override def supportsObjects: Boolean = true
     override def createCompanion: Boolean = true
 
     private val tPtrByte = weakTypeOf[Ptr[Byte]]
@@ -68,6 +68,12 @@ object CObj {
             andThen analyzeBody(cls) _
           )(data)
         (cls, updData)
+      case (obj: ObjectParts, data) =>
+        val updData = (
+          analyzeMainAnnotation(obj) _
+          andThen analyzeBody(obj) _
+        )(data)
+        (obj, updData)
       case default => default
     }
 
@@ -91,11 +97,11 @@ object CObj {
     }
 
 
-    private def analyzeMainAnnotation(tpe: TypeParts)(data: Data): Data = {
+    private def analyzeMainAnnotation(tpe: CommonParts)(data: Data): Data = {
       val annotParams = extractAnnotationParameters(c.prefix.tree, annotationParamNames)
       val externalPrefix = annotParams("prefix") match {
         case Some(prefix) => extractStringConstant(prefix).get
-        case None => genPrefixName(tpe.name.toString)
+        case None => genPrefixName(tpe.nameString)
       }
       val semantics = annotParams("semantics") match {
         case Some(Select(_,name)) => name.toString match {
@@ -131,16 +137,20 @@ object CObj {
       data.withConstructors( Seq( (genExternalName(data.externalPrefix,data.newSuffix),cls.params.asInstanceOf[List[ValDef]]) ) )
     }
 
-    private def analyzeBody(tpe: TypeParts)(data: Data): Data = {
+    private def analyzeBody(tpe: CommonParts)(data: Data): Data = {
       val prefix = data.externalPrefix
-      val externals = tpe.body.collect {
+      val typeExternals = tpe.body.collect {
         case t@DefDef(mods, name, types, args, rettype, rhs) if isExtern(rhs) =>
-          genExternalBinding(prefix,t,true,data)
-      } ++ tpe.companion.map(_.body.collect {
-        case t@DefDef(mods, name, types, args, rettype, rhs) if isExtern(rhs) =>
-          genExternalBinding(prefix,t,false,data)
-      }).getOrElse(Map())
-      data.withExternals(externals.toMap)
+          genExternalBinding(prefix,t,!tpe.isObject,data)
+      }
+      val companionExternals = tpe match {
+        case t: TypeParts => t.companion.map(_.body.collect {
+          case t@DefDef(mods, name, types, args, rettype, rhs) if isExtern(rhs) =>
+            genExternalBinding(prefix,t,false,data)
+        }).getOrElse(Map())
+        case _ => Nil
+      }
+      data.withExternals( (typeExternals ++ companionExternals).toMap )
     }
 
     private def genTransformedCtorParams(cls: ClassTransformData): Seq[Tree] = cls.data.semantics match {
@@ -165,6 +175,7 @@ object CObj {
       t.data.semantics match {
         case Wrapped =>
           t.data.constructors.map { p =>
+            val args = transformExternalCallArgs(p._2)
             DefDef(Modifiers(),
               termNames.CONSTRUCTOR,
               List(),
@@ -172,7 +183,7 @@ object CObj {
               TypeTree(),
               Block(
                 Nil,
-                Apply(Ident(termNames.CONSTRUCTOR), List(q"$companion.__ext.${TermName(p._1)}(..${paramNames(p._2)})"))
+                Apply(Ident(termNames.CONSTRUCTOR), List(q"$companion.__ext.${TermName(p._1)}(..$args)"))
               ))
           }
         case Raw => Nil
@@ -219,6 +230,7 @@ object CObj {
 
     private def genExternalCall(externalName: String, scalaDef: DefDef, isClassMethod: Boolean, semantics: Semantics): DefDef = {
       import scalaDef._
+//      val args = transformExternalCallArgs(vparamss.head)
       val args = paramNames(vparamss.head)
       val external = TermName(externalName)
       val call =
@@ -228,6 +240,14 @@ object CObj {
           case Wrapped => q"__ext.$external(__ref,..$args)"
         }
       DefDef(mods,name,tparams,vparamss,tpt,call)
+    }
+
+    private def transformExternalCallArgs(args: Seq[ValDef]): Seq[Tree] = {
+      args map {
+        // TODO: currently crashes due to https://github.com/scala-native/scala-native/issues/1142
+        case ValDef(_,name,AppliedTypeTree(tpe,_),_) if tpe.toString == "_root_.scala.<repeated>" => q"$name:_*"
+        case ValDef(_,name,_,_) => q"$name"
+      }
     }
 
     def genExternalName(prefix: String, scalaName: String): String =
