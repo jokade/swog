@@ -38,7 +38,7 @@ lazy val tests = project
     nativeLinkStubs := true,
     nativeLinkingOptions ++= Seq(
       "-lglib-2.0",
-      "gtk-3.0"
+      "-lgtk-3.0"
     )
   )
 

@@ -4,16 +4,15 @@ import scalanative.native._
 
 object Main {
   def main(args: Array[String]): Unit = {
-    val list = new GList()
-    println(list.length())
+    val keys = new GKeyFile()
+    val s = keys.toData(null,null)
+    println(fromCString(s))
   }
 }
 
-@CObj(newSuffix = "alloc")
+@CObj
 @debug
-class GList private() {
-  def length(): UInt = extern
-}
-object GList {
-  def append()
+class GKeyFile() {
+  def toData(length: Ptr[UInt], error: Ptr[Byte]): CString = extern
+
 }
