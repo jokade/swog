@@ -13,6 +13,12 @@ class CObj(prefix: String = null, newSuffix: String = null, semantics: CObj.Sema
 
 object CObj {
 
+  trait CRef[T] {
+    def __ref: Ptr[T]
+  }
+
+  trait CRefVoid extends CRef[Byte]
+
   sealed trait Semantics
   case object Wrapped extends Semantics
   case object Raw extends Semantics
@@ -27,6 +33,9 @@ object CObj {
     override def createCompanion: Boolean = true
 
     private val tPtrByte = weakTypeOf[Ptr[Byte]]
+    private val tByte = weakTypeOf[Byte]
+    private val tCRef = weakTypeOf[CRef[_]]
+    private val tCRefVoid = weakTypeOf[CRefVoid]
     private val selfPtr = q"val self: $tPtrByte"
     private val refPtr = q"__ref: $tPtrByte"
     private val expExtern = q"scalanative.native.extern"
@@ -41,16 +50,23 @@ object CObj {
       def constructors: Seq[(String,Seq[ValDef])] = data.getOrElse("constructors",Nil).asInstanceOf[Seq[(String,Seq[ValDef])]]
       def semantics: Semantics = data.getOrElse("semantics",Wrapped).asInstanceOf[Semantics]
       def newSuffix: String = data.getOrElse("newSuffix","").asInstanceOf[String]
+      def crefType: Type = data.getOrElse("crefType",tCRefVoid).asInstanceOf[Type]
       def withExternalPrefix(prefix: String): Data = data.updated("externalPrefix",prefix)
       def withExternals(externals: Externals): Data = data.updated("externals",externals)
       def withConstructors(ctors: Seq[(String,Seq[Tree])]): Data = data.updated("constructors",ctors)
       def withSemantics(semantics: Semantics): Data = data.updated("semantics",semantics)
       def withNewSuffix(suffix: String): Data = data.updated("newSuffix",suffix)
+      def withCRefType(tpe: Type): Data = data.updated("crefType",tpe)
     }
 
     override def analyze: Analysis = super.analyze andThen {
       case (cls: ClassParts, data) =>
-        val updData = (analyzeMainAnnotation(cls) _ andThen analyzeConstructor(cls) _ andThen analyzeBody(cls) _)(data)
+        val updData = (
+          analyzeMainAnnotation(cls) _
+            andThen analyzeTypes(cls) _
+            andThen analyzeConstructor(cls) _
+            andThen analyzeBody(cls) _
+          )(data)
         (cls, updData)
       case default => default
     }
@@ -95,6 +111,22 @@ object CObj {
       data.withExternalPrefix(externalPrefix).withSemantics(semantics).withNewSuffix(newSuffix)
     }
 
+    private def analyzeTypes(tpe: TypeParts)(data: Data): Data = {
+      val crefType = tpe.parents.map(getType(_)).filter( _ <:< tCRef ) match {
+        case Nil => tByte
+        case List(tpe@TypeRef(_,sym,args)) if sym.toString == "trait CRef" =>
+          args.head
+        case List(tpe) =>
+          c.error(c.enclosingPosition,"CObj types can only directly extend CObj.CRef[T]")
+          ???
+        case types =>
+          c.error(c.enclosingPosition,s"CObj types can't extend more than one instance of CObj.CRef (found: $types)")
+          ???
+      }
+      data.withCRefType(crefType)
+    }
+
+
     private def analyzeConstructor(cls: ClassParts)(data: Data): Data = {
       data.withConstructors( Seq( (genExternalName(data.externalPrefix,data.newSuffix),cls.params.asInstanceOf[List[ValDef]]) ) )
     }
@@ -103,16 +135,16 @@ object CObj {
       val prefix = data.externalPrefix
       val externals = tpe.body.collect {
         case t@DefDef(mods, name, types, args, rettype, rhs) if isExtern(rhs) =>
-          genExternalBinding(prefix,t,true)
+          genExternalBinding(prefix,t,true,data)
       } ++ tpe.companion.map(_.body.collect {
         case t@DefDef(mods, name, types, args, rettype, rhs) if isExtern(rhs) =>
-          genExternalBinding(prefix,t,false)
+          genExternalBinding(prefix,t,false,data)
       }).getOrElse(Map())
       data.withExternals(externals.toMap)
     }
 
     private def genTransformedCtorParams(cls: ClassTransformData): Seq[Tree] = cls.data.semantics match {
-      case Wrapped => Seq(refPtr)
+      case Wrapped => Seq(q"val __ref: scalanative.native.Ptr[${cls.data.crefType}]")
       case Raw => cls.modParts.params
     }
 
@@ -120,7 +152,6 @@ object CObj {
       val companion = t.modParts.companion.get.name
       val imports = Seq(q"import $companion.__ext")
       val ctors = genSecondaryConstructor(t)
-//      val ctors = Seq(q"def this(x: Int) = this(Foo.__ext.foo_new(x))")
       imports ++ ctors ++ (t.modParts.body map {
         case tree @ DefDef(mods, name, types, args, rettype, rhs) if isExtern(rhs) =>
           val externalName = t.data.externals(name.toString)._1
@@ -159,14 +190,14 @@ object CObj {
 
     private def genBindingsObject(data: MacroData): Tree = {
       val ctors = data.constructors.map{
-        case (externalName,args) => q"def ${TermName(externalName)}(..$args): $tPtrByte = $expExtern"
+        case (externalName,args) => q"def ${TermName(externalName)}(..$args): scalanative.native.Ptr[${data.crefType}] = $expExtern"
       }
       val defs = data.externals.values.map(_._2)
       q"""@scalanative.native.extern object __ext {..${ctors++defs}}"""
     }
 
 
-    private def genExternalBinding(prefix: String, scalaDef: DefDef, isInstanceMethod: Boolean): (String,(String,Tree)) = {
+    private def genExternalBinding(prefix: String, scalaDef: DefDef, isInstanceMethod: Boolean, data: Data): (String,(String,Tree)) = {
       val scalaName = scalaDef.name.toString
 //      val externalName = scalaName match {
 //        case "apply" => prefix+"new"
@@ -175,7 +206,7 @@ object CObj {
       val externalName = genExternalName(prefix,scalaName)
       val externalParams =
         if(isInstanceMethod) scalaDef.vparamss match {
-          case List(params) => List(selfPtr +: params)
+          case List(params) => List(q"val self: scalanative.native.Ptr[${data.crefType}]" +: params)
           case _ =>
             c.error(c.enclosingPosition,"methods with multiple parameter lists are not supported for @CObj classes")
             ???
