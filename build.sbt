@@ -38,6 +38,7 @@ lazy val tests = project
     nativeLinkStubs := true,
     nativeLinkingOptions ++= Seq(
       "-lglib-2.0",
+      "-lgobject-2.0",
       "-lgtk-3.0"
     )
   )

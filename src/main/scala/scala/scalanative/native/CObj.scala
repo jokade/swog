@@ -68,6 +68,13 @@ object CObj {
             andThen analyzeBody(cls) _
           )(data)
         (cls, updData)
+      case (trt: TraitParts, data) =>
+        val updData = (
+          analyzeMainAnnotation(trt) _
+            andThen analyzeTypes(trt) _
+            andThen analyzeBody(trt) _
+          )(data)
+        (trt, updData)
       case (obj: ObjectParts, data) =>
         val updData = (
           analyzeMainAnnotation(obj) _
@@ -87,7 +94,7 @@ object CObj {
           .updCtorMods(Modifiers(Flag.PROTECTED)) // ensure that the class can't be instantiated using new
       /* transform trait */
       case trt: TraitTransformData =>
-        val transformedBody = genTransformedTypeBody(trt)
+        val transformedBody = q"def __ref: scalanative.native.Ptr[${trt.data.crefType}]" +: genTransformedTypeBody(trt)
         trt.updBody(transformedBody)
       /* transform companion object */
       case obj: ObjectTransformData =>
@@ -141,6 +148,8 @@ object CObj {
       val prefix = data.externalPrefix
       val typeExternals = tpe.body.collect {
         case t@DefDef(mods, name, types, args, rettype, rhs) if isExtern(rhs) =>
+          if(tpe.isTrait && !mods.hasFlag(Flag.FINAL))
+            c.error(c.enclosingPosition,"CObj traits currently only support final extern methods")
           genExternalBinding(prefix,t,!tpe.isObject,data)
       }
       val companionExternals = tpe match {
@@ -210,10 +219,6 @@ object CObj {
 
     private def genExternalBinding(prefix: String, scalaDef: DefDef, isInstanceMethod: Boolean, data: Data): (String,(String,Tree)) = {
       val scalaName = scalaDef.name.toString
-//      val externalName = scalaName match {
-//        case "apply" => prefix+"new"
-//        case _ => genExternalName(prefix,scalaName)
-//      }
       val externalName = genExternalName(prefix,scalaName)
       val externalParams =
         if(isInstanceMethod) scalaDef.vparamss match {
