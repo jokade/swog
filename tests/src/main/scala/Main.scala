@@ -16,6 +16,8 @@ object Main {
 
     win.connectData(c"destroy",CFunctionPtr.fromFunction0(destroy),null,null,0)
 
+    win.add(lbl)
+
     win.showAll()
 
     Gtk.main()
@@ -49,18 +51,21 @@ trait GtkWidget extends GSignalReceiver {
 }
 
 @CObj(prefix = "g_signal_")
+//@debug
 trait GSignalReceiver {
   final def connectData(detailed_signal: CString, c_handler: CFunctionPtr0[Unit],
                         data: Ptr[Byte], destroy_data: Ptr[Byte], connect_flags: Int): Unit = extern
 }
 
 @CObj
+@debug
 trait GtkContainer extends GtkWidget {
   final def setBorderWidth(width: Int): Unit = extern
+  final def add(widget: GtkWidget): Unit = extern
 }
 
 @CObj
-@debug
+//@debug
 class GtkLabel(msg: CString) extends GtkWidget {
   def setSelectable(flag: Boolean): Unit = extern
 }

@@ -22,6 +22,8 @@ object CObj {
 
   trait CRefVoid extends CRef[Byte]
 
+  class CRefWrapper extends StaticAnnotation
+
 
   sealed trait Semantics
   case object Wrapped extends Semantics
@@ -43,6 +45,8 @@ object CObj {
     private val selfPtr = q"val self: $tPtrByte"
     private val refPtr = q"__ref: $tPtrByte"
     private val expExtern = q"scalanative.native.extern"
+    private val tCrefWrapperAnnotation = weakTypeOf[CRefWrapper]
+    private val crefWrapperAnnotation = q"new scalanative.native.CObj.CRefWrapper"
 
     private val annotationParamNames = Seq("prefix","newSuffix","semantics")
 
@@ -94,12 +98,15 @@ object CObj {
         val transformedBody = genTransformedTypeBody(cls)
         cls
           .updBody(transformedBody)
+          .addAnnotations(crefWrapperAnnotation)
           .updCtorParams(genTransformedCtorParams(cls))
           .updCtorMods(Modifiers(Flag.PRIVATE)) // ensure that the class can't be instantiated using new
       /* transform trait */
       case trt: TraitTransformData =>
         val transformedBody = q"def __ref: scalanative.native.CObj.Ref[${trt.data.crefType}]" +: genTransformedTypeBody(trt)
-        trt.updBody(transformedBody)
+        trt
+          .updBody(transformedBody)
+          .addAnnotations(crefWrapperAnnotation)
       /* transform companion object */
       case obj: ObjectTransformData =>
         val transformedBody = genTransformedCompanionBody(obj) :+ genBindingsObject(obj.data)
@@ -226,7 +233,7 @@ object CObj {
       val scalaName = scalaDef.name.toString
       val externalName = genExternalName(prefix,scalaName)
       val externalParams =
-        if(isInstanceMethod) scalaDef.vparamss match {
+        if(isInstanceMethod) scalaDef.vparamss.map(transformExternalBindingParams) match {
           case List(params) => List(q"val self: scalanative.native.CObj.Ref[${data.crefType}]" +: params)
           case _ =>
             c.error(c.enclosingPosition,"methods with multiple parameter lists are not supported for @CObj classes")
@@ -240,8 +247,8 @@ object CObj {
 
     private def genExternalCall(externalName: String, scalaDef: DefDef, isClassMethod: Boolean, semantics: Semantics): DefDef = {
       import scalaDef._
-//      val args = transformExternalCallArgs(vparamss.head)
-      val args = paramNames(vparamss.head)
+      val args = transformExternalCallArgs(vparamss.head)
+//      val args = paramNames(vparamss.head)
       val external = TermName(externalName)
       val call =
         if(isClassMethod) q"__ext.$external(..$args)"
@@ -252,13 +259,25 @@ object CObj {
       DefDef(mods,name,tparams,vparamss,tpt,call)
     }
 
+    private def transformExternalBindingParams(params: List[ValDef]): List[ValDef] = {
+      params map {
+        case ValDef(mods,name,tpt,rhs) if isCRefWrapper(tpt) =>
+          ValDef(mods,name,q"$tPtrByte",rhs)
+        case default => default
+      }
+//      params
+    }
+
     private def transformExternalCallArgs(args: Seq[ValDef]): Seq[Tree] = {
       args map {
         // TODO: currently crashes due to https://github.com/scala-native/scala-native/issues/1142
+        case ValDef(_,name,tpt,_) if isCRefWrapper(tpt) => q"$name.__ref.cast[$tPtrByte]"
         case ValDef(_,name,AppliedTypeTree(tpe,_),_) if tpe.toString == "_root_.scala.<repeated>" => q"$name:_*"
-        case ValDef(_,name,_,_) => q"$name"
+        case ValDef(_,name,tpt,_) => q"$name"
       }
     }
+
+    private def isCRefWrapper(tpt: Tree): Boolean = this.findAnnotation(getType(tpt).typeSymbol,"scalanative.native.CObj.CRefWrapper").isDefined
 
     def genExternalName(prefix: String, scalaName: String): String =
       prefix + scalaName.replaceAll("([A-Z])","_$1").toLowerCase
