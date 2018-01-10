@@ -14,10 +14,14 @@ class CObj(prefix: String = null, newSuffix: String = null, semantics: CObj.Sema
 object CObj {
 
   trait CRef[T] {
-    def __ref: Ptr[T]
+    def __ref: Ref[T]
   }
 
+
+  sealed trait Ref[T]
+
   trait CRefVoid extends CRef[Byte]
+
 
   sealed trait Semantics
   case object Wrapped extends Semantics
@@ -91,10 +95,10 @@ object CObj {
         cls
           .updBody(transformedBody)
           .updCtorParams(genTransformedCtorParams(cls))
-          .updCtorMods(Modifiers(Flag.PROTECTED)) // ensure that the class can't be instantiated using new
+          .updCtorMods(Modifiers(Flag.PRIVATE)) // ensure that the class can't be instantiated using new
       /* transform trait */
       case trt: TraitTransformData =>
-        val transformedBody = q"def __ref: scalanative.native.Ptr[${trt.data.crefType}]" +: genTransformedTypeBody(trt)
+        val transformedBody = q"def __ref: scalanative.native.CObj.Ref[${trt.data.crefType}]" +: genTransformedTypeBody(trt)
         trt.updBody(transformedBody)
       /* transform companion object */
       case obj: ObjectTransformData =>
@@ -163,7 +167,7 @@ object CObj {
     }
 
     private def genTransformedCtorParams(cls: ClassTransformData): Seq[Tree] = cls.data.semantics match {
-      case Wrapped => Seq(q"val __ref: scalanative.native.Ptr[${cls.data.crefType}]")
+      case Wrapped => Seq(q"val __ref: scalanative.native.CObj.Ref[${cls.data.crefType}]")
       case Raw => cls.modParts.params
     }
 
@@ -171,6 +175,7 @@ object CObj {
       val companion = t.modParts.companion.get.name
       val imports = Seq(q"import $companion.__ext")
       val ctors = genSecondaryConstructor(t)
+//      val ctors = Seq(s"val __ref: ${t.data.crefType} = ")
       imports ++ ctors ++ (t.modParts.body map {
         case tree @ DefDef(mods, name, types, args, rettype, rhs) if isExtern(rhs) =>
           val externalName = t.data.externals(name.toString)._1
@@ -210,7 +215,7 @@ object CObj {
 
     private def genBindingsObject(data: MacroData): Tree = {
       val ctors = data.constructors.map{
-        case (externalName,args) => q"def ${TermName(externalName)}(..$args): scalanative.native.Ptr[${data.crefType}] = $expExtern"
+        case (externalName,args) => q"def ${TermName(externalName)}(..$args): scalanative.native.CObj.Ref[${data.crefType}] = $expExtern"
       }
       val defs = data.externals.values.map(_._2)
       q"""@scalanative.native.extern object __ext {..${ctors++defs}}"""
@@ -222,7 +227,7 @@ object CObj {
       val externalName = genExternalName(prefix,scalaName)
       val externalParams =
         if(isInstanceMethod) scalaDef.vparamss match {
-          case List(params) => List(q"val self: scalanative.native.Ptr[${data.crefType}]" +: params)
+          case List(params) => List(q"val self: scalanative.native.CObj.Ref[${data.crefType}]" +: params)
           case _ =>
             c.error(c.enclosingPosition,"methods with multiple parameter lists are not supported for @CObj classes")
             ???

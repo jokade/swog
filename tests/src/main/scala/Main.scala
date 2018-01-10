@@ -9,6 +9,10 @@ object Main {
 
     win.setTitle(c"Hello world!")
     win.setBorderWidth(100)
+    win.setSizeRequest(200,100)
+
+    val lbl = new GtkLabel(c"Hello world")
+    lbl.setSelectable(true)
 
     win.connectData(c"destroy",CFunctionPtr.fromFunction0(destroy),null,null,0)
 
@@ -40,11 +44,11 @@ object Gtk {
 @CObj
 //@debug
 trait GtkWidget extends GSignalReceiver {
+  final def setSizeRequest(width: Int, height: Int): Unit = extern
   final def showAll(): Unit = extern
 }
 
 @CObj(prefix = "g_signal_")
-@debug
 trait GSignalReceiver {
   final def connectData(detailed_signal: CString, c_handler: CFunctionPtr0[Unit],
                         data: Ptr[Byte], destroy_data: Ptr[Byte], connect_flags: Int): Unit = extern
@@ -53,4 +57,10 @@ trait GSignalReceiver {
 @CObj
 trait GtkContainer extends GtkWidget {
   final def setBorderWidth(width: Int): Unit = extern
+}
+
+@CObj
+@debug
+class GtkLabel(msg: CString) extends GtkWidget {
+  def setSelectable(flag: Boolean): Unit = extern
 }
