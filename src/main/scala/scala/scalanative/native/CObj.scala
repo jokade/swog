@@ -16,9 +16,13 @@ object CObj {
   trait CRef[T] {
     def __ref: Ref[T]
   }
-
-
   sealed trait Ref[T]
+
+  object implicits {
+    implicit class RichRef[T](val ref: Ref[T]) extends AnyVal {
+      @inline def toPtr: Ptr[T] = ref.cast[Ptr[T]]
+    }
+  }
 
   trait CRefVoid extends CRef[Byte]
 
