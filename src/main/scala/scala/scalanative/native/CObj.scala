@@ -159,8 +159,8 @@ object CObj {
       val prefix = data.externalPrefix
       val typeExternals = tpe.body.collect {
         case t@DefDef(mods, name, types, args, rettype, rhs) if isExtern(rhs) =>
-          if(tpe.isTrait && !mods.hasFlag(Flag.FINAL))
-            c.error(c.enclosingPosition,"CObj traits currently only support final extern methods")
+//          if(!tpe.isObject && !mods.hasFlag(Flag.FINAL))
+//            c.error(c.enclosingPosition,"CObj classes and traits currently only support final extern methods")
           genExternalBinding(prefix,t,!tpe.isObject,data)
       }
       val companionExternals = tpe match {
