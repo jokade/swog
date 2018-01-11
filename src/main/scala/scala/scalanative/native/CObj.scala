@@ -100,7 +100,7 @@ object CObj {
           .updBody(transformedBody)
           .addAnnotations(crefWrapperAnnotation)
           .updCtorParams(genTransformedCtorParams(cls))
-          .updCtorMods(Modifiers(Flag.PRIVATE)) // ensure that the class can't be instantiated using new
+          .updCtorMods(if(isAbstract(cls)) Modifiers() else Modifiers(Flag.PRIVATE)) // ensure that the concrete classes can't be instantiated using new
       /* transform trait */
       case trt: TraitTransformData =>
         val transformedBody = q"def __ref: scalanative.native.CObj.Ref[${trt.data.crefType}]" +: genTransformedTypeBody(trt)
@@ -174,6 +174,7 @@ object CObj {
     }
 
     private def genTransformedCtorParams(cls: ClassTransformData): Seq[Tree] = cls.data.semantics match {
+      case Wrapped if isAbstract(cls) => cls.modParts.params
       case Wrapped => Seq(q"val __ref: scalanative.native.CObj.Ref[${cls.data.crefType}]")
       case Raw => cls.modParts.params
     }
@@ -181,7 +182,11 @@ object CObj {
     private def genTransformedTypeBody(t: TypeTransformData[TypeParts]): Seq[Tree] = {
       val companion = t.modParts.companion.get.name
       val imports = Seq(q"import $companion.__ext")
-      val ctors = genSecondaryConstructor(t)
+      val ctors =
+        if(isAbstract(t))
+          Seq(q"def __ref: scalanative.native.CObj.Ref[${t.data.crefType}]")
+        else
+          genSecondaryConstructor(t)
 //      val ctors = Seq(s"val __ref: ${t.data.crefType} = ")
       imports ++ ctors ++ (t.modParts.body map {
         case tree @ DefDef(mods, name, types, args, rettype, rhs) if isExtern(rhs) =>
@@ -293,6 +298,11 @@ object CObj {
         name.toString == "extern"
       case x =>
         false
+    }
+
+    private def isAbstract(t: TypeTransformData[TypeParts]): Boolean = t match {
+      case cls : ClassTransformData => t.modParts.modifiers.hasFlag(Flag.ABSTRACT)
+      case _ => false
     }
 
   }
