@@ -4,20 +4,20 @@ import scalanative.native._
 
 object Main {
   def main(args: Array[String]): Unit = {
-    Gtk.init(0,null)
-    val win = new GtkWindow(0.toUInt)
 
-    win.setTitle(c"Hello world!")
-    win.setBorderWidth(100)
+    Gtk.init(0,null)
+
+    val win = new GtkWindow(0)
+    win.setTitle(c"Hello Scala Native")
+    win.setBorderWidth(10)
     win.setSizeRequest(200,100)
 
-    val lbl = new GtkLabel(c"Hello world")
-    lbl.setSelectable(true)
-
-    win.connectData(c"destroy",CFunctionPtr.fromFunction0(destroy),null,null,0)
+    val lbl = new GtkLabel(null)
+    lbl.setMarkup(c"<span size='large'>Hello Scala Native!</span>")
 
     win.add(lbl)
 
+    win.connectData(c"destroy",CFunctionPtr.fromFunction0(destroy),null,null,0)
     win.showAll()
 
     Gtk.main()
@@ -31,8 +31,8 @@ object Main {
 
 @CObj
 //@debug
-class GtkWindow(tpe: UInt) extends GtkContainer {
-  def setTitle(title: CString): Unit = extern
+class GtkWindow(tpe: Int) extends GtkContainer {
+  final def setTitle(title: CString): Unit = extern
 }
 
 @CObj
@@ -67,5 +67,10 @@ trait GtkContainer extends GtkWidget {
 @CObj
 //@debug
 class GtkLabel(msg: CString) extends GtkWidget {
-  def setSelectable(flag: Boolean): Unit = extern
+  final def setSelectable(flag: Boolean): Unit = extern
+  final def setMarkup(str: CString): Unit = extern
+}
+
+@CObj
+class GtkButton extends GtkWidget {
 }

@@ -1,11 +1,11 @@
 organization in ThisBuild := "de.surfice"
 
-version in ThisBuild := "0.0.1-SNAPSHOT"
+version in ThisBuild := "0.0.1"
 
 scalaVersion in ThisBuild := "2.11.12"
 
 val Version = new {
-  val smacrotools = "0.0.7-SNAPSHOT"
+  val smacrotools = "0.0.7"
   val utest       = "0.6.3"
 }
 
@@ -22,7 +22,7 @@ lazy val commonSettings = Seq(
 
 lazy val interop = project.in(file("."))
   .enablePlugins(ScalaNativePlugin)
-  .settings(commonSettings:_*)
+  .settings(commonSettings ++ publishingSettings:_*)
   .settings(
     name := "scalanative-obj-interop",
     libraryDependencies ++= Seq(
@@ -51,3 +51,35 @@ lazy val dontPublish = Seq(
   publishArtifact := false,
   publishTo := Some(Resolver.file("Unused transient repository",file("target/unusedrepo")))
 )
+
+lazy val publishingSettings = Seq(
+  publishMavenStyle := true,
+  publishTo := {
+    val nexus = "https://oss.sonatype.org/"
+    if (isSnapshot.value)
+      Some("snapshots" at nexus + "content/repositories/snapshots")
+    else
+      Some("releases"  at nexus + "service/local/staging/deploy/maven2")
+  },
+  pomExtra := (
+    <url>https://github.com/jokade/scalantive-obj-interop</url>
+    <licenses>
+      <license>
+        <name>MIT License</name>
+        <url>http://www.opensource.org/licenses/mit-license.php</url>
+      </license>
+    </licenses>
+    <scm>
+      <url>git@github.com:jokade/scalantive-obj-interop</url>
+      <connection>scm:git:git@github.com:jokade/scalantive-obj-interop.git</connection>
+    </scm>
+    <developers>
+      <developer>
+        <id>jokade</id>
+        <name>Johannes Kastner</name>
+        <email>jokade@karchedon.de</email>
+      </developer>
+    </developers>
+  )
+)
+
