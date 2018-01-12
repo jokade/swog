@@ -1,10 +1,11 @@
 package scala.scalanative.native
 
-import de.surfice.smacrotools.MacroAnnotationHandler
+import de.surfice.smacrotools.{BlackboxMacroTools, MacroAnnotationHandler}
 
 import scala.annotation.{StaticAnnotation, compileTimeOnly}
-import scala.reflect.macros.whitebox
+import scala.reflect.macros.{blackbox, whitebox}
 import scala.language.experimental.macros
+import scala.reflect.ClassTag
 
 @compileTimeOnly("enable macro paradise to expand macro annotations")
 class CObj(prefix: String = null, newSuffix: String = null, semantics: CObj.Semantics = null) extends StaticAnnotation {
@@ -16,7 +17,47 @@ object CObj {
   trait CRef[T] {
     def __ref: Ref[T]
   }
-  sealed trait Ref[T]
+
+  sealed trait Ref[+T]
+
+  final class Out[T] {
+    @inline def ptr: Ptr[Ptr[Byte]] = this.cast[Ptr[Ptr[Byte]]]
+    @inline def isDefined: Boolean = !ptr != null
+    @inline def isEmpty: Boolean = !isDefined
+    @inline def valuePtr: Ptr[Byte] = !ptr
+    @inline def value: Option[T] = macro Out.Macros.getImpl[T]
+    @inline def clear(): Unit = !ptr = null
+  }
+  object Out {
+
+    def alloc[T](implicit zone: Zone): Out[T] = macro Macros.allocImpl[T]
+
+    class Macros(val c: blackbox.Context) extends BlackboxMacroTools {
+      import c.universe._
+      def allocImpl[T: WeakTypeTag](zone: Tree) = {
+        val tpe = weakTypeOf[T]
+        val tree =
+          q"""
+              val ptr = scalanative.native.alloc[Ptr[Byte]]
+              !ptr = null
+              ptr.cast[scalanative.native.CObj.Out[$tpe]]
+           """
+        tree
+      }
+
+      def getImpl[T: WeakTypeTag] = {
+        val tpe = weakTypeOf[T]
+        val self = c.prefix
+        val tree =
+          q"""
+             if($self.isDefined) Some(new $tpe($self.valuePtr.cast[scalanative.native.CObj.Ref[Nothing]]))
+             else None
+           """
+        tree
+      }
+    }
+  }
+
 
   object implicits {
     implicit class RichRef[T](val ref: Ref[T]) extends AnyVal {
@@ -104,7 +145,7 @@ object CObj {
           .updBody(transformedBody)
           .addAnnotations(crefWrapperAnnotation)
           .updCtorParams(genTransformedCtorParams(cls))
-          .updCtorMods(if(isAbstract(cls)) Modifiers() else Modifiers(Flag.PRIVATE)) // ensure that the concrete classes can't be instantiated using new
+//          .updCtorMods(if(isAbstract(cls)) Modifiers() else Modifiers(Flag.PRIVATE)) // ensure that the concrete classes can't be instantiated using new
       /* transform trait */
       case trt: TraitTransformData =>
         val transformedBody = q"def __ref: scalanative.native.CObj.Ref[${trt.data.crefType}]" +: genTransformedTypeBody(trt)
@@ -163,8 +204,6 @@ object CObj {
       val prefix = data.externalPrefix
       val typeExternals = tpe.body.collect {
         case t@DefDef(mods, name, types, args, rettype, rhs) if isExtern(rhs) =>
-//          if(!tpe.isObject && !mods.hasFlag(Flag.FINAL))
-//            c.error(c.enclosingPosition,"CObj classes and traits currently only support final extern methods")
           genExternalBinding(prefix,t,!tpe.isObject,data)
       }
       val companionExternals = tpe match {
@@ -242,10 +281,13 @@ object CObj {
       val scalaName = scalaDef.name.toString
       val externalName = genExternalName(prefix,scalaName)
       val externalParams =
-        if(isInstanceMethod) scalaDef.vparamss.map(transformExternalBindingParams) match {
-          case List(params) => List(q"val self: scalanative.native.CObj.Ref[${data.crefType}]" +: params)
+        if(isInstanceMethod) scalaDef.vparamss match {
+          case List(params) => List(q"val self: scalanative.native.CObj.Ref[${data.crefType}]" +: transformExternalBindingParams(params) )
+          case List(inparams,outparams) =>
+            List( q"val self: scalanative.native.CObj.Ref[${data.crefType}]" +:
+              (transformExternalBindingParams(inparams) ++ transformExternalBindingParams(outparams,true)) )
           case _ =>
-            c.error(c.enclosingPosition,"methods with multiple parameter lists are not supported for @CObj classes")
+            c.error(c.enclosingPosition,"extern methods with more than two parameter lists are not supported for @CObj classes")
             ???
         }
         else scalaDef.vparamss
@@ -256,8 +298,14 @@ object CObj {
 
     private def genExternalCall(externalName: String, scalaDef: DefDef, isClassMethod: Boolean, semantics: Semantics): DefDef = {
       import scalaDef._
-      val args = transformExternalCallArgs(vparamss.head)
-//      val args = paramNames(vparamss.head)
+      val args = vparamss match {
+        case List(args) => transformExternalCallArgs(args)
+        case List(inargs,outargs) =>
+          transformExternalCallArgs(inargs) ++ transformExternalCallArgs(outargs)
+        case _ =>
+          c.error(c.enclosingPosition,"extern methods with more than two parameter lists are not supported for @CObj classes")
+          ???
+      }
       val external = TermName(externalName)
       val call =
         if(isClassMethod) q"__ext.$external(..$args)"
@@ -268,25 +316,36 @@ object CObj {
       DefDef(mods,name,tparams,vparamss,tpt,call)
     }
 
-    private def transformExternalBindingParams(params: List[ValDef]): List[ValDef] = {
+    private def transformExternalBindingParams(params: List[ValDef], outParams: Boolean = false): List[ValDef] = {
       params map {
         case ValDef(mods,name,tpt,rhs) if isCRefWrapper(tpt) =>
           ValDef(mods,name,q"$tPtrByte",rhs)
+//        case ValDef(_,name,tpt,_) if outParams =>
+//          c.error(c.enclosingPosition, s"Invalid type for output parameter '$name': output parameters must extend CRef")
+//          ???
         case default => default
+//        case ValDef(mods,name,tpt,rhs) =>
+//          ValDef(mods,name,tpt,EmptyTree)
       }
-//      params
     }
 
-    private def transformExternalCallArgs(args: Seq[ValDef]): Seq[Tree] = {
+    private def transformExternalCallArgs(args: Seq[ValDef], outArgs: Boolean = false): Seq[Tree] = {
       args map {
         // TODO: currently crashes due to https://github.com/scala-native/scala-native/issues/1142
-        case ValDef(_,name,tpt,_) if isCRefWrapper(tpt) => q"$name.__ref.cast[$tPtrByte]"
+        case ValDef(_,name,tpt,_) if isCRefWrapper(tpt) || outArgs => q"$name.__ref.cast[$tPtrByte]"
         case ValDef(_,name,AppliedTypeTree(tpe,_),_) if tpe.toString == "_root_.scala.<repeated>" => q"$name:_*"
         case ValDef(_,name,tpt,_) => q"$name"
       }
     }
 
-    private def isCRefWrapper(tpt: Tree): Boolean = this.findAnnotation(getType(tpt).typeSymbol,"scalanative.native.CObj.CRefWrapper").isDefined
+    private def isCRefWrapper(tpt: Tree): Boolean = {
+      val typed = getType(tpt)
+//      println( typed.baseClasses.map(_.typeSignature) )
+      typed.baseClasses.find(_.typeSignature <:< tCRef).isDefined ||
+        this.findAnnotation(typed.typeSymbol,"scalanative.native.CObj.CRefWrapper").isDefined
+    }
+
+//    private def isOutRef(tpt: Tree): Boolean = getType(tpt) <:< tOutRef
 
     def genExternalName(prefix: String, scalaName: String): String =
       prefix + scalaName.replaceAll("([A-Z])","_$1").toLowerCase
@@ -310,4 +369,6 @@ object CObj {
     }
 
   }
+
+
 }

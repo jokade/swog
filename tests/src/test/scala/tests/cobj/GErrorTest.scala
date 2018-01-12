@@ -19,12 +19,5 @@ object GErrorTest extends TestSuite {
 
   }
 
-  @CObj
-  // TODO: add args: CVararg*
-  class GError(_domain: Int, _code: Int, _fmt: CString, args: CVararg*)
-    extends CObj.CRef[CStruct3[Int,Int,CString]] {
-    def domain: Int = !__ref._1
-    def code: Int = !__ref._2
-    def msg: CString = !__ref._3
-  }
+
 }

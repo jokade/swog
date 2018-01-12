@@ -9,7 +9,6 @@ val Version = new {
   val utest       = "0.6.3"
 }
 
-
 lazy val commonSettings = Seq(
   scalacOptions ++= Seq("-deprecation","-unchecked","-feature","-language:implicitConversions","-Xlint"),
   addCompilerPlugin("org.scalamacros" % "paradise" % "2.1.0" cross CrossVersion.full),
@@ -30,6 +29,8 @@ lazy val interop = project.in(file("."))
     )
   )
 
+import scalanative.sbtplugin.ScalaNativePluginInternal._
+
 lazy val tests = project
   .enablePlugins(ScalaNativePlugin)
   .dependsOn(interop)
@@ -42,6 +43,7 @@ lazy val tests = project
       "-lgtk-3.0"
     )
   )
+
 
 lazy val dontPublish = Seq(
   publish := {},
