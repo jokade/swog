@@ -3,12 +3,12 @@ package scala.scalanative.native
 import de.surfice.smacrotools.{BlackboxMacroTools, MacroAnnotationHandler}
 
 import scala.annotation.{StaticAnnotation, compileTimeOnly}
-import scala.reflect.macros.{blackbox, whitebox}
+import scala.reflect.macros.{TypecheckException, blackbox, whitebox}
 import scala.language.experimental.macros
 import scala.reflect.ClassTag
 
 @compileTimeOnly("enable macro paradise to expand macro annotations")
-class CObj(prefix: String = null, newSuffix: String = null, semantics: CObj.Semantics = null) extends StaticAnnotation {
+class CObj(prefix: String = null, newSuffix: String = null) extends StaticAnnotation {
   def macroTransform(annottees: Any*): Any = macro CObj.Macro.impl
 }
 
@@ -25,7 +25,7 @@ object CObj {
     @inline def isDefined: Boolean = !ptr != null
     @inline def isEmpty: Boolean = !isDefined
     @inline def valuePtr: Ptr[Byte] = !ptr
-    @inline def value: Option[T] = macro Out.Macros.getImpl[T]
+    @inline def value: Option[T] = macro Out.Macros.valueImpl[T]
     @inline def clear(): Unit = !ptr = null
   }
   object Out {
@@ -34,6 +34,9 @@ object CObj {
 
     class Macros(val c: blackbox.Context) extends BlackboxMacroTools {
       import c.universe._
+
+      val tAnyVal = weakTypeOf[AnyVal]
+
       def allocImpl[T: WeakTypeTag](zone: Tree) = {
         val tpe = weakTypeOf[T]
         val tree =
@@ -45,14 +48,20 @@ object CObj {
         tree
       }
 
-      def getImpl[T: WeakTypeTag] = {
+      def valueImpl[T: WeakTypeTag] = {
         val tpe = weakTypeOf[T]
         val self = c.prefix
         val tree =
-          q"""
+          if(tpe <:< tAnyVal)
+            q"""
+               Some($self.valuePtr.cast[$tpe])
+             """
+          else
+            q"""
              if($self.isDefined) Some(new $tpe($self.valuePtr.cast[scalanative.native.CObj.Ref[Nothing]]))
              else None
            """
+//        println(tree)
         tree
       }
     }
@@ -69,10 +78,6 @@ object CObj {
 
   class CRefWrapper extends StaticAnnotation
 
-
-  sealed trait Semantics
-  case object Wrapped extends Semantics
-  case object Raw extends Semantics
 
   private[native] class Macro(val c: whitebox.Context) extends MacroAnnotationHandler {
     import c.universe._
@@ -101,13 +106,13 @@ object CObj {
       def externalPrefix: String = data.getOrElse("externalPrefix","").asInstanceOf[String]
       def externals: Externals = data.getOrElse("externals", Map()).asInstanceOf[Externals]
       def constructors: Seq[(String,Seq[ValDef])] = data.getOrElse("constructors",Nil).asInstanceOf[Seq[(String,Seq[ValDef])]]
-      def semantics: Semantics = data.getOrElse("semantics",Wrapped).asInstanceOf[Semantics]
+//      def semantics: Semantics = data.getOrElse("semantics",Wrapped).asInstanceOf[Semantics]
       def newSuffix: String = data.getOrElse("newSuffix","").asInstanceOf[String]
       def crefType: Type = data.getOrElse("crefType",tCRefVoid).asInstanceOf[Type]
       def withExternalPrefix(prefix: String): Data = data.updated("externalPrefix",prefix)
       def withExternals(externals: Externals): Data = data.updated("externals",externals)
       def withConstructors(ctors: Seq[(String,Seq[Tree])]): Data = data.updated("constructors",ctors)
-      def withSemantics(semantics: Semantics): Data = data.updated("semantics",semantics)
+//      def withSemantics(semantics: Semantics): Data = data.updated("semantics",semantics)
       def withNewSuffix(suffix: String): Data = data.updated("newSuffix",suffix)
       def withCRefType(tpe: Type): Data = data.updated("crefType",tpe)
     }
@@ -166,18 +171,11 @@ object CObj {
         case Some(prefix) => extractStringConstant(prefix).get
         case None => genPrefixName(tpe.nameString)
       }
-      val semantics = annotParams("semantics") match {
-        case Some(Select(_,name)) => name.toString match {
-          case "Raw" => Raw
-          case "Wrapped" => Wrapped
-        }
-        case None => Wrapped
-      }
       val newSuffix = annotParams("newSuffix") match {
         case Some(suffix) => extractStringConstant(suffix).get
         case None => "new"
       }
-      data.withExternalPrefix(externalPrefix).withSemantics(semantics).withNewSuffix(newSuffix)
+      data.withExternalPrefix(externalPrefix).withNewSuffix(newSuffix)
     }
 
     private def analyzeTypes(tpe: TypeParts)(data: Data): Data = {
@@ -216,11 +214,9 @@ object CObj {
       data.withExternals( (typeExternals ++ companionExternals).toMap )
     }
 
-    private def genTransformedCtorParams(cls: ClassTransformData): Seq[Tree] = cls.data.semantics match {
-      case Wrapped if isAbstract(cls) => cls.modParts.params
-      case Wrapped => Seq(q"val __ref: scalanative.native.CObj.Ref[${cls.data.crefType}]")
-      case Raw => cls.modParts.params
-    }
+    private def genTransformedCtorParams(cls: ClassTransformData): Seq[Tree] =
+      if(isAbstract(cls)) cls.modParts.params
+      else Seq(q"val __ref: scalanative.native.CObj.Ref[${cls.data.crefType}]")
 
     private def genTransformedTypeBody(t: TypeTransformData[TypeParts]): Seq[Tree] = {
       val companion = t.modParts.companion.get.name
@@ -234,28 +230,24 @@ object CObj {
       imports ++ ctors ++ (t.modParts.body map {
         case tree @ DefDef(mods, name, types, args, rettype, rhs) if isExtern(rhs) =>
           val externalName = t.data.externals(name.toString)._1
-          genExternalCall(externalName,tree,false,t.data.semantics)
+          genExternalCall(externalName,tree,false)
         case default => default
       })
     }
 
     private def genSecondaryConstructor(t: TypeTransformData[TypeParts]): Seq[Tree] = {
       val companion = t.modParts.companion.get.name
-      t.data.semantics match {
-        case Wrapped =>
-          t.data.constructors.map { p =>
-            val args = transformExternalCallArgs(p._2)
-            DefDef(Modifiers(),
-              termNames.CONSTRUCTOR,
-              List(),
-              List(p._2.toList),
-              TypeTree(),
-              Block(
-                Nil,
-                Apply(Ident(termNames.CONSTRUCTOR), List(q"$companion.__ext.${TermName(p._1)}(..$args)"))
-              ))
-          }
-        case Raw => Nil
+      t.data.constructors.map { p =>
+        val args = transformExternalCallArgs(p._2)
+        DefDef(Modifiers(),
+          termNames.CONSTRUCTOR,
+          List(),
+          List(p._2.toList),
+          TypeTree(),
+          Block(
+            Nil,
+            Apply(Ident(termNames.CONSTRUCTOR), List(q"$companion.__ext.${TermName(p._1)}(..$args)"))
+          ))
       }
     }
 
@@ -263,7 +255,7 @@ object CObj {
       t.modParts.body map {
         case tree @ DefDef(mods, name, types, args, rettype, rhs) if isExtern(rhs) =>
           val externalName = t.data.externals(name.toString)._1
-          genExternalCall(externalName,tree,t.modParts.isObject,t.data.semantics)
+          genExternalCall(externalName,tree,t.modParts.isObject)
         case default => default
       }
     }
@@ -296,23 +288,23 @@ object CObj {
       (scalaName,(externalName,externalDef))
     }
 
-    private def genExternalCall(externalName: String, scalaDef: DefDef, isClassMethod: Boolean, semantics: Semantics): DefDef = {
+    private def genExternalCall(externalName: String, scalaDef: DefDef, isClassMethod: Boolean): DefDef = {
       import scalaDef._
       val args = vparamss match {
-        case List(args) => transformExternalCallArgs(args)
+        case Nil => None
+        case List(args) => Some(transformExternalCallArgs(args))
         case List(inargs,outargs) =>
-          transformExternalCallArgs(inargs) ++ transformExternalCallArgs(outargs)
+          Some( transformExternalCallArgs(inargs) ++ transformExternalCallArgs(outargs) )
         case _ =>
           c.error(c.enclosingPosition,"extern methods with more than two parameter lists are not supported for @CObj classes")
           ???
       }
       val external = TermName(externalName)
-      val call =
-        if(isClassMethod) q"__ext.$external(..$args)"
-        else semantics match {
-          case Raw => q"__ext.$external(this.cast[$tPtrByte],..$args)"
-          case Wrapped => q"__ext.$external(__ref,..$args)"
-        }
+      val call = args match {
+        case Some(as) if isClassMethod => q"__ext.$external(..$as)"
+        case Some(as) => q"__ext.$external(__ref,..$as)"
+        case None => q"__ext.$external"
+      }
       DefDef(mods,name,tparams,vparamss,tpt,call)
     }
 
@@ -338,14 +330,14 @@ object CObj {
       }
     }
 
-    private def isCRefWrapper(tpt: Tree): Boolean = {
+    private def isCRefWrapper(tpt: Tree): Boolean = try {
       val typed = getType(tpt)
-//      println( typed.baseClasses.map(_.typeSignature) )
       typed.baseClasses.find(_.typeSignature <:< tCRef).isDefined ||
         this.findAnnotation(typed.typeSymbol,"scalanative.native.CObj.CRefWrapper").isDefined
+    } catch {
+      case ex: TypecheckException => false
     }
 
-//    private def isOutRef(tpt: Tree): Boolean = getType(tpt) <:< tOutRef
 
     def genExternalName(prefix: String, scalaName: String): String =
       prefix + scalaName.replaceAll("([A-Z])","_$1").toLowerCase
