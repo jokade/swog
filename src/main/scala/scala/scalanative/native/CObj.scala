@@ -283,7 +283,10 @@ object CObj {
             ???
         }
         else scalaDef.vparamss
-      val externalDef = DefDef(scalaDef.mods,TermName(externalName),scalaDef.tparams,externalParams,scalaDef.tpt,scalaDef.rhs)
+      val tpt =
+        if(isCRefWrapper(scalaDef.tpt)) tq"scalanative.native.Ptr[Byte]"
+        else scalaDef.tpt
+      val externalDef = DefDef(scalaDef.mods,TermName(externalName),scalaDef.tparams,externalParams,tpt,scalaDef.rhs)
 
       (scalaName,(externalName,externalDef))
     }
@@ -299,14 +302,24 @@ object CObj {
           c.error(c.enclosingPosition,"extern methods with more than two parameter lists are not supported for @CObj classes")
           ???
       }
+//      scalaDef.tpt
+//      scalaDef match {
+//        case DefDef(mods,name,_,_,tpt,rhs) => println(isCRefWrapper(tpt))
+//      }
       val external = TermName(externalName)
       val call = args match {
         case Some(as) if isClassMethod => q"__ext.$external(..$as)"
         case Some(as) => q"__ext.$external(__ref,..$as)"
         case None => q"__ext.$external"
       }
-      DefDef(mods,name,tparams,vparamss,tpt,call)
+      DefDef(mods,name,tparams,vparamss,tpt,wrapExternalCallResult(call,scalaDef.tpt))
     }
+
+    private def wrapExternalCallResult(tree: Tree, tpt: Tree): Tree =
+      if(isCRefWrapper(tpt)) {
+        q"""new $tpt($tree.cast[scalanative.native.CObj.Ref[Nothing]])"""
+      }
+      else tree
 
     private def transformExternalBindingParams(params: List[ValDef], outParams: Boolean = false): List[ValDef] = {
       params map {
@@ -331,7 +344,7 @@ object CObj {
     }
 
     private def isCRefWrapper(tpt: Tree): Boolean = try {
-      val typed = getType(tpt)
+      val typed = getType(tpt,true)
       typed.baseClasses.find(_.typeSignature <:< tCRef).isDefined ||
         this.findAnnotation(typed.typeSymbol,"scalanative.native.CObj.CRefWrapper").isDefined
     } catch {
