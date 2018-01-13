@@ -109,11 +109,17 @@ object CObj {
       def constructors: Seq[(String,Seq[ValDef])] = data.getOrElse("constructors",Nil).asInstanceOf[Seq[(String,Seq[ValDef])]]
       def newSuffix: String = data.getOrElse("newSuffix","").asInstanceOf[String]
       def crefType: Type = data.getOrElse("crefType",tCRefVoid).asInstanceOf[Type]
+      def isAbstract: Boolean = data.getOrElse("isAbstract",false).asInstanceOf[Boolean]
+      def parentIsCRef: Boolean = data.getOrElse("parentIsCRef",false).asInstanceOf[Boolean]
+      def parentIsAbstract: Boolean = data.getOrElse("parentIsAbstract",false).asInstanceOf[Boolean]
       def withExternalPrefix(prefix: String): Data = data.updated("externalPrefix",prefix)
       def withExternals(externals: Externals): Data = data.updated("externals",externals)
       def withConstructors(ctors: Seq[(String,Seq[Tree])]): Data = data.updated("constructors",ctors)
       def withNewSuffix(suffix: String): Data = data.updated("newSuffix",suffix)
+      def withIsAbstract(flag: Boolean): Data = data.updated("isAbstract",flag)
       def withCRefType(tpe: Type): Data = data.updated("crefType",tpe)
+      def withParentIsCRef(flag: Boolean): Data = data.updated("parentIsCRef",flag)
+      def withParentIsAbstract(flag: Boolean): Data = data.updated("parentIsAbstract",flag)
     }
 
     override def analyze: Analysis = super.analyze andThen {
@@ -149,6 +155,7 @@ object CObj {
           .updBody(transformedBody)
           .addAnnotations(crefWrapperAnnotation)
           .updCtorParams(genTransformedCtorParams(cls))
+          .updParents(genTransformedParents(cls))
 //          .updCtorMods(if(isAbstract(cls)) Modifiers() else Modifiers(Flag.PRIVATE)) // ensure that the concrete classes can't be instantiated using new
       /* transform trait */
       case trt: TraitTransformData =>
@@ -177,7 +184,9 @@ object CObj {
       data.withExternalPrefix(externalPrefix).withNewSuffix(newSuffix)
     }
 
+    // TODO: move all checks (isCRef, isAbstract, ... in here and store the results in data)
     private def analyzeTypes(tpe: TypeParts)(data: Data): Data = {
+      val isAbstract = tpe.modifiers.hasFlag(Flag.ABSTRACT)
       val crefType = tpe.parents.map(getType(_)).filter( _ <:< tCRef ) match {
         case Nil => tByte
         case List(tpe@TypeRef(_,sym,args)) if sym.toString == "trait CRef" =>
@@ -189,7 +198,13 @@ object CObj {
           c.error(c.enclosingPosition,s"CObj types can't extend more than one instance of CObj.CRef (found: $types)")
           ???
       }
-      data.withCRefType(crefType)
+      val parentIsCRef = isCRefWrapper(tpe.parents.head)
+      val parentIsAbstract = getType(tpe.parents.head).typeSymbol.isAbstract
+      data
+        .withIsAbstract(isAbstract)
+        .withCRefType(crefType)
+        .withParentIsCRef(parentIsCRef)
+        .withParentIsAbstract(parentIsAbstract)
     }
 
 
@@ -213,10 +228,18 @@ object CObj {
       data.withExternals( (typeExternals ++ companionExternals).toMap )
     }
 
+    private def genTransformedParents(cls: ClassTransformData): Seq[Tree] =
+      if(!cls.data.isAbstract && cls.data.parentIsCRef && !cls.data.parentIsAbstract) {
+        (cls.modParts.parents.head match {
+          case x => q"$x(__ref)"
+        }) +: cls.modParts.parents.tail
+      }
+      else cls.modParts.parents
+
     private def genTransformedCtorParams(cls: ClassTransformData): Seq[Tree] =
-      if (isAbstract(cls))
+      if (cls.data.isAbstract)
         cls.modParts.params
-      else if(needsRefOverride(cls))
+      else if(cls.data.parentIsCRef)
         Seq(q"override val __ref: scalanative.native.CObj.Ref[${cls.data.crefType}]")
       else
         Seq(q"val __ref: scalanative.native.CObj.Ref[${cls.data.crefType}]")
@@ -352,11 +375,6 @@ object CObj {
         case ex: TypecheckException => false
       }
 
-    private def needsRefOverride(cls: ClassTransformData): Boolean = {
-      cls.modParts.parents.exists(isCRefWrapper)
-//      val base = getType(cls.modParts.parents.head,true)
-//      ! (base =:= tAnyRef)
-    }
 
     def genExternalName(prefix: String, scalaName: String): String =
       prefix + scalaName.replaceAll("([A-Z])","_$1").toLowerCase

@@ -15,9 +15,12 @@ object Main {
 @CObj
 class Foo
 
+trait X
+trait Y
+
 @CObj
 @debug
-class Bar extends Foo
+class Bar(__ref: Ptr[Byte]) extends Foo
 
 //@CObj
 //abstract class X
