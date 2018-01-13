@@ -1,6 +1,6 @@
 organization in ThisBuild := "de.surfice"
 
-version in ThisBuild := "0.0.2-SNAPSHOT"
+version in ThisBuild := "0.0.2"
 
 scalaVersion in ThisBuild := "2.11.12"
 
