@@ -92,6 +92,7 @@ object CObj {
     private val tByte = weakTypeOf[Byte]
     private val tCRef = weakTypeOf[CRef[_]]
     private val tCRefVoid = weakTypeOf[CRefVoid]
+    private val tAnyRef = weakTypeOf[AnyRef]
     private val selfPtr = q"val self: $tPtrByte"
     private val refPtr = q"__ref: $tPtrByte"
     private val expExtern = q"scalanative.native.extern"
@@ -106,13 +107,11 @@ object CObj {
       def externalPrefix: String = data.getOrElse("externalPrefix","").asInstanceOf[String]
       def externals: Externals = data.getOrElse("externals", Map()).asInstanceOf[Externals]
       def constructors: Seq[(String,Seq[ValDef])] = data.getOrElse("constructors",Nil).asInstanceOf[Seq[(String,Seq[ValDef])]]
-//      def semantics: Semantics = data.getOrElse("semantics",Wrapped).asInstanceOf[Semantics]
       def newSuffix: String = data.getOrElse("newSuffix","").asInstanceOf[String]
       def crefType: Type = data.getOrElse("crefType",tCRefVoid).asInstanceOf[Type]
       def withExternalPrefix(prefix: String): Data = data.updated("externalPrefix",prefix)
       def withExternals(externals: Externals): Data = data.updated("externals",externals)
       def withConstructors(ctors: Seq[(String,Seq[Tree])]): Data = data.updated("constructors",ctors)
-//      def withSemantics(semantics: Semantics): Data = data.updated("semantics",semantics)
       def withNewSuffix(suffix: String): Data = data.updated("newSuffix",suffix)
       def withCRefType(tpe: Type): Data = data.updated("crefType",tpe)
     }
@@ -215,8 +214,12 @@ object CObj {
     }
 
     private def genTransformedCtorParams(cls: ClassTransformData): Seq[Tree] =
-      if(isAbstract(cls)) cls.modParts.params
-      else Seq(q"val __ref: scalanative.native.CObj.Ref[${cls.data.crefType}]")
+      if (isAbstract(cls))
+        cls.modParts.params
+      else if(needsRefOverride(cls))
+        Seq(q"override val __ref: scalanative.native.CObj.Ref[${cls.data.crefType}]")
+      else
+        Seq(q"val __ref: scalanative.native.CObj.Ref[${cls.data.crefType}]")
 
     private def genTransformedTypeBody(t: TypeTransformData[TypeParts]): Seq[Tree] = {
       val companion = t.modParts.companion.get.name
@@ -302,10 +305,6 @@ object CObj {
           c.error(c.enclosingPosition,"extern methods with more than two parameter lists are not supported for @CObj classes")
           ???
       }
-//      scalaDef.tpt
-//      scalaDef match {
-//        case DefDef(mods,name,_,_,tpt,rhs) => println(isCRefWrapper(tpt))
-//      }
       val external = TermName(externalName)
       val call = args match {
         case Some(as) if isClassMethod => q"__ext.$external(..$as)"
@@ -318,6 +317,7 @@ object CObj {
     private def wrapExternalCallResult(tree: Tree, tpt: Tree): Tree =
       if(isCRefWrapper(tpt)) {
         q"""new $tpt($tree.cast[scalanative.native.CObj.Ref[Nothing]])"""
+//        q"""${getType(tpt,true).companion}.wrap($tree.cast[scalanative.native.CObj.Ref[Nothing]])"""
       }
       else tree
 
@@ -343,14 +343,20 @@ object CObj {
       }
     }
 
-    private def isCRefWrapper(tpt: Tree): Boolean = try {
-      val typed = getType(tpt,true)
-      typed.baseClasses.find(_.typeSignature <:< tCRef).isDefined ||
-        this.findAnnotation(typed.typeSymbol,"scalanative.native.CObj.CRefWrapper").isDefined
-    } catch {
-      case ex: TypecheckException => false
-    }
+    private def isCRefWrapper(tpt: Tree): Boolean =
+      try {
+        val typed = getType(tpt,true)
+        typed.baseClasses.find(_.typeSignature <:< tCRef).isDefined ||
+          this.findAnnotation(typed.typeSymbol,"scalanative.native.CObj.CRefWrapper").isDefined
+      } catch {
+        case ex: TypecheckException => false
+      }
 
+    private def needsRefOverride(cls: ClassTransformData): Boolean = {
+      cls.modParts.parents.exists(isCRefWrapper)
+//      val base = getType(cls.modParts.parents.head,true)
+//      ! (base =:= tAnyRef)
+    }
 
     def genExternalName(prefix: String, scalaName: String): String =
       prefix + scalaName.replaceAll("([A-Z])","_$1").toLowerCase

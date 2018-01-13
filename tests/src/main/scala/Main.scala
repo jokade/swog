@@ -12,3 +12,15 @@ object Main {
 
 }
 
+@CObj
+class Foo
+
+@CObj
+@debug
+class Bar extends Foo
+
+//@CObj
+//abstract class X
+
+//@CObj
+//class Y extends X
