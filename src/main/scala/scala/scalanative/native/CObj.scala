@@ -14,6 +14,10 @@ class CObj(prefix: String = null, newSuffix: String = null) extends StaticAnnota
 
 object CObj {
 
+  trait CObjWrapper {
+    def __ref: Any
+  }
+
   trait CRef[T] {
     def __ref: Ref[T]
   }
@@ -98,6 +102,7 @@ object CObj {
     private val expExtern = q"scalanative.native.extern"
     private val tCrefWrapperAnnotation = weakTypeOf[CRefWrapper]
     private val crefWrapperAnnotation = q"new scalanative.native.CObj.CRefWrapper"
+    private val tCObjWrapper = weakTypeOf[CObjWrapper]
 
     private val annotationParamNames = Seq("prefix","newSuffix","semantics")
 
@@ -112,6 +117,7 @@ object CObj {
       def isAbstract: Boolean = data.getOrElse("isAbstract",false).asInstanceOf[Boolean]
       def parentIsCRef: Boolean = data.getOrElse("parentIsCRef",false).asInstanceOf[Boolean]
       def parentIsAbstract: Boolean = data.getOrElse("parentIsAbstract",false).asInstanceOf[Boolean]
+      def fullName: String = data.getOrElse("fullName",false).asInstanceOf[String]
       def withExternalPrefix(prefix: String): Data = data.updated("externalPrefix",prefix)
       def withExternals(externals: Externals): Data = data.updated("externals",externals)
       def withConstructors(ctors: Seq[(String,Seq[Tree])]): Data = data.updated("constructors",ctors)
@@ -120,6 +126,7 @@ object CObj {
       def withCRefType(tpe: Type): Data = data.updated("crefType",tpe)
       def withParentIsCRef(flag: Boolean): Data = data.updated("parentIsCRef",flag)
       def withParentIsAbstract(flag: Boolean): Data = data.updated("parentIsAbstract",flag)
+      def withFullName(name: String): Data = data.updated("fullName",name)
     }
 
     override def analyze: Analysis = super.analyze andThen {
@@ -205,6 +212,7 @@ object CObj {
         .withCRefType(crefType)
         .withParentIsCRef(parentIsCRef)
         .withParentIsAbstract(parentIsAbstract)
+        .withFullName(tpe.fullName)
     }
 
 
@@ -256,7 +264,7 @@ object CObj {
       imports ++ ctors ++ (t.modParts.body map {
         case tree @ DefDef(mods, name, types, args, rettype, rhs) if isExtern(rhs) =>
           val externalName = t.data.externals(name.toString)._1
-          genExternalCall(externalName,tree,false)
+          genExternalCall(externalName,tree,false,t.data)
         case default => default
       })
     }
@@ -281,7 +289,7 @@ object CObj {
       t.modParts.body map {
         case tree @ DefDef(mods, name, types, args, rettype, rhs) if isExtern(rhs) =>
           val externalName = t.data.externals(name.toString)._1
-          genExternalCall(externalName,tree,t.modParts.isObject)
+          genExternalCall(externalName,tree,t.modParts.isObject,t.data)
         case default => default
       }
     }
@@ -317,7 +325,7 @@ object CObj {
       (scalaName,(externalName,externalDef))
     }
 
-    private def genExternalCall(externalName: String, scalaDef: DefDef, isClassMethod: Boolean): DefDef = {
+    private def genExternalCall(externalName: String, scalaDef: DefDef, isClassMethod: Boolean, data: Data): DefDef = {
       import scalaDef._
       val args = vparamss match {
         case Nil => None
@@ -334,15 +342,16 @@ object CObj {
         case Some(as) => q"__ext.$external(__ref,..$as)"
         case None => q"__ext.$external"
       }
-      DefDef(mods,name,tparams,vparamss,tpt,wrapExternalCallResult(call,scalaDef.tpt))
+      DefDef(mods,name,tparams,vparamss,tpt,wrapExternalCallResult(call,scalaDef.tpt,data))
     }
 
-    private def wrapExternalCallResult(tree: Tree, tpt: Tree): Tree =
-      if(isCRefWrapper(tpt)) {
+    private def wrapExternalCallResult(tree: Tree, tpt: Tree, data: Data): Tree = {
+      if (isCRefWrapper(tpt)) {
         q"""new $tpt($tree.cast[scalanative.native.CObj.Ref[Nothing]])"""
-//        q"""${getType(tpt,true).companion}.wrap($tree.cast[scalanative.native.CObj.Ref[Nothing]])"""
+        //        q"""${getType(tpt,true).companion}.wrap($tree.cast[scalanative.native.CObj.Ref[Nothing]])"""
       }
       else tree
+    }
 
     private def transformExternalBindingParams(params: List[ValDef], outParams: Boolean = false): List[ValDef] = {
       params map {
@@ -369,7 +378,8 @@ object CObj {
     private def isCRefWrapper(tpt: Tree): Boolean =
       try {
         val typed = getType(tpt,true)
-        typed.baseClasses.find(_.typeSignature <:< tCRef).isDefined ||
+        // TODO: do we still need the check for tCRef (or can we only check for tCObjWrapper)
+        typed.baseClasses.map(_.asType.toType).exists( t => t <:< tCRef || t <:< tCObjWrapper) ||
           this.findAnnotation(typed.typeSymbol,"scalanative.native.CObj.CRefWrapper").isDefined
       } catch {
         case ex: TypecheckException => false

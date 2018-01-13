@@ -1,6 +1,6 @@
 import de.surfice.smacrotools.debug
 
-import scala.scalanative.native.CObj.{CRef, Out}
+import scala.scalanative.native.CObj.{CObjWrapper, CRef, Out}
 import scalanative.native._
 import CObj.implicits._
 
@@ -15,12 +15,13 @@ object Main {
 @CObj
 class Foo
 
-trait X
-trait Y
-
 @CObj
 @debug
-class Bar(__ref: Ptr[Byte]) extends Foo
+class Bar extends Foo with CObjWrapper
+
+object Bar {
+  def bar(): Bar = extern
+}
 
 //@CObj
 //abstract class X
