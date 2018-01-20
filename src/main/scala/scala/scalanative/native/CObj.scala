@@ -6,6 +6,7 @@ import scala.annotation.{StaticAnnotation, compileTimeOnly}
 import scala.reflect.macros.{TypecheckException, blackbox, whitebox}
 import scala.language.experimental.macros
 import scala.reflect.ClassTag
+import scala.reflect.runtime.Macros
 
 @compileTimeOnly("enable macro paradise to expand macro annotations")
 class CObj(prefix: String = null, newSuffix: String = null) extends StaticAnnotation {
@@ -13,6 +14,8 @@ class CObj(prefix: String = null, newSuffix: String = null) extends StaticAnnota
 }
 
 object CObj {
+
+  class returnsThis extends StaticAnnotation
 
   trait CObjWrapper {
     def __ref: Any
@@ -316,7 +319,13 @@ object CObj {
             c.error(c.enclosingPosition,"extern methods with more than two parameter lists are not supported for @CObj classes")
             ???
         }
-        else scalaDef.vparamss
+        else scalaDef.vparamss match {
+          case List(params) => List(transformExternalBindingParams(params))
+          case List(inparams,outparams) => List(transformExternalBindingParams(inparams++outparams))
+          case _ =>
+            c.error(c.enclosingPosition,"extern methods with more than two parameter lists are not supported for @CObj classes")
+            ???
+        }
       val tpt =
         if(isCRefWrapper(scalaDef.tpt)) tq"scalanative.native.Ptr[Byte]"
         else scalaDef.tpt
@@ -342,7 +351,13 @@ object CObj {
         case Some(as) => q"__ext.$external(__ref,..$as)"
         case None => q"__ext.$external"
       }
-      DefDef(mods,name,tparams,vparamss,tpt,wrapExternalCallResult(call,scalaDef.tpt,data))
+      val rhs =
+        if(returnsThis(scalaDef))
+          q"$call;this"
+        else
+        wrapExternalCallResult(call,scalaDef.tpt,data)
+
+      DefDef(mods,name,tparams,vparamss,tpt,rhs)
     }
 
     private def wrapExternalCallResult(tree: Tree, tpt: Tree, data: Data): Tree = {
@@ -406,6 +421,9 @@ object CObj {
       case cls : ClassTransformData => t.modParts.modifiers.hasFlag(Flag.ABSTRACT)
       case _ => false
     }
+
+    private def returnsThis(m: DefDef): Boolean =
+      findAnnotation(m.mods.annotations,"scala.scalanative.native.CObj.returnsThis").isDefined
 
   }
 
