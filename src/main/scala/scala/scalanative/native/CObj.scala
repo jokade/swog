@@ -16,6 +16,12 @@ class CObj(prefix: String = null, newSuffix: String = null) extends StaticAnnota
 object CObj {
 
   class returnsThis extends StaticAnnotation
+  class updatesThis extends StaticAnnotation
+
+  @compileTimeOnly("enable macro paradise to expand macro annotations")
+  class Mutable(prefix: String = null, newSuffix: String = null) extends StaticAnnotation {
+    def macroTransform(annottees: Any*): Any = macro CObj.MutableMacro.impl
+  }
 
   trait CObjWrapper {
     def __ref: Any
@@ -86,15 +92,34 @@ object CObj {
   class CRefWrapper extends StaticAnnotation
 
 
-  private[native] class Macro(val c: whitebox.Context) extends MacroAnnotationHandler {
-    import c.universe._
+  private[native] class Macro(val c: whitebox.Context) extends MacroBase {
 
-    override def annotationName = "CObj"
+    def isMutable: Boolean = false
+    override def annotationName = "scala.scalanative.native.CObj"
     override def supportsClasses: Boolean = true
     override def supportsTraits: Boolean = true
     override def supportsObjects: Boolean = true
     override def createCompanion: Boolean = true
 
+  }
+
+  private[native] class MutableMacro(val c: whitebox.Context) extends MacroBase {
+
+    def isMutable: Boolean = true
+    override def annotationName = "scala.scalanative.native.CObj.Mutable"
+    override def supportsClasses: Boolean = true
+    override def supportsTraits: Boolean = true
+    override def supportsObjects: Boolean = true
+    override def createCompanion: Boolean = true
+
+  }
+
+  private[native] abstract class MacroBase extends MacroAnnotationHandler {
+    val c: whitebox.Context
+
+    import c.universe._
+
+    def isMutable: Boolean
     private val tPtrByte = weakTypeOf[Ptr[Byte]]
     private val tByte = weakTypeOf[Byte]
     private val tCRef = weakTypeOf[CRef[_]]
@@ -106,6 +131,7 @@ object CObj {
     private val tCrefWrapperAnnotation = weakTypeOf[CRefWrapper]
     private val crefWrapperAnnotation = q"new scalanative.native.CObj.CRefWrapper"
     private val tCObjWrapper = weakTypeOf[CObjWrapper]
+    private val tRefNothing = weakTypeOf[Ref[Nothing]]
 
     private val annotationParamNames = Seq("prefix","newSuffix","semantics")
 
@@ -248,7 +274,7 @@ object CObj {
       else cls.modParts.parents
 
     private def genTransformedCtorParams(cls: ClassTransformData): Seq[Tree] =
-      if (cls.data.isAbstract)
+      if (cls.data.isAbstract || isMutable)
         cls.modParts.params
       else if(cls.data.parentIsCRef)
         Seq(q"override val __ref: scalanative.native.CObj.Ref[${cls.data.crefType}]")
@@ -259,7 +285,9 @@ object CObj {
       val companion = t.modParts.companion.get.name
       val imports = Seq(q"import $companion.__ext")
       val ctors =
-        if(isAbstract(t))
+        if(isMutable)
+          Nil
+        else if(isAbstract(t))
           Seq(q"def __ref: scalanative.native.CObj.Ref[${t.data.crefType}]")
         else
           genSecondaryConstructor(t)
@@ -354,6 +382,8 @@ object CObj {
       val rhs =
         if(returnsThis(scalaDef))
           q"$call;this"
+        else if(updatesThis(scalaDef))
+          q"this.__ref = $call.cast[$tRefNothing];this"
         else
         wrapExternalCallResult(call,scalaDef.tpt,data)
 
@@ -424,6 +454,9 @@ object CObj {
 
     private def returnsThis(m: DefDef): Boolean =
       findAnnotation(m.mods.annotations,"scala.scalanative.native.CObj.returnsThis").isDefined
+
+    private def updatesThis(m: DefDef): Boolean =
+      findAnnotation(m.mods.annotations,"scala.scalanative.native.CObj.updatesThis").isDefined
 
   }
 
