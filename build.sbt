@@ -13,27 +13,37 @@ lazy val commonSettings = Seq(
   scalacOptions ++= Seq("-deprecation","-unchecked","-feature","-language:implicitConversions","-Xlint"),
   addCompilerPlugin("org.scalamacros" % "paradise" % "2.1.0" cross CrossVersion.full),
   libraryDependencies ++= Seq(
+    "de.surfice" %% "smacrotools" % Version.smacrotools,
     "com.lihaoyi" %%% "utest" % Version.utest % "test"
     ),
   testFrameworks += new TestFramework("utest.runner.Framework")
   )
 
 
-lazy val interop = project.in(file("."))
+lazy val root = project.in(file("."))
+  .aggregate(common,cobj)
+  .settings(commonSettings ++ dontPublish:_*)
+
+lazy val common = project
   .enablePlugins(ScalaNativePlugin)
   .settings(commonSettings ++ publishingSettings:_*)
   .settings(
-    name := "scalanative-obj-interop",
-    libraryDependencies ++= Seq(
-      "de.surfice" %% "smacrotools" % Version.smacrotools
-    )
+    name := "scalanative-interop-common"
+  )
+
+lazy val cobj = project
+  .enablePlugins(ScalaNativePlugin)
+  .dependsOn(common)
+  .settings(commonSettings ++ publishingSettings:_*)
+  .settings(
+    name := "scalanative-interop-cobj"
   )
 
 import scalanative.sbtplugin.ScalaNativePluginInternal._
 
 lazy val tests = project
   .enablePlugins(ScalaNativePlugin)
-  .dependsOn(interop)
+  .dependsOn(cobj)
   .settings(commonSettings ++ dontPublish:_*)
   .settings(
     nativeLinkStubs := true,

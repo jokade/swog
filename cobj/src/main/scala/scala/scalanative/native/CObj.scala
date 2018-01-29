@@ -17,6 +17,7 @@ object CObj {
 
   class returnsThis extends StaticAnnotation
   class updatesThis extends StaticAnnotation
+  class nullable extends StaticAnnotation
 
   @compileTimeOnly("enable macro paradise to expand macro annotations")
   class Mutable(prefix: String = null, newSuffix: String = null) extends StaticAnnotation {
@@ -192,7 +193,6 @@ object CObj {
           .addAnnotations(crefWrapperAnnotation)
           .updCtorParams(genTransformedCtorParams(cls))
           .updParents(genTransformedParents(cls))
-//          .updCtorMods(if(isAbstract(cls)) Modifiers() else Modifiers(Flag.PRIVATE)) // ensure that the concrete classes can't be instantiated using new
       /* transform trait */
       case trt: TraitTransformData =>
         val transformedBody = q"def __ref: scalanative.native.CObj.Ref[${trt.data.crefType}]" +: genTransformedTypeBody(trt)
@@ -385,14 +385,17 @@ object CObj {
         else if(updatesThis(scalaDef))
           q"this.__ref = $call.cast[$tRefNothing];this"
         else
-        wrapExternalCallResult(call,scalaDef.tpt,data)
+          wrapExternalCallResult(call,tpt,data,nullable(scalaDef))
 
       DefDef(mods,name,tparams,vparamss,tpt,rhs)
     }
 
-    private def wrapExternalCallResult(tree: Tree, tpt: Tree, data: Data): Tree = {
+    private def wrapExternalCallResult(tree: Tree, tpt: Tree, data: Data, isNullable: Boolean): Tree = {
       if (isCRefWrapper(tpt)) {
-        q"""new $tpt($tree.cast[scalanative.native.CObj.Ref[Nothing]])"""
+        if(isNullable)
+          q"""val res = $tree; if(res == null) null else new $tpt($tree.cast[scalanative.native.CObj.Ref[Nothing]])"""
+        else
+          q"""new $tpt($tree.cast[scalanative.native.CObj.Ref[Nothing]])"""
         //        q"""${getType(tpt,true).companion}.wrap($tree.cast[scalanative.native.CObj.Ref[Nothing]])"""
       }
       else tree
@@ -458,6 +461,8 @@ object CObj {
     private def updatesThis(m: DefDef): Boolean =
       findAnnotation(m.mods.annotations,"scala.scalanative.native.CObj.updatesThis").isDefined
 
+    private def nullable(m: DefDef): Boolean =
+      findAnnotation(m.mods.annotations,"scala.scalanative.native.CObj.nullable").isDefined
   }
 
 

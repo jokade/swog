@@ -14,9 +14,10 @@ object Main {
 
 @CObj.Mutable
 @debug
-class Foo(var __ref: Ref[Byte]) extends CObjWrapper {
-  @CObj.updatesThis
-  def foo(): Foo = extern
+class Foo[T](var __ref: Ref[Byte]) extends CObjWrapper {
+//  @CObj.updatesThis
+  @CObj.nullable
+  def foo(): Foo[T] = extern
 }
 
 //@CObj
