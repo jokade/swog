@@ -1,11 +1,11 @@
 organization in ThisBuild := "de.surfice"
 
-version in ThisBuild := "0.0.3-SNAPSHOT"
+version in ThisBuild := "0.0.3"
 
 scalaVersion in ThisBuild := "2.11.12"
 
 val Version = new {
-  val smacrotools = "0.0.8-SNAPSHOT"
+  val smacrotools = "0.0.8"
   val utest       = "0.6.3"
 }
 
