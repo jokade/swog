@@ -1,6 +1,6 @@
 organization in ThisBuild := "de.surfice"
 
-version in ThisBuild := "0.0.3"
+version in ThisBuild := "0.0.4-SNAPSHOT"
 
 scalaVersion in ThisBuild := "2.11.12"
 
@@ -20,9 +20,12 @@ lazy val commonSettings = Seq(
   )
 
 
-lazy val root = project.in(file("."))
-  .aggregate(common,cobj)
+lazy val root  = project.in(file("."))
+  .aggregate(common,cobj,objc)
   .settings(commonSettings ++ dontPublish:_*)
+  .settings(
+    name := "scalanative-obj-interop"
+  )
 
 lazy val common = project
   .enablePlugins(ScalaNativePlugin)
@@ -37,6 +40,14 @@ lazy val cobj = project
   .settings(commonSettings ++ publishingSettings:_*)
   .settings(
     name := "scalanative-interop-cobj"
+  )
+
+lazy val objc = project
+  .enablePlugins(ScalaNativePlugin)
+  .dependsOn(common)
+  .settings(commonSettings ++ publishingSettings:_*)
+  .settings(
+    name := "scalanative-interop-objc"
   )
 
 import scalanative.sbtplugin.ScalaNativePluginInternal._
