@@ -1,6 +1,7 @@
 package scala.scalanative.native.objc
 
 import de.surfice.smacrotools.{CommonMacroTools, WhiteboxMacroTools}
+import scala.language.reflectiveCalls
 
 trait ObjCMacroTools extends CommonMacroTools {
   import c.universe._
@@ -72,6 +73,7 @@ trait ObjCMacroTools extends CommonMacroTools {
       c.error(c.enclosingPosition, "multiple parameter lists not supported for ObjC classes")
       ???
   }
+
 
   private def selectorMethodName(name: TermName): String = {
     val s = name.toString

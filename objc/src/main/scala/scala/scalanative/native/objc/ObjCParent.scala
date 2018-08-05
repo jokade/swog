@@ -14,7 +14,7 @@ object ObjCParent {
     def init(self: id, sel: SEL, ref: id): id = {
       val proxy = objc_msgSend(self,sel_alloc)
       setScalaInstanceIVar(proxy,ref)
-//      println("Initializing Proxy!")
+      println("Initializing Proxy!")
       proxy
     }
     def methodSignature(self: id, sel: SEL, selForSignature: SEL): id = {
@@ -23,7 +23,7 @@ object ObjCParent {
     }
     def forwardInvocation(self: id, sel: SEL, invocation: id): id = {
       val ref = getScalaInstanceIVar[Object](self).cast[id]
-//      println("forwarding invocation")
+      println("forwarding invocation")
       self
     }
     val newCls = objc_allocateClassPair(objc_getClass(c"NSProxy"),c"ScalaParentProxy",0)

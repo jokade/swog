@@ -32,7 +32,7 @@ object ScalaObjC {
         val exposedMembers = getExposedMembers(cls.body)
 
         // collect all required ObjC selectors (every selector is stored as a lazy val on the companion object)
-        val selectors = exposedMembers.map( m => genSelector(m.name,List(m.params)) ) ++
+        val selectors = exposedMembers.map( _.selector ) ++
           // add setter selectors for public vars
           exposedMembers.filter(_.provideSetter).map{m =>
             val name = genSetterSelectorName(m.name)
@@ -83,8 +83,8 @@ object ScalaObjC {
     private def objcClassDef(cls: ClassParts, exposedMembers: Seq[ExposedMember]) = Seq[Tree] {
       val clsName = cstring(cls.name.toString)
       val parent = c.typecheck(cls.parents.head,c.TYPEmode).tpe match {
-        case p if p =:= weakTypeOf[Object] => q"cocoa.foundation.NSObject"
-        case p if p <:< weakTypeOf[ObjCObject] => q"${p.typeSymbol.companion}"
+        case p if p =:= weakTypeOf[Object] => q"scalanative.native.objc.defaultRootObject"
+        case p if p <:< weakTypeOf[ObjCObject] => q"${p.typeSymbol.companion}.__cls"
         case _ =>
           error("@ScalaObjC class must be a descendant of ObjCObject")
           ???
@@ -98,7 +98,7 @@ object ScalaObjC {
           import objc.runtime._
           import objc.helper._
 
-          val newCls = objc_allocateClassPair($parent.__cls,$clsName,0)
+          val newCls = objc_allocateClassPair($parent,$clsName,0)
           objc.helper.addScalaInstanceIVar(newCls)
           val metaCls = object_getClass(newCls)
           class_addMethod(metaCls,sel_allocWithZone,CFunctionPtr.fromFunction3(__allocWithZone),c"@:@")
@@ -131,8 +131,8 @@ object ScalaObjC {
     }
 
     private def registerExposedMember(m: ExposedMember): Tree = {
-      val typeEncoding = cstring( "@:" + m.params.map(genTypeEncoding).mkString )
-      q"""class_addMethod(newCls,${genSelector(m.name,List(m.params))._2},${exposedMethodCast(m)},$typeEncoding)"""
+      val typeEncoding = cstring( "@@:" + m.params.map(genTypeEncoding).mkString )
+      q"""class_addMethod(newCls,${m.selector._2},${exposedMethodCast(m)},$typeEncoding)"""
     }
 
     private def exposedMethodCast(m: ExposedMember): Tree = m.params.size match {
@@ -165,7 +165,7 @@ object ScalaObjC {
 
     private def getExposedMembers(body: Seq[Tree]): Seq[ExposedMember] = body collect {
       case m: DefDef if isPublic(m.mods) =>
-        ExposedMember(m.name,m.vparamss.headOption.getOrElse(Nil),m.vparamss.nonEmpty)
+        ExposedMember(m.name,m.vparamss.headOption.getOrElse(Nil),m.vparamss.nonEmpty, customSelector = findCustomSelector(m.mods.annotations))
       case p: ValDef if isPublic(p.mods) =>
         val tpe =
           if(p.tpt.nonEmpty)
@@ -269,11 +269,24 @@ object ScalaObjC {
       val TypeArg  = Value
     }
 
+    def findCustomSelector(annots: Seq[Tree]): Option[String] = {
+      findAnnotation(annots,"selector")
+        .map(t => extractAnnotationParameters(t,Seq("name")) )
+        .map(_.apply("name"))
+        .map(t => extractStringConstant(t.get).get)
+    }
+
     case class ExposedMember(name: TermName,
                              params: List[ValDef],
                              hasParamList: Boolean,
                              tpe: Option[Symbol] = None,
-                             provideSetter: Boolean = false)
+                             provideSetter: Boolean = false,
+                             customSelector: Option[String] = None) {
+      lazy val selector: (String,TermName) = customSelector match {
+        case Some(sel) => (sel,genSelectorTerm(sel))
+        case _ => genSelector(name,List(params))
+      }
+    }
 
   }
 

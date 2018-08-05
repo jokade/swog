@@ -6,7 +6,7 @@ scalaVersion in ThisBuild := "2.11.12"
 
 val Version = new {
   val smacrotools = "0.0.8"
-  val utest       = "0.6.3"
+  val utest       = "0.6.4"
 }
 
 lazy val commonSettings = Seq(
@@ -52,7 +52,7 @@ lazy val objc = project
 
 import scalanative.sbtplugin.ScalaNativePluginInternal._
 
-lazy val tests = project
+lazy val cobjTests = project
   .enablePlugins(ScalaNativePlugin)
   .dependsOn(cobj)
   .settings(commonSettings ++ dontPublish:_*)
@@ -65,6 +65,16 @@ lazy val tests = project
     )
   )
 
+lazy val objcTests = project
+  .enablePlugins(ScalaNativePlugin)
+  .dependsOn(objc)
+  .settings(commonSettings ++ dontPublish: _*)
+  .settings(
+    nativeLinkStubs := true,
+    nativeLinkingOptions ++= Seq(
+      "-framework", "Foundation"
+    )
+  )
 
 lazy val dontPublish = Seq(
   publish := {},

@@ -32,7 +32,7 @@ object helper {
     runtime.objc_msgSendSuper(objc_super,op, arg1)
   }
 
-  @inline def addScalaInstanceIVar(cls: id): Boolean = runtime.class_addIvar(cls,scalaInstanceIVar,8,3.toUByte,null)
+  @inline def addScalaInstanceIVar(cls: ClassPtr): Boolean = runtime.class_addIvar(cls,scalaInstanceIVar,8,3.toUByte,null)
 
   @inline def setScalaInstanceIVar(obj: id, instance: Object): runtime.IVar =
     runtime.object_setInstanceVariable(obj,scalaInstanceIVar,instance.cast[Ptr[Byte]])
@@ -56,6 +56,7 @@ object helper {
 //    def msgSend(selector: CString, arg1: CVararg): id = objc_msgSend(o,sel_registerName(selector),arg1)
 //    def msgSend(selector: CString, arg1: CVararg, arg2: CVararg): id = objc_msgSend(o,sel_registerName(selector),arg1,arg2)
 //  }
+
 }
 
 
