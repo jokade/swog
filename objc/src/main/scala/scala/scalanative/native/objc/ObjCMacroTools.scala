@@ -64,15 +64,18 @@ trait ObjCMacroTools extends CommonMacroTools {
   // TODO: handle arguments!
   protected[this] def genSelectorString(method: MethodSymbol): String = method.name.toString
 
-  protected[this] def genSelectorString(name: TermName, args: List[List[ValDef]]): String = args match {
-    case Nil | List(Nil) => selectorMethodName(name)
-    case List(args) => selectorMethodName(name) +: (args.tail map {
-      case ValDef(_, name, _, _) => name.toString
-    }) mkString("", ":", ":")
-    case x =>
-      c.error(c.enclosingPosition, "multiple parameter lists not supported for ObjC classes")
-      ???
-  }
+  protected[this] def genSelectorString(name: TermName, args: List[List[ValDef]]): String =
+    if(name.toString.contains("_"))
+      name.toString.replaceAll("_",":")
+    else args match {
+      case Nil | List(Nil) => selectorMethodName(name)
+      case List(args) => selectorMethodName(name) +: (args.tail map {
+        case ValDef(_, name, _, _) => name.toString
+      }) mkString("", ":", ":")
+      case x =>
+        c.error(c.enclosingPosition, "multiple parameter lists not supported for ObjC classes")
+        ???
+    }
 
 
   private def selectorMethodName(name: TermName): String = {
