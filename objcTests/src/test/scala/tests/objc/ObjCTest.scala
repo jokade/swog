@@ -13,14 +13,31 @@ object ObjCTest extends TestSuite {
       val obj = NSObject.alloc().init()
       fromCString( class_getName( obj.`class` ) ) ==> "NSObject"
     }
+    'NSString-{
+      'callSuperclassMethod-{
+        val str = NSString.alloc().init()
+        str.length ==> 0.toULong
+      }
+      'selectorWithArg-{
+        val str = NSString.alloc().initWithUTF8String_(c"foo")
+        str.length ==> 3.toULong
+      }
+      'selectorWithMultipleSegments-{
+        val str = NSString.alloc().initWithUTF8String_(c"foo")
+        val pad = NSString.alloc().initWithUTF8String_(c"bar")
+        val str2 = str.stringByPaddingToLength_withString_startingAtIndex_(6,pad,0.toULong)
+        str2.length ==> 6.toULong
+      }
+    }
   }
 
-
   @ObjC
+  @debug
   class NSObject {
     @inline def `class`: id = extern
     @inline def hash: UInt = extern
     @inline def init(): this.type = extern
+    @inline def retain(): this.type = extern
   }
 
   @ObjCClass
@@ -34,4 +51,17 @@ object ObjCTest extends TestSuite {
     override type InstanceType = NSObject
   }
 
+  @ObjC
+  class NSString extends NSObject {
+    def length: ULong = extern
+    def initWithUTF8String_(nullTerminatedString: CString): NSString = extern
+    def stringByPaddingToLength_withString_startingAtIndex_(newLength: Long, padString: NSString, padIndex: ULong): NSString = extern
+  }
+
+  abstract class NSStringClass extends NSObjectClass {
+    override type InstanceType = NSString
+    def __cls: id
+  }
+
+  object NSString extends NSStringClass
 }
