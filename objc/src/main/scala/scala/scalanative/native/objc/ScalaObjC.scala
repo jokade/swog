@@ -1,12 +1,11 @@
-package scala.scalanative.native
+package scala.scalanative.native.objc
 
 import de.surfice.smacrotools.MacroAnnotationHandler
-import objc.ObjCMacroTools
-import objc.runtime.ObjCObject
 
 import scala.annotation.{StaticAnnotation, compileTimeOnly}
 import scala.language.experimental.macros
 import scala.reflect.macros.whitebox
+import scala.scalanative.native.objc.runtime.ObjCObject
 
 @compileTimeOnly("enable macro paradise to expand macro annotations")
 class ScalaObjC() extends StaticAnnotation {

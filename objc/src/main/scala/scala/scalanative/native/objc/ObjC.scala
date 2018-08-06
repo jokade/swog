@@ -1,9 +1,7 @@
-package scala.scalanative.native
+package scala.scalanative.native.objc
 
 
 import de.surfice.smacrotools.MacroAnnotationHandler
-import objc.ObjCMacroTools
-import objc.runtime.id
 
 import scala.language.experimental.macros
 import scala.annotation.{StaticAnnotation, compileTimeOnly}
