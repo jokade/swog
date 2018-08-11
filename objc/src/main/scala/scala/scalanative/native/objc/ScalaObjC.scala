@@ -35,7 +35,7 @@ object ScalaObjC {
           // add setter selectors for public vars
           exposedMembers.filter(_.provideSetter).map{m =>
             val name = genSetterSelectorName(m.name)
-            (name+":",TermName("__sel_"+name+"_"))
+            (name,genSelectorTerm(name)) //TermName("__sel_"+name))
           }
 
         val updData = MacroData(data)
@@ -259,7 +259,7 @@ object ScalaObjC {
     }
 
     private def genSetterSelectorName(name: TermName): String =
-      "set" + name.toString.head.toUpper + name.toString.tail
+      "set" + name.toString.head.toUpper + name.toString.tail + ":"
 
     object CastMode extends Enumeration {
       val Direct = Value
