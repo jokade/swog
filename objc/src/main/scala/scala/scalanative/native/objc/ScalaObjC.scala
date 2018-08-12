@@ -168,9 +168,9 @@ object ScalaObjC {
       case p: ValDef if isPublic(p.mods) =>
         val tpe =
           if(p.tpt.nonEmpty)
-            c.typecheck(p.tpt,c.TYPEmode,withMacrosDisabled = true).tpe.typeSymbol
+            c.typecheck(p.tpt,c.TYPEmode,withMacrosDisabled = true).tpe
           else
-            c.typecheck(p.rhs,c.TERMmode,withMacrosDisabled = true).tpe.typeSymbol
+            c.typecheck(p.rhs,c.TERMmode,withMacrosDisabled = true).tpe
         ExposedMember(p.name,Nil,hasParamList = false, provideSetter = p.mods.hasFlag(Flag.MUTABLE), tpe = Some(tpe) )
     }
 
@@ -278,7 +278,7 @@ object ScalaObjC {
     case class ExposedMember(name: TermName,
                              params: List[ValDef],
                              hasParamList: Boolean,
-                             tpe: Option[Symbol] = None,
+                             tpe: Option[Type] = None,
                              provideSetter: Boolean = false,
                              customSelector: Option[String] = None) {
       lazy val selector: (String,TermName) = customSelector match {
