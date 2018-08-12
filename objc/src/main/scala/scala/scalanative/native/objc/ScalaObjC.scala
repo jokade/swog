@@ -25,6 +25,8 @@ object ScalaObjC {
     override val supportsObjects: Boolean = true
     override val createCompanion: Boolean = true
 
+    val tpeRetain = typeOf[retain]
+
     override def analyze: Analysis = super.analyze andThen {
       case (cls: ClassParts, data: Data) =>
         // all public defs, vals, and vars are exposed to ObjC
@@ -171,7 +173,7 @@ object ScalaObjC {
             c.typecheck(p.tpt,c.TYPEmode,withMacrosDisabled = true).tpe
           else
             c.typecheck(p.rhs,c.TERMmode,withMacrosDisabled = true).tpe
-        ExposedMember(p.name,Nil,hasParamList = false, provideSetter = p.mods.hasFlag(Flag.MUTABLE), tpe = Some(tpe) )
+        ExposedMember(p.name,Nil,hasParamList = false, provideSetter = p.mods.hasFlag(Flag.MUTABLE), tpe = Some(tpe), retain = hasAnnotation(p.mods.annotations,tpeRetain) )
     }
 
 
@@ -195,9 +197,18 @@ object ScalaObjC {
 
     private def genExposedVarSetterProxy(cls: ClassParts)(m: ExposedMember) = {
       import m._
+      def setValue =
+        if(m.retain)
+          q"""if(o.$name != null)
+                o.$name.release()
+              o.$name = value.retain()
+           """
+        else
+        q"""o.$name = value"""
+
       q"""def ${methodProxyName(genSetterSelectorName(m.name))}(self: scalanative.native.objc.runtime.id, sel: scalanative.native.objc.runtime.SEL, value: ${m.tpe.get}) = {
             val o = scalanative.native.objc.helper.getScalaInstanceIVar[${cls.name}](self)
-            o.$name = value
+            $setValue
           }
        """
     }
@@ -280,7 +291,8 @@ object ScalaObjC {
                              hasParamList: Boolean,
                              tpe: Option[Type] = None,
                              provideSetter: Boolean = false,
-                             customSelector: Option[String] = None) {
+                             customSelector: Option[String] = None,
+                             retain: Boolean = true) {
       lazy val selector: (String,TermName) = customSelector match {
         case Some(sel) => (sel,genSelectorTerm(sel))
         case _ => genSelector(name,List(params))
