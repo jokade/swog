@@ -9,11 +9,16 @@ import scala.reflect.ClassTag
 import scala.reflect.runtime.Macros
 
 @compileTimeOnly("enable macro paradise to expand macro annotations")
-class CObj(prefix: String = null, newSuffix: String = null) extends StaticAnnotation {
+class CObj(prefix: String = null, newSuffix: String = null, namingConvention: CObj.NamingConvention.Value = CObj.NamingConvention.SnakeCase) extends StaticAnnotation {
   def macroTransform(annottees: Any*): Any = macro CObj.Macro.impl
 }
 
 object CObj {
+
+  object NamingConvention extends Enumeration {
+    val None = Value
+    val SnakeCase = Value
+  }
 
   class returnsThis extends StaticAnnotation
   class updatesThis extends StaticAnnotation
@@ -134,7 +139,7 @@ object CObj {
     private val tCObjWrapper = weakTypeOf[CObjWrapper]
     private val tRefNothing = weakTypeOf[Ref[Nothing]]
 
-    private val annotationParamNames = Seq("prefix","newSuffix","semantics")
+    private val annotationParamNames = Seq("prefix","newSuffix","namingConvention","semantics")
 
     implicit class MacroData(data: Map[String,Any]) {
       type Data = Map[String,Any]
@@ -148,6 +153,7 @@ object CObj {
       def parentIsCRef: Boolean = data.getOrElse("parentIsCRef",false).asInstanceOf[Boolean]
       def parentIsAbstract: Boolean = data.getOrElse("parentIsAbstract",false).asInstanceOf[Boolean]
       def fullName: String = data.getOrElse("fullName",false).asInstanceOf[String]
+      def namingConvention: NamingConvention.Value = data.getOrElse("namingConvention",NamingConvention.SnakeCase).asInstanceOf[NamingConvention.Value]
       def withExternalPrefix(prefix: String): Data = data.updated("externalPrefix",prefix)
       def withExternals(externals: Externals): Data = data.updated("externals",externals)
       def withConstructors(ctors: Seq[(String,Seq[Tree])]): Data = data.updated("constructors",ctors)
@@ -157,6 +163,7 @@ object CObj {
       def withParentIsCRef(flag: Boolean): Data = data.updated("parentIsCRef",flag)
       def withParentIsAbstract(flag: Boolean): Data = data.updated("parentIsAbstract",flag)
       def withFullName(name: String): Data = data.updated("fullName",name)
+      def withNamingConvention(nc: NamingConvention.Value): Data = data.updated("namingConvention",nc)
     }
 
     override def analyze: Analysis = super.analyze andThen {
@@ -217,7 +224,11 @@ object CObj {
         case Some(suffix) => extractStringConstant(suffix).get
         case None => "new"
       }
-      data.withExternalPrefix(externalPrefix).withNewSuffix(newSuffix)
+      val namingConvention = annotParams("namingConvention") match {
+        case Some(Select(_,name)) => NamingConvention.withName(name.toString)
+        case None => NamingConvention.SnakeCase
+      }
+      data.withExternalPrefix(externalPrefix).withNewSuffix(newSuffix).withNamingConvention(namingConvention)
     }
 
     // TODO: move all checks (isCRef, isAbstract, ... in here and store the results in data)
@@ -246,7 +257,7 @@ object CObj {
 
 
     private def analyzeConstructor(cls: ClassParts)(data: Data): Data = {
-      data.withConstructors( Seq( (genExternalName(data.externalPrefix,data.newSuffix),cls.params.asInstanceOf[List[ValDef]]) ) )
+      data.withConstructors( Seq( (genExternalName(data.externalPrefix,data.newSuffix,data.namingConvention),cls.params.asInstanceOf[List[ValDef]]) ) )
     }
 
     private def analyzeBody(tpe: CommonParts)(data: Data): Data = {
@@ -336,7 +347,7 @@ object CObj {
 
     private def genExternalBinding(prefix: String, scalaDef: DefDef, isInstanceMethod: Boolean, data: Data): (String,(String,Tree)) = {
       val scalaName = scalaDef.name.toString
-      val externalName = genExternalName(prefix,scalaName)
+      val externalName = genExternalName(prefix,scalaName,data.namingConvention)
       val externalParams =
         if(isInstanceMethod) scalaDef.vparamss match {
           case List(params) => List(q"val self: scalanative.native.CObj.Ref[${data.crefType}]" +: transformExternalBindingParams(params) )
@@ -434,8 +445,11 @@ object CObj {
       }
 
 
-    def genExternalName(prefix: String, scalaName: String): String =
-      prefix + scalaName.replaceAll("([A-Z])","_$1").toLowerCase
+    def genExternalName(prefix: String, scalaName: String, nc: NamingConvention.Value): String = nc match {
+      case NamingConvention.SnakeCase =>
+        prefix + scalaName.replaceAll("([A-Z])","_$1").toLowerCase
+      case _ => prefix + scalaName
+    }
 
     def genPrefixName(clsName: String): String =
       clsName.replaceAll("(.)([A-Z])","$1_$2").toLowerCase + "_"
