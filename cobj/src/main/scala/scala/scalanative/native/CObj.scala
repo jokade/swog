@@ -17,7 +17,15 @@ object CObj {
 
   object NamingConvention extends Enumeration {
     val None = Value
+    /**
+     * Upper case letters within a method name are replaced with underscores followed by the
+     * corresponding lower case letter, i.e. `fooBar` -> `foo_bar`
+     */
     val SnakeCase = Value
+    /**
+     * The first letter of the method name is transformed to upper case, i.e. `fooBar` -> `FooBar`
+     */
+    val PascalCase = Value
   }
 
   class returnsThis extends StaticAnnotation
@@ -448,6 +456,8 @@ object CObj {
     def genExternalName(prefix: String, scalaName: String, nc: NamingConvention.Value): String = nc match {
       case NamingConvention.SnakeCase =>
         prefix + scalaName.replaceAll("([A-Z])","_$1").toLowerCase
+      case NamingConvention.PascalCase =>
+        prefix + scalaName.head.toUpper + scalaName.tail
       case _ => prefix + scalaName
     }
 
