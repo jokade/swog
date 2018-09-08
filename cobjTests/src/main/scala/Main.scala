@@ -1,7 +1,7 @@
 import de.surfice.smacrotools.debug
 
-import scala.scalanative.native.CObj._
 import scalanative.native._
+import cobj._
 import CObj.implicits._
 
 object Main {

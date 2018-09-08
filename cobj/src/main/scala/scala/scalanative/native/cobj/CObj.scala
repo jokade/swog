@@ -1,4 +1,4 @@
-package scala.scalanative.native
+package scala.scalanative.native.cobj
 
 import de.surfice.smacrotools.{BlackboxMacroTools, MacroAnnotationHandler}
 
@@ -7,6 +7,7 @@ import scala.reflect.macros.{TypecheckException, blackbox, whitebox}
 import scala.language.experimental.macros
 import scala.reflect.ClassTag
 import scala.reflect.runtime.Macros
+import scalanative.native._
 
 @compileTimeOnly("enable macro paradise to expand macro annotations")
 class CObj(prefix: String = null, newSuffix: String = null, namingConvention: CObj.NamingConvention.Value = CObj.NamingConvention.SnakeCase) extends StaticAnnotation {
@@ -109,7 +110,7 @@ object CObj {
   private[native] class Macro(val c: whitebox.Context) extends MacroBase {
 
     def isMutable: Boolean = false
-    override def annotationName = "scala.scalanative.native.CObj"
+    override def annotationName = "scala.scalanative.native.cobj.CObj"
     override def supportsClasses: Boolean = true
     override def supportsTraits: Boolean = true
     override def supportsObjects: Boolean = true
@@ -120,7 +121,7 @@ object CObj {
   private[native] class MutableMacro(val c: whitebox.Context) extends MacroBase {
 
     def isMutable: Boolean = true
-    override def annotationName = "scala.scalanative.native.CObj.Mutable"
+    override def annotationName = "scala.scalanative.native.cobj.CObj.Mutable"
     override def supportsClasses: Boolean = true
     override def supportsTraits: Boolean = true
     override def supportsObjects: Boolean = true
@@ -143,7 +144,7 @@ object CObj {
     private val refPtr = q"__ref: $tPtrByte"
     private val expExtern = q"scalanative.native.extern"
     private val tCrefWrapperAnnotation = weakTypeOf[CRefWrapper]
-    private val crefWrapperAnnotation = q"new scalanative.native.CObj.CRefWrapper"
+    private val crefWrapperAnnotation = q"new scalanative.native.cobj.CObj.CRefWrapper"
     private val tCObjWrapper = weakTypeOf[CObjWrapper]
     private val tRefNothing = weakTypeOf[Ref[Nothing]]
 
@@ -210,7 +211,7 @@ object CObj {
           .updParents(genTransformedParents(cls))
       /* transform trait */
       case trt: TraitTransformData =>
-        val transformedBody = q"def __ref: scalanative.native.CObj.Ref[${trt.data.crefType}]" +: genTransformedTypeBody(trt)
+        val transformedBody = q"def __ref: scalanative.native.cobj.CObj.Ref[${trt.data.crefType}]" +: genTransformedTypeBody(trt)
         trt
           .updBody(transformedBody)
           .addAnnotations(crefWrapperAnnotation)
@@ -296,9 +297,9 @@ object CObj {
       if (cls.data.isAbstract || isMutable)
         cls.modParts.params
       else if(cls.data.parentIsCRef)
-        Seq(q"override val __ref: scalanative.native.CObj.Ref[${cls.data.crefType}]")
+        Seq(q"override val __ref: scalanative.native.cobj.CObj.Ref[${cls.data.crefType}]")
       else
-        Seq(q"val __ref: scalanative.native.CObj.Ref[${cls.data.crefType}]")
+        Seq(q"val __ref: scalanative.native.cobj.CObj.Ref[${cls.data.crefType}]")
 
     private def genTransformedTypeBody(t: TypeTransformData[TypeParts]): Seq[Tree] = {
       val companion = t.modParts.companion.get.name
@@ -307,7 +308,7 @@ object CObj {
         if(isMutable)
           Nil
         else if(isAbstract(t))
-          Seq(q"def __ref: scalanative.native.CObj.Ref[${t.data.crefType}]")
+          Seq(q"def __ref: scalanative.native.cobj.CObj.Ref[${t.data.crefType}]")
         else
           genSecondaryConstructor(t)
 //      val ctors = Seq(s"val __ref: ${t.data.crefType} = ")
@@ -346,7 +347,7 @@ object CObj {
 
     private def genBindingsObject(data: MacroData): Tree = {
       val ctors = data.constructors.map{
-        case (externalName,args) => q"def ${TermName(externalName)}(..$args): scalanative.native.CObj.Ref[${data.crefType}] = $expExtern"
+        case (externalName,args) => q"def ${TermName(externalName)}(..$args): scalanative.native.cobj.CObj.Ref[${data.crefType}] = $expExtern"
       }
       val defs = data.externals.values.map(_._2)
       q"""@scalanative.native.extern object __ext {..${ctors++defs}}"""
@@ -358,9 +359,9 @@ object CObj {
       val externalName = genExternalName(prefix,scalaName,data.namingConvention)
       val externalParams =
         if(isInstanceMethod) scalaDef.vparamss match {
-          case List(params) => List(q"val self: scalanative.native.CObj.Ref[${data.crefType}]" +: transformExternalBindingParams(params) )
+          case List(params) => List(q"val self: scalanative.native.cobj.CObj.Ref[${data.crefType}]" +: transformExternalBindingParams(params) )
           case List(inparams,outparams) =>
-            List( q"val self: scalanative.native.CObj.Ref[${data.crefType}]" +:
+            List( q"val self: scalanative.native.cobj.CObj.Ref[${data.crefType}]" +:
               (transformExternalBindingParams(inparams) ++ transformExternalBindingParams(outparams,true)) )
           case _ =>
             c.error(c.enclosingPosition,"extern methods with more than two parameter lists are not supported for @CObj classes")
@@ -414,7 +415,7 @@ object CObj {
         if(isNullable)
           q"""val res = $tree; if(res == null) null else new $tpt($tree.cast[scalanative.native.CObj.Ref[Nothing]])"""
         else
-          q"""new $tpt($tree.cast[scalanative.native.CObj.Ref[Nothing]])"""
+          q"""new $tpt($tree.cast[scalanative.native.cobj.CObj.Ref[Nothing]])"""
         //        q"""${getType(tpt,true).companion}.wrap($tree.cast[scalanative.native.CObj.Ref[Nothing]])"""
       }
       else tree
@@ -447,7 +448,7 @@ object CObj {
         val typed = getType(tpt,true)
         // TODO: do we still need the check for tCRef (or can we only check for tCObjWrapper)
         typed.baseClasses.map(_.asType.toType).exists( t => t <:< tCRef || t <:< tCObjWrapper) ||
-          this.findAnnotation(typed.typeSymbol,"scalanative.native.CObj.CRefWrapper").isDefined
+          this.findAnnotation(typed.typeSymbol,"scalanative.native.cobj.CObj.CRefWrapper").isDefined
       } catch {
         case ex: TypecheckException => false
       }
@@ -480,13 +481,13 @@ object CObj {
     }
 
     private def returnsThis(m: DefDef): Boolean =
-      findAnnotation(m.mods.annotations,"scala.scalanative.native.CObj.returnsThis").isDefined
+      findAnnotation(m.mods.annotations,"scala.scalanative.native.cobj.CObj.returnsThis").isDefined
 
     private def updatesThis(m: DefDef): Boolean =
-      findAnnotation(m.mods.annotations,"scala.scalanative.native.CObj.updatesThis").isDefined
+      findAnnotation(m.mods.annotations,"scala.scalanative.native.cobj.CObj.updatesThis").isDefined
 
     private def nullable(m: DefDef): Boolean =
-      findAnnotation(m.mods.annotations,"scala.scalanative.native.CObj.nullable").isDefined
+      findAnnotation(m.mods.annotations,"scala.scalanative.native.cobj.CObj.nullable").isDefined
   }
 
 
