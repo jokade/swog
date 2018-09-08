@@ -359,6 +359,7 @@ object CObj {
       val externalName = genExternalName(prefix,scalaName,data.namingConvention)
       val externalParams =
         if(isInstanceMethod) scalaDef.vparamss match {
+          case Nil => List(List(q"val self: scalanative.native.cobj.CObj.Ref[${data.crefType}]"))
           case List(params) => List(q"val self: scalanative.native.cobj.CObj.Ref[${data.crefType}]" +: transformExternalBindingParams(params) )
           case List(inparams,outparams) =>
             List( q"val self: scalanative.native.cobj.CObj.Ref[${data.crefType}]" +:
@@ -368,9 +369,10 @@ object CObj {
             ???
         }
         else scalaDef.vparamss match {
+          case Nil => List(Nil)
           case List(params) => List(transformExternalBindingParams(params))
           case List(inparams,outparams) => List(transformExternalBindingParams(inparams++outparams))
-          case _ =>
+          case x =>
             c.error(c.enclosingPosition,"extern methods with more than two parameter lists are not supported for @CObj classes")
             ???
         }
@@ -397,7 +399,8 @@ object CObj {
       val call = args match {
         case Some(as) if isClassMethod => q"__ext.$external(..$as)"
         case Some(as) => q"__ext.$external(__ref,..$as)"
-        case None => q"__ext.$external"
+        case None if isClassMethod => q"__ext.$external"
+        case None => q"__ext.$external(__ref)"
       }
       val rhs =
         if(returnsThis(scalaDef))
