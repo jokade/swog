@@ -1,7 +1,10 @@
 
 
+import de.surfice.smacrotools.debug
+
 import scalanative.native._
 import objc._
+import scala.scalanative.native.objc.runtime.ObjCObject
 
 object Main {
 
@@ -9,4 +12,12 @@ object Main {
 
   }
 
+}
+
+@ScalaObjC
+@debug
+class Foo(self: ObjCObject) {
+  var foo: ObjCObject = _
+
+  def bar: ObjCObject = ???
 }

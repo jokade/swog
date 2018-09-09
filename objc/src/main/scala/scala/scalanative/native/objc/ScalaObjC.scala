@@ -93,7 +93,9 @@ object ScalaObjC {
 
       val exposedVarSetters = exposedMembers
         .filter(_.provideSetter)
-        .map(m => registerExposedMember(m.copy(name = TermName(genSetterSelectorName(m.name)), params = List(ValDef(null,m.name,null,null)))) )
+        .map(m =>
+          registerExposedMember(
+            m.copy(name = TermName(genSetterSelectorName(m.name)), params = List(ValDef(null,m.name,null,null)), isSetter = true)) )
 
       q"""import scalanative.native._
           import objc.runtime._
@@ -132,7 +134,7 @@ object ScalaObjC {
     }
 
     private def registerExposedMember(m: ExposedMember): Tree = {
-      val typeEncoding = cstring( "@@:" + m.params.map(genTypeEncoding).mkString )
+      val typeEncoding = cstring( genTypeEncoding(m) )
       q"""class_addMethod(newCls,${m.selector._2},${exposedMethodCast(m)},$typeEncoding)"""
     }
 
@@ -166,7 +168,8 @@ object ScalaObjC {
 
     private def getExposedMembers(body: Seq[Tree]): Seq[ExposedMember] = body collect {
       case m: DefDef if isPublic(m.mods) =>
-        ExposedMember(m.name,m.vparamss.headOption.getOrElse(Nil),m.vparamss.nonEmpty, customSelector = findCustomSelector(m.mods.annotations))
+        val returnType = getType(m.tpt)
+        ExposedMember(m.name,m.vparamss.headOption.getOrElse(Nil),m.vparamss.nonEmpty, tpe = Some(returnType), customSelector = findCustomSelector(m.mods.annotations))
       case p: ValDef if isPublic(p.mods) =>
         val tpe =
           if(p.tpt.nonEmpty)
@@ -213,7 +216,21 @@ object ScalaObjC {
        """
     }
 
-    private def genTypeEncoding(p: ValDef) = "@"
+    private def genTypeEncoding(m: ExposedMember): String = {
+      val returnType =
+        if(m.isSetter) "v"
+        else genTypeCode(m.tpe)
+
+      returnType + "@:" + m.params.map(genTypeCode).mkString
+    }
+
+    private def genTypeCode(p: ValDef): String = genTypeCode(p.tpe)
+
+    private def genTypeCode(tpe: Option[Type]): String =
+      if(tpe.isEmpty) "v"
+      else genTypeCode(tpe.get)
+
+    private def genTypeCode(tpe: Type): String = "@"
 
     private val _extern = q"scalanative.native.extern"
 
@@ -292,7 +309,8 @@ object ScalaObjC {
                              tpe: Option[Type] = None,
                              provideSetter: Boolean = false,
                              customSelector: Option[String] = None,
-                             retain: Boolean = true) {
+                             retain: Boolean = true,
+                             isSetter: Boolean = false) {
       lazy val selector: (String,TermName) = customSelector match {
         case Some(sel) => (sel,genSelectorTerm(sel))
         case _ => genSelector(name,List(params))
