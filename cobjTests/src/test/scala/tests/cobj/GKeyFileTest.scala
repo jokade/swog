@@ -3,8 +3,8 @@ package tests.cobj
 import de.surfice.smacrotools.debug
 import utest._
 
-import scala.scalanative.native.CObj.Out
 import scala.scalanative.native._
+import cobj._
 
 object GKeyFileTest extends TestSuite {
   val tests = Tests {

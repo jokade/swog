@@ -2,7 +2,6 @@ import de.surfice.smacrotools.debug
 
 import scalanative.native._
 import cobj._
-import CObj.implicits._
 
 object Main {
 
@@ -16,7 +15,7 @@ object Main {
 @debug
 class Foo[T](var __ref: Ref[Byte]) extends CObjWrapper {
 //  @CObj.updatesThis
-  @CObj.nullable
+  @nullable
   def foo(): Foo[T] = extern
 }
 
