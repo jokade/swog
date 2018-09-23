@@ -20,6 +20,11 @@ object CObj {
   }
 
 
+  trait CRef[T] {
+    def __ref: Ref[T]
+  }
+
+
   trait CRefVoid extends CRef[Byte]
 
   class CRefWrapper extends StaticAnnotation
@@ -358,7 +363,9 @@ object CObj {
     private def transformExternalCallArgs(args: Seq[ValDef], outArgs: Boolean = false): Seq[Tree] = {
       args map {
         // TODO: currently crashes due to https://github.com/scala-native/scala-native/issues/1142
-        case ValDef(_,name,tpt,_) if isCRefWrapper(tpt) || outArgs => q"$name.__ref.cast[$tPtrByte]"
+        case ValDef(_,name,tpt,_) if isCRefWrapper(tpt) || outArgs =>
+          //q"$name.__ref.cast[$tPtrByte]"
+          q"""if($name==null) null else $name.__ref.cast[$tPtrByte]"""
         case ValDef(_,name,AppliedTypeTree(tpe,_),_) if tpe.toString == "_root_.scala.<repeated>" => q"$name:_*"
         case ValDef(_,name,tpt,_) => q"$name"
       }
