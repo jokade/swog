@@ -5,6 +5,7 @@ import scalanative.native._
 import objc._
 import runtime._
 import utest._
+import foundation._
 
 object ObjCTest extends TestSuite {
 
@@ -31,37 +32,6 @@ object ObjCTest extends TestSuite {
     }
   }
 
-  @ObjC
-  @debug
-  class NSObject {
-    @inline def `class`: id = extern
-    @inline def hash: UInt = extern
-    @inline def init(): this.type = extern
-    @inline def retain(): this.type = extern
-  }
-
-  @ObjCClass
-  abstract class NSObjectClass {
-    type InstanceType
-    def __cls: id
-    def alloc(): InstanceType = extern
-  }
-
-  object NSObject extends NSObjectClass {
-    override type InstanceType = NSObject
-  }
-
-  @ObjC
-  class NSString extends NSObject {
-    def length: ULong = extern
-    def initWithUTF8String_(nullTerminatedString: CString): NSString = extern
-    def stringByPaddingToLength_withString_startingAtIndex_(newLength: Long, padString: NSString, padIndex: ULong): NSString = extern
-  }
-
-  abstract class NSStringClass extends NSObjectClass {
-    override type InstanceType = NSString
-    def __cls: id
-  }
-
-  object NSString extends NSStringClass
 }
+
+

@@ -5,7 +5,10 @@ import objc._
 
 @ObjC
 class NSString extends NSObject {
-  @inline def UTF8String(): Ptr[CSignedChar] = extern
+  def UTF8String(): Ptr[CSignedChar] = extern
+  def length: ULong = extern
+  def initWithUTF8String_(nullTerminatedString: CString): NSString = extern
+  def stringByPaddingToLength_withString_startingAtIndex_(newLength: Long, padString: NSString, padIndex: ULong): NSString = extern
 }
 
 @ObjCClass

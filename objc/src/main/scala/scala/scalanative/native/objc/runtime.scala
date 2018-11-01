@@ -15,7 +15,8 @@ object runtime {
   type int32_t = CInt
   type int64_t = CLong
 
-  trait ObjCObject
+  trait ObjCObject {
+  }
 
   type BOOL = Boolean
 

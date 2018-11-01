@@ -52,6 +52,14 @@ object ScalaObjC {
 
 
     override def transform: Transformation = super.transform andThen {
+      case cls: ClassTransformData =>
+        val self = cls.modParts.params.head match {
+          case x:ValDef => x
+        }
+        val updParents = cls.modParts.parents.map( getType(_,false) ).map {
+          x => q"$x(${self.name}.cast[scalanative.native.Ptr[Byte]])"
+        }
+        cls.updParents(updParents)
       /* transform companion object */
       case obj: ObjectTransformData =>
         val objcCls =
@@ -77,6 +85,7 @@ object ScalaObjC {
           .map(p => genSelectorDef(p._1, p._2))
         val transformedBody = Seq(ccastImport, objcCls) ++ selectorDefs ++ objStmts ++ obj.data.additionalCompanionStmts
         obj.updBody(transformedBody)
+      /* default */
       case default => default
     }
 
