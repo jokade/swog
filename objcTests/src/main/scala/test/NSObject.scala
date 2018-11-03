@@ -8,6 +8,7 @@ import scala.scalanative.native.objc.runtime.{ObjCObject, id}
 class NSObject extends ObjCObject {
   @returnsThis
   def self(): this.type = extern
+  def description(): NSString = extern
 }
 
 @ObjCClass

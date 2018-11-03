@@ -42,6 +42,8 @@ object ext {
 @debug
 class MyClass(self: id) extends NSObject {
   def foo(): Unit = {
+    val s = $super[NSObject,NSString](self)(_.description())
+    Main.NSLog(NSString(c"%@"),s)
     println("FOO")
   }
 }

@@ -217,15 +217,19 @@ object ScalaObjC {
     private def genExposedVarSetterProxy(cls: ClassParts)(m: ExposedMember) = {
       import m._
       def setValue =
-        if(m.retain)
+        if(m.retain) {
+          val result = wrapResult(q"value.retain()",tpe)
           q"""if(o.$name != null)
                 o.$name.release()
-              o.$name = value.retain()
+              o.$name = $result
            """
-        else
-        q"""o.$name = value"""
+        }
+        else {
+          val result = wrapResult(q"value",tpe)
+          q"""o.$name = $result"""
+        }
 
-      q"""def ${methodProxyName(genSetterSelectorName(m.name))}(self: scalanative.native.objc.runtime.id, sel: scalanative.native.objc.runtime.SEL, value: ${m.tpe.get}) = {
+      q"""def ${methodProxyName(genSetterSelectorName(m.name))}(self: scalanative.native.objc.runtime.id, sel: scalanative.native.objc.runtime.SEL, value: scalanative.native.objc.runtime.id) = {
             val o = scalanative.native.objc.helper.getScalaInstanceIVar[${cls.name}](self)
             $setValue
           }
@@ -286,16 +290,24 @@ object ScalaObjC {
     }
 
     private def genWrapperImplicit(tpe: TypeName, tparams: Seq[Tree]): Tree =
-      if(tparams.isEmpty)
-        q"""implicit object __wrapper extends scalanative.native.objc.ObjCWrapper[$tpe] {
+      tparams.size match {
+        case 0 =>
+          q"""implicit object __wrapper extends scalanative.native.objc.ObjCWrapper[$tpe] {
             def __wrap(ptr: scalanative.native.Ptr[Byte]) = scalanative.native.objc.helper.getScalaInstanceIVar[$tpe](ptr)
           }
-       """
-      else
-        q"""implicit object __wrapper extends scalanative.native.objc.ObjCWrapper[$tpe[_]] {
+          """
+        case 1 =>
+          q"""implicit object __wrapper extends scalanative.native.objc.ObjCWrapper[$tpe[_]] {
             def __wrap(ptr: scalanative.native.Ptr[Byte]) = scalanative.native.objc.helper.getScalaInstanceIVar[$tpe[_]](ptr)
           }
-       """
+          """
+        case 2 =>
+          q"""implicit object __wrapper extends scalanative.native.objc.ObjCWrapper[$tpe[_,_]] {
+            def __wrap(ptr: scalanative.native.Ptr[Byte]) = scalanative.native.objc.helper.getScalaInstanceIVar[$tpe[_,_]](ptr)
+          }
+          """
+      }
+
 
     // As of scala-native 0.3.2, casting from unsigned (UInt, ULong, ...) to signed (CInt, CLong, ...)
     // is not supported. Hence we need to add an additional cast to Object in these cases.

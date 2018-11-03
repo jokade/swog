@@ -111,8 +111,10 @@ trait ObjCMacroTools extends CommonMacroTools {
 
   protected[this] def isObjCObject(tpt: Tree): Boolean = isObjCObject(getObjCType(tpt))
 
-  protected[this] def isObjCObject(tpe: Option[Type]): Boolean =
-    tpe.exists(_.baseClasses.map(_.asType.toType).exists( t => t <:< tObjCObject ))
+  protected[this] def isObjCObject(tpe: Option[Type]): Boolean = tpe match {
+    case Some(t) => t.baseClasses.map(_.asType.toType).exists( t => t <:< tObjCObject )
+    case _ => true
+  }
 
 //  protected[this] def isAnyVal(tpe: Option[Type]): Boolean = tpe.exists(_ <:< tAnyVal)
 

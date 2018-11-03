@@ -132,16 +132,23 @@ object ObjC {
     }
 
     private def genWrapperImplicit(tpe: TypeName, tparams: Seq[Tree]): Tree =
-      if(tparams.isEmpty)
-        q"""implicit object __wrapper extends scalanative.native.objc.ObjCWrapper[$tpe] {
+      tparams.size match {
+        case 0 =>
+          q"""implicit object __wrapper extends scalanative.native.objc.ObjCWrapper[$tpe] {
             def __wrap(ptr: scalanative.native.Ptr[Byte]) = new $tpe(ptr)
           }
-       """
-      else
-        q"""implicit object __wrapper extends scalanative.native.objc.ObjCWrapper[$tpe[_]] {
+          """
+        case 1 =>
+          q"""implicit object __wrapper extends scalanative.native.objc.ObjCWrapper[$tpe[_]] {
             def __wrap(ptr: scalanative.native.Ptr[Byte]) = new $tpe(ptr)
           }
-       """
+          """
+        case 2 =>
+          q"""implicit object __wrapper extends scalanative.native.objc.ObjCWrapper[$tpe[_,_]] {
+            def __wrap(ptr: scalanative.native.Ptr[Byte]) = new $tpe(ptr)
+          }
+          """
+      }
 
     private def transformCtorParams(params: Seq[Tree]): Seq[Tree] =
       if(isObjCClass) Nil
