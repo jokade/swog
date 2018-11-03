@@ -170,11 +170,6 @@ object ObjC {
     private def useWrapper(m: DefDef): Boolean =
       findAnnotation(m.mods.annotations,"scala.scalanative.native.objc.useWrapper").isDefined
 
-    //  private def wrapResult(result: Tree, resultType: Tree): Tree =
-    //    if( isObjCObject(resultType) )
-    //      q"new $resultType($result)"
-    //    else
-    //      q"$result.cast[$resultType]"
 
     private def genCall(target: TermName, selectorVal: TermName, scalaDef: DefDef): Tree =
       genCall(q"$target",q"$selectorVal",scalaDef)

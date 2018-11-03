@@ -40,12 +40,20 @@ object ScalaObjC {
             (name,genSelectorTerm(name)) //TermName("__sel_"+name))
           }
 
+        // generate implicit wrapper if class is not abstract
+        val companionStmts =
+          if( cls.isClass && !cls.modifiers.hasFlag(Flag.ABSTRACT) )
+            List(genWrapperImplicit(cls.name,cls.tparams))
+          else
+            Nil
+
         val updData = MacroData(data)
         updData.selectors = data.selectors ++ selectors
         updData.objcClassInits = allocDef(cls) ++
           objcClassDef(cls,exposedMembers) ++
           (exposedMembers map genExposedMethodProxy(cls)) ++
           (exposedMembers filter(_.provideSetter) map genExposedVarSetterProxy(cls))
+        updData.additionalCompanionStmts = companionStmts
         (cls,updData.data)
       case x => x
     }
@@ -130,14 +138,13 @@ object ScalaObjC {
           c.error(c.enclosingPosition,s"ScalaObjC classes must have exactly one constructor argument (self)")
           ???
       }
-      q"""def __allocWithZone(clsObj: objc.runtime.id, sel: objc.runtime.SEL, zone: objc.runtime.id): $proxyType = {
+      q"""def __allocWithZone(clsObj: objc.runtime.id, sel: objc.runtime.SEL, zone: objc.runtime.id): id = {
             import scalanative.native.objc
             import objc.helper._
             val ref = objc.helper.msgSendSuper1(clsObj,sel_allocWithZone,zone)
-            val proxy = ref.cast[$proxyType]
-            val instance = new $clsName(proxy)
+            val instance = new $clsName(ref)
             setScalaInstanceIVar(ref,instance)
-            proxy
+            ref
           }
        """
     }
@@ -277,6 +284,18 @@ object ScalaObjC {
           q"scalanative.native.objc.runtime.objc_msgSend($target,$selectorVal,..$argnames).cast[Object].asInstanceOf[$rettype]"
       }
     }
+
+    private def genWrapperImplicit(tpe: TypeName, tparams: Seq[Tree]): Tree =
+      if(tparams.isEmpty)
+        q"""implicit object __wrapper extends scalanative.native.objc.ObjCWrapper[$tpe] {
+            def __wrap(ptr: scalanative.native.Ptr[Byte]) = scalanative.native.objc.helper.getScalaInstanceIVar[$tpe](ptr)
+          }
+       """
+      else
+        q"""implicit object __wrapper extends scalanative.native.objc.ObjCWrapper[$tpe[_]] {
+            def __wrap(ptr: scalanative.native.Ptr[Byte]) = scalanative.native.objc.helper.getScalaInstanceIVar[$tpe[_]](ptr)
+          }
+       """
 
     // As of scala-native 0.3.2, casting from unsigned (UInt, ULong, ...) to signed (CInt, CLong, ...)
     // is not supported. Hence we need to add an additional cast to Object in these cases.

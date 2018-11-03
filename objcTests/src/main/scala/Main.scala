@@ -5,6 +5,7 @@ import test._
 
 import scalanative.native._
 import objc._
+import scala.scalanative.native.objc.runtime.id
 
 object Main {
 //  implicit object NSStringWrapper extends Wrapper[NSString] {
@@ -12,17 +13,20 @@ object Main {
 //  }
 
   def main(args: Array[String]): Unit = Zone { implicit z =>
-    val array = NSMutableArray.array[NSString]()
-    array.addObject_(NSString(c"Hello"))
-    array.addObject_(NSString(c"World"))
-    array(1) = NSString(c"FOO")
+//    val array = NSMutableArray.array[NSString]()
+//    array.addObject_(NSString(c"Hello"))
+//    array.addObject_(NSString(c"World"))
+//    array(1) = NSString(c"FOO")
 //    array.addObject_(str)
 //    stdio.printf(c"%x\n",foo.__ptr)
 //    ext.NSLog(str.__ptr,array.objectAtIndex_(0.toUInt).__ptr)
-    NSLog(NSString(c"%@"),array)
-    val d = NSString(c"42.0")
-    println( d.doubleValue() )
-    println( d.floatValue() )
+//    NSLog(NSString(c"%@"),array)
+//    val d = NSString(c"42.0")
+//    println( d.doubleValue() )
+//    println( d.floatValue() )
+    val my = MyClass.alloc()
+    my.foo()
+    NSLog(NSString(c"%@"),my)
     println("DONE")
   }
 
@@ -34,5 +38,14 @@ object ext {
   def NSLog(format: Ptr[Byte], args: CVararg*): Unit = extern
 }
 
+@ScalaObjC
+@debug
+class MyClass(self: id) extends NSObject {
+  def foo(): Unit = {
+    println("FOO")
+  }
+}
 
-
+object MyClass extends NSObjectClass {
+  override type InstanceType = MyClass
+}

@@ -124,9 +124,12 @@ trait ObjCMacroTools extends CommonMacroTools {
   protected[this] def wrapResult(result: Tree, resultType: Option[Type]): Tree = {
     if (isObjCObject(resultType))
       q"new ${resultType.get}($result)"
+    else if (resultType.isDefined)
+      q"$result.cast[${resultType.get}]"
     else
       q"$result"
   }
+
 
 
 }
