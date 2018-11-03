@@ -12,8 +12,8 @@ package object objc {
 
   var defaultRootObject: ClassPtr = runtime.objc_getClass(c"NSObject")
 
-  implicit def function2Block1[T1,R](f: (Block,T1) => R): Block1[T1,R] = macro Block.Macros.blockImpl
-  implicit def function2Block2[T1,T2,R](f: (Block,T1,T2) => R): Block2[T1,T2,R] = macro Block.Macros.blockImpl
+//  implicit def function2Block1[T1,R](f: (Block,T1) => R): Block1[T1,R] = macro Block.Macros.blockImpl
+//  implicit def function2Block2[T1,T2,R](f: (Block,T1,T2) => R): Block2[T1,T2,R] = macro Block.Macros.blockImpl
 
   def $super[T,R](self: T)(f: T=>R): R = macro Macros.superImpl
 }

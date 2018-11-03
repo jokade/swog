@@ -5,6 +5,7 @@ import de.surfice.smacrotools.debug
 import scalanative.native._
 import objc._
 import scala.scalanative.native.objc.runtime.{ObjCObject, id}
+import scala.scalanative.objc.{ObjC, ObjCClass}
 
 @ObjC
 @debug

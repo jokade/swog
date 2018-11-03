@@ -1,4 +1,4 @@
-addSbtPlugin("org.scala-native" % "sbt-scala-native" % "0.3.8")
+addSbtPlugin("org.scala-native" % "sbt-scala-native" % "0.3.9-SNAPSHOT")
 
 addSbtPlugin("org.xerial.sbt" % "sbt-sonatype" % "1.1")
 

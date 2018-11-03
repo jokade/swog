@@ -1,41 +1,35 @@
 
 
 import de.surfice.smacrotools.debug
+import test._
 
 import scalanative.native._
 import objc._
-import scala.scalanative.native.objc.runtime.ObjCObject
 
 object Main {
+//  implicit object NSStringWrapper extends Wrapper[NSString] {
+//    override def wrap(ptr: Ptr[Byte]): NSString = new NSString(ptr)
+//  }
 
   def main(args: Array[String]): Unit = Zone { implicit z =>
-    val foo = Foo.alloc()
+    val array = NSMutableArray.array[NSString]()
+    array.addObject_(NSString(c"Hello"))
+    array.addObject_(NSString(c"World"))
+    array(1) = NSString(c"FOO")
+//    array.addObject_(str)
+//    stdio.printf(c"%x\n",foo.__ptr)
+//    ext.NSLog(str.__ptr,array.objectAtIndex_(0.toUInt).__ptr)
+    NSLog(NSString(c"%@"),array)
+    println("DONE")
   }
 
+  def NSLog(format: NSString, arg1: NSObject): Unit = ext.NSLog(format.__ptr,arg1.__ptr)
 }
 
-//@ObjC
-//@debug
-//class Foo extends ObjCObject
-//
-//@ObjC
-//@debug
-//class Bar extends Foo {
-//  def foo(): Unit = extern
-//
-//}
-
-@ObjC
-class NSObject extends ObjCObject
-
-@ScalaObjC
-@debug
-class Foo(self: ObjCObject) extends NSObject {
-  def foo(): Unit = {
-
-  }
+@extern
+object ext {
+  def NSLog(format: Ptr[Byte], args: CVararg*): Unit = extern
 }
 
-object Foo extends ObjCObject {
-  def alloc(): Foo = extern
-}
+
+

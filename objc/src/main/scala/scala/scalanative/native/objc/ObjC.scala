@@ -1,12 +1,10 @@
 package scala.scalanative.native.objc
 
-
 import de.surfice.smacrotools.MacroAnnotationHandler
 
-import scala.language.experimental.macros
 import scala.annotation.{StaticAnnotation, compileTimeOnly}
-import scala.reflect.macros.{TypecheckException, whitebox}
-import scala.scalanative.native.objc.runtime.ObjCObject
+import scala.language.experimental.macros
+import scala.reflect.macros.whitebox
 
 @compileTimeOnly("enable macro paradise to expand macro annotations")
 class ObjC() extends StaticAnnotation {
@@ -34,7 +32,7 @@ object ObjC {
 
   private[native] abstract class BaseMacro
     extends MacroAnnotationHandler
-    with ObjCMacroTools {
+      with ObjCMacroTools {
 
     import c.universe._
 
@@ -46,17 +44,24 @@ object ObjC {
     override val supportsObjects: Boolean = true
     override val createCompanion: Boolean = true
 
-    private val tObjCObject = c.weakTypeOf[ObjCObject]
     private val wrapperAnnot = q"new scalanative.native.objc.ObjC.Wrapper"
 
     override def analyze: Analysis = super.analyze andThen {
       case (cls: TypeParts, data) =>
+        val companionStmts =
+          if( cls.isClass && !cls.modifiers.hasFlag(Flag.ABSTRACT) )
+            List(genWrapperImplicit(cls.name,cls.tparams))
+          else
+            Nil
         // collect selectors to be emitted into companion object body
         val selectors = cls.body.collect {
           case DefDef(mods, name, types, args, rettype, rhs) if isExtern(rhs) =>
             genSelector(name, args)
         }
-        (cls, data.selectors = data.selectors ++ selectors)
+        (cls,
+          data
+            .withSelectors(selectors)
+            .withAdditionalCompanionStmts(companionStmts) )
       case default => default
     }
 
@@ -81,9 +86,9 @@ object ObjC {
                 val selectorTerm = q"${cls.modParts.name.toTermName}.${genSelector(name, args)._2}"
                 val call =
                   if(isObjCClass)
-                    genCall(q"__cls", selectorTerm, args, rettype)
+                    genCall(q"__cls", selectorTerm,t)
                   else
-                    genCall(q"this.__ptr", selectorTerm, args, rettype)
+                    genCall(q"this.__ptr",selectorTerm,t)
                 DefDef(mods, name, types, args, rettype, call)
               case x => x
             }
@@ -93,7 +98,7 @@ object ObjC {
           .updCtorParams(ctorParams)
           .updParents(parents)
           .updBody(ccastImport +: transformedBody)
-          .updCtorMods(Modifiers(Flag.PROTECTED))  // ensure that the class can't be instatiated using new
+      //.updCtorMods(Modifiers(Flag.PROTECTED))  // ensure that the class can't be instatiated using new
 
       /* transform companion object */
       case obj: ObjectTransformData =>
@@ -112,7 +117,7 @@ object ObjC {
           .map {
             case t@DefDef(mods, name, types, args, rettype, Ident(TermName("extern"))) =>
               val sel = genSelector(name, args)
-              val call = genCall(clsTarget, sel._2, args, rettype) //q"objc.objc_msgSend(_cls,$selectorVal,${paramNames(t)})"
+              val call = genCall(clsTarget, sel._2, t) //q"objc.objc_msgSend(_cls,$selectorVal,${paramNames(t)})"
               (Some(sel), DefDef(mods, name, types, args, rettype, call))
             case stmt => (None, stmt)
           }.unzip
@@ -126,9 +131,21 @@ object ObjC {
       case default => default
     }
 
+    private def genWrapperImplicit(tpe: TypeName, tparams: Seq[Tree]): Tree =
+      if(tparams.isEmpty)
+        q"""implicit object __wrapper extends scalanative.native.objc.ObjCWrapper[$tpe] {
+            def __wrap(ptr: scalanative.native.Ptr[Byte]) = new $tpe(ptr)
+          }
+       """
+      else
+        q"""implicit object __wrapper extends scalanative.native.objc.ObjCWrapper[$tpe[_]] {
+            def __wrap(ptr: scalanative.native.Ptr[Byte]) = new $tpe(ptr)
+          }
+       """
+
     private def transformCtorParams(params: Seq[Tree]): Seq[Tree] =
       if(isObjCClass) Nil
-      else Seq(q"private[this] val __ptr: Ptr[Byte]")
+      else Seq(q"override val __ptr: Ptr[Byte]")
 
     private def transformParents(parents: Seq[Tree]): Seq[Tree] =
       if(isObjCClass) parents
@@ -147,60 +164,41 @@ object ObjC {
         false
     }
 
+    private def returnsThis(m: DefDef): Boolean =
+      findAnnotation(m.mods.annotations,"scala.scalanative.native.objc.returnsThis").isDefined
 
-    private def genCall(target: TermName, selectorVal: TermName, argsList: List[List[ValDef]], rettype: Tree): Tree =
-      genCall(q"$target", q"$selectorVal", argsList, rettype)
+    private def useWrapper(m: DefDef): Boolean =
+      findAnnotation(m.mods.annotations,"scala.scalanative.native.objc.useWrapper").isDefined
 
+    //  private def wrapResult(result: Tree, resultType: Tree): Tree =
+    //    if( isObjCObject(resultType) )
+    //      q"new $resultType($result)"
+    //    else
+    //      q"$result.cast[$resultType]"
 
-    private def genCall(target: Tree, selectorVal: Tree, argsList: List[List[ValDef]], rettype: Tree): Tree = {
-      val argnames = argsList match {
+    private def genCall(target: TermName, selectorVal: TermName, scalaDef: DefDef): Tree =
+      genCall(q"$target",q"$selectorVal",scalaDef)
+
+    private def genCall(target: Tree, selectorVal: Tree, scalaDef: DefDef): Tree = {
+      val args = scalaDef.vparamss match {
         case Nil => Nil
-        case List(args) => args map {
-          case t@ValDef(_, name, tpe, _) =>
-            // TODO: do we really need this casting? without, the NIR compiler complains about a missing type tag
-            castMode(tpe) match {
-              case CastMode.TypeArg =>
-                q"$name.asInstanceOf[AnyRef]"
-              case _ => q"$name"
-            }
+        case List(argdefs) => argdefs map {
+          case t@ValDef(_, name, tpt, _) =>
+            if (isObjCObject(tpt))
+              q"$name.__ptr"
+            else q"$name"
         }
         case x =>
           c.error(c.enclosingPosition, "multiple parameter lists not supported for ObjC classes")
           ???
       }
-      // TODO: check if intermediate casting is still required
-      castMode(rettype) match {
-        case CastMode.Direct =>
-          q"scalanative.native.objc.runtime.objc_msgSend($target,$selectorVal,..$argnames).cast[$rettype]"
-        case CastMode.Object =>
-          q"scalanative.native.objc.runtime.objc_msgSend($target,$selectorVal,..$argnames).cast[Object].cast[$rettype]"
-        case CastMode.InstanceOf | CastMode.TypeArg =>
-          q"scalanative.native.objc.runtime.objc_msgSend($target,$selectorVal,..$argnames).cast[Object].asInstanceOf[$rettype]"
-      }
-    }
-
-    // As of scala-native 0.3.2, casting from unsigned (UInt, ULong, ...) to signed (CInt, CLong, ...)
-    // is not supported. Hence we need to add an additional cast to Object in these cases.
-    private def castMode(rettype: Tree): CastMode.Value = try{
-      getQualifiedTypeName(rettype, withMacrosDisabled = true, dealias = true) match {
-        case "Boolean" | "Int" | "Long" | "Short" |
-             "scala.scalanative.native.UShort" =>
-          CastMode.Object
-        case "Float" | "Double" =>
-          CastMode.InstanceOf
-        case x =>
-          CastMode.Direct
-      }
-      // TODO: we shouldn't need this catch - can we avoid this Excpetion?
-    } catch {
-      case _: Throwable => CastMode.TypeArg
-    }
-
-    object CastMode extends Enumeration {
-      val Direct = Value
-      val Object = Value
-      val InstanceOf = Value
-      val TypeArg  = Value
+      val call = q"scalanative.native.objc.runtime.objc_msgSend($target,$selectorVal,..$args)"
+      if( returnsThis(scalaDef) )
+        q"$call;this"
+      else if ( useWrapper(scalaDef) )
+        q"__wrapper.__wrap($call)"
+      else
+        wrapResult(call,scalaDef.tpt)
     }
 
   }

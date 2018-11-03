@@ -20,7 +20,7 @@ sealed trait Block8[T1,T2,T3,T4,T5,T6,T7,T8,R] extends Block
 sealed trait Block9[T1,T2,T3,T4,T5,T6,T7,T8,T9,R] extends Block
 
 object Block {
-
+/*
   protected[objc] type BlockStruct = CStruct6[Ptr[Byte],CInt,CInt,Ptr[Byte],Ptr[Byte],Ptr[Byte]]
 
   @inline def apply[R](f: CFunctionPtr1[Block,R])(implicit ba: BlockAlloc): Block0[R] =
@@ -179,4 +179,5 @@ object Block {
       }
 
   }
+  */
 }

@@ -2,6 +2,7 @@ package tests.objc.foundation
 
 import scalanative.native._
 import objc._
+import scala.scalanative.objc.{ObjC, ObjCClass}
 
 @ObjC
 class NSString extends NSObject {

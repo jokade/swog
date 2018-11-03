@@ -2,6 +2,7 @@ package scala.scalanative.native.objc
 
 import scala.scalanative.native._
 import objc.runtime._
+import scala.scalanative.libc.stdlib
 
 object reflect {
 

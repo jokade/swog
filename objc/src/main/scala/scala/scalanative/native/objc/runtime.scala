@@ -15,7 +15,9 @@ object runtime {
   type int32_t = CInt
   type int64_t = CLong
 
+
   trait ObjCObject {
+    def __ptr: Ptr[Byte] = null
   }
 
   type BOOL = Boolean
@@ -167,6 +169,17 @@ object runtime {
 
 
   def objc_msgSend(self: Any, op: SEL, args: native.CVararg*): id = extern
+//  def objc_msgSend(self: Any, op: SEL): id = extern
+//  def objc_msgSend(self: Any, op: SEL, arg1: Any): id = extern
+//  def objc_msgSend(self: Any, op: SEL, arg1: Any, arg2: Any): id = extern
+//
+//  def objc_msgSend(self: Any, op: SEL, arg1: Any, arg2: Any, arg3: Any): id = extern
+//  def objc_msgSend(self: Any, op: SEL, arg1: Any, arg2: Any, arg3: Any, arg4: Any): id = extern
+//  def objc_msgSend(self: Any, op: SEL, arg1: Any, arg2: Any, arg3: Any, arg4: Any, arg5: Any): id = extern
+//  def objc_msgSend(self: Any, op: SEL, arg1: Any, arg2: Any, arg3: Any, arg4: Any, arg5: Any, arg6: Any): id = extern
+//  def objc_msgSend(self: Any, op: SEL, arg1: Any, arg2: Any, arg3: Any, arg4: Any, arg5: Any, arg6: Any, arg7: Any): id = extern
+//  def objc_msgSend(self: Any, op: SEL, arg1: Any, arg2: Any, arg3: Any, arg4: Any, arg5: Any, arg6: Any, arg7: Any, arg8: Any): id = extern
+//  def objc_msgSend(self: Any, op: SEL, arg1: Any, arg2: Any, arg3: Any, arg4: Any, arg5: Any, arg6: Any, arg7: Any, arg8: Any, arg9: Any): id = extern
 
   def objc_msgSendSuper(objc_super: Ptr[objc_super], op: SEL, args: native.CVararg*): id = extern
 

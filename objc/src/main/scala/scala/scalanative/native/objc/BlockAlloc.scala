@@ -1,10 +1,11 @@
 package scala.scalanative.native.objc
 
-import scala.scalanative.native.objc.Block.BlockStruct
+import scala.scalanative.libc.stdlib
+//import scala.scalanative.native.objc.Block.BlockStruct
 import scalanative.native._
 
 trait BlockAlloc {
-  protected[objc] def alloc(): Ptr[BlockStruct]
+//  protected[objc] def alloc(): Ptr[BlockStruct]
   def free(block: Block): Unit = {}
 }
 
@@ -17,7 +18,7 @@ object BlockAlloc {
   def zone(implicit z: Zone): BlockAlloc = new ZoneAlloc
 
   private class ZoneAlloc(implicit val z: Zone) extends BlockAlloc {
-    protected[objc] override def alloc(): Ptr[BlockStruct] = scalanative.native.alloc[BlockStruct]
+//    protected[objc] override def alloc(): Ptr[BlockStruct] = scalanative.native.alloc[BlockStruct]
   }
 
   // doesn't currently work -- maybe if we could get the pointer to _NSConcreteStackBlock...
@@ -36,7 +37,7 @@ object BlockAlloc {
    * This allocator uses malloc/free to allocate/release blocks.
    */
   object global extends BlockAlloc {
-    protected[objc] override def alloc(): Ptr[BlockStruct] = stdlib.malloc(sizeof[BlockStruct]).cast[Ptr[BlockStruct]]
+//    protected[objc] override def alloc(): Ptr[BlockStruct] = stdlib.malloc(sizeof[BlockStruct]).cast[Ptr[BlockStruct]]
 
     override def free(block: Block): Unit = stdlib.free(block.cast[Ptr[Byte]])
   }

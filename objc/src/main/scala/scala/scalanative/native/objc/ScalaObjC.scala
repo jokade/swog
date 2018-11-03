@@ -56,9 +56,9 @@ object ScalaObjC {
         val self = cls.modParts.params.head match {
           case x:ValDef => x
         }
-        val updParents = cls.modParts.parents.map( getType(_,false) ).map {
-          x => q"$x(${self.name}.cast[scalanative.native.Ptr[Byte]])"
-        }
+        val updParents = (getType(cls.modParts.parents.head,false) match {
+          case x => q"$x(${self.name}.cast[scalanative.native.Ptr[Byte]])"
+        }) +: cls.modParts.parents.tail
         cls.updParents(updParents)
       /* transform companion object */
       case obj: ObjectTransformData =>

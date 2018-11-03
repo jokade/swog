@@ -3,6 +3,7 @@ package tests.objc.foundation
 import scalanative.native._
 import objc._
 import scala.scalanative.native.objc.runtime.{ObjCObject, id}
+import scala.scalanative.objc.{ObjC, ObjCClass}
 
 @ObjC
 class NSArray[T<:ObjCObject] extends NSObject {

@@ -1,7 +1,10 @@
 package scala.scalanative.native.objc
 
-import de.surfice.smacrotools.{CommonMacroTools, WhiteboxMacroTools}
+import de.surfice.smacrotools.CommonMacroTools
+
 import scala.language.reflectiveCalls
+import scala.reflect.macros.TypecheckException
+import scala.scalanative.native.objc.runtime.ObjCObject
 
 trait ObjCMacroTools extends CommonMacroTools {
   import c.universe._
@@ -13,6 +16,7 @@ trait ObjCMacroTools extends CommonMacroTools {
 
     // selectors to be defined in the companion object
     def selectors: Selectors = data.getOrElse("selectors", Nil).asInstanceOf[Selectors]
+    def withSelectors(selectors: Selectors): Data = data.updated("selectors",selectors)
 
     def selectors_=(selectors: Selectors): Data = {
       data += "selectors" -> selectors
@@ -33,6 +37,7 @@ trait ObjCMacroTools extends CommonMacroTools {
       data += "compStmts" -> stmts
       data
     }
+    def withAdditionalCompanionStmts(stmts: Statements): Data = data.updated("compStmts",stmts)
 
     def replaceClassBody: Option[Statements] = data.getOrElse("replaceClsBody", None).asInstanceOf[Option[Statements]]
     def replaceClassBody_=(stmts: Option[Statements]): Data = {
@@ -45,6 +50,8 @@ trait ObjCMacroTools extends CommonMacroTools {
   protected[this] val clsTarget = TermName("__cls")
 
   protected[this] def cstring(s: String) = q"scalanative.native.CQuote(StringContext($s)).c()"
+  protected[this] val tObjCObject = c.weakTypeOf[ObjCObject]
+  protected[this] val tAnyVal = c.weakTypeOf[AnyVal]
 
   protected[this] def genSelector(name: TermName, args: List[List[ValDef]]): (String, TermName) = {
     val s = genSelectorString(name, args)
@@ -92,5 +99,31 @@ trait ObjCMacroTools extends CommonMacroTools {
 
   protected[this] def genSelectorDef(selector: String, selectorTerm: TermName) =
     q"protected lazy val $selectorTerm = scalanative.native.objc.runtime.sel_registerName(scalanative.native.CQuote(StringContext($selector)).c())"
+
+  protected[this] def getObjCType(tpt: Tree): Option[Type] =
+    try {
+      val typed = getType(tpt,true)
+      Some(typed)
+    } catch {
+      case ex: TypecheckException => None
+    }
+
+  protected[this] def isObjCObject(tpt: Tree): Boolean = isObjCObject(getObjCType(tpt))
+
+  protected[this] def isObjCObject(tpe: Option[Type]): Boolean =
+    tpe.exists(_.baseClasses.map(_.asType.toType).exists( t => t <:< tObjCObject ))
+
+  protected[this] def isAnyVal(tpe: Option[Type]): Boolean = tpe.exists(_ <:< tAnyVal)
+
+  protected[this] def wrapResult(result: Tree, resultType: Tree): Tree = {
+    val tpe = getObjCType(resultType)
+    if (isObjCObject(tpe))
+      q"new $resultType($result)"
+//    else if (isAnyVal(tpe))
+//      q"$result.cast[$resultType]"
+    else
+      q"$result.cast[$resultType]"
+  }
+
 
 }
