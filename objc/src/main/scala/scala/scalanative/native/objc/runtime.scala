@@ -169,6 +169,11 @@ object runtime {
 
 
   def objc_msgSend(self: Any, op: SEL, args: native.CVararg*): id = extern
+  @name("objc_msgSend")
+  def objc_msgSend_Double(self: Any, op: SEL, args: native.CVararg*): Double = extern
+
+  @name("objc_msgSend")
+  def objc_msgSend_Float(self: Any, op: SEL, args: native.CVararg*): Float = extern
 //  def objc_msgSend(self: Any, op: SEL): id = extern
 //  def objc_msgSend(self: Any, op: SEL, arg1: Any): id = extern
 //  def objc_msgSend(self: Any, op: SEL, arg1: Any, arg2: Any): id = extern

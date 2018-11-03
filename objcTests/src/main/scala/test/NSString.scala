@@ -8,6 +8,8 @@ import scala.scalanative.native.objc._
 @ObjC
 class NSString extends NSObject {
 
+  def doubleValue(): Double = extern
+  def floatValue(): Float = extern
 }
 
 

@@ -20,6 +20,9 @@ object Main {
 //    stdio.printf(c"%x\n",foo.__ptr)
 //    ext.NSLog(str.__ptr,array.objectAtIndex_(0.toUInt).__ptr)
     NSLog(NSString(c"%@"),array)
+    val d = NSString(c"42.0")
+    println( d.doubleValue() )
+    println( d.floatValue() )
     println("DONE")
   }
 

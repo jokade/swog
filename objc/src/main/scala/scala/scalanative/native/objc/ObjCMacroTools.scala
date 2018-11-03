@@ -51,7 +51,8 @@ trait ObjCMacroTools extends CommonMacroTools {
 
   protected[this] def cstring(s: String) = q"scalanative.native.CQuote(StringContext($s)).c()"
   protected[this] val tObjCObject = c.weakTypeOf[ObjCObject]
-  protected[this] val tAnyVal = c.weakTypeOf[AnyVal]
+  protected[this] val tFloat = c.weakTypeOf[Float]
+  protected[this] val tDouble = c.weakTypeOf[Double]
 
   protected[this] def genSelector(name: TermName, args: List[List[ValDef]]): (String, TermName) = {
     val s = genSelectorString(name, args)
@@ -113,16 +114,18 @@ trait ObjCMacroTools extends CommonMacroTools {
   protected[this] def isObjCObject(tpe: Option[Type]): Boolean =
     tpe.exists(_.baseClasses.map(_.asType.toType).exists( t => t <:< tObjCObject ))
 
-  protected[this] def isAnyVal(tpe: Option[Type]): Boolean = tpe.exists(_ <:< tAnyVal)
+//  protected[this] def isAnyVal(tpe: Option[Type]): Boolean = tpe.exists(_ <:< tAnyVal)
 
   protected[this] def wrapResult(result: Tree, resultType: Tree): Tree = {
     val tpe = getObjCType(resultType)
-    if (isObjCObject(tpe))
-      q"new $resultType($result)"
-//    else if (isAnyVal(tpe))
-//      q"$result.cast[$resultType]"
+    wrapResult(result,tpe)
+  }
+
+  protected[this] def wrapResult(result: Tree, resultType: Option[Type]): Tree = {
+    if (isObjCObject(resultType))
+      q"new ${resultType.get}($result)"
     else
-      q"$result.cast[$resultType]"
+      q"$result"
   }
 
 

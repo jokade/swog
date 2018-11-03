@@ -192,13 +192,23 @@ object ObjC {
           c.error(c.enclosingPosition, "multiple parameter lists not supported for ObjC classes")
           ???
       }
-      val call = q"scalanative.native.objc.runtime.objc_msgSend($target,$selectorVal,..$args)"
+
+      val resultType = getObjCType(scalaDef.tpt)
+
+      val call = resultType match {
+        case Some(t) if t <:< tFloat =>
+          q"scalanative.native.objc.runtime.objc_msgSend_Float($target,$selectorVal,..$args)"
+        case Some(t) if t <:< tDouble =>
+          q"scalanative.native.objc.runtime.objc_msgSend_Double($target,$selectorVal,..$args)"
+        case _ =>
+          q"scalanative.native.objc.runtime.objc_msgSend($target,$selectorVal,..$args)"
+      }
       if( returnsThis(scalaDef) )
         q"$call;this"
       else if ( useWrapper(scalaDef) )
         q"__wrapper.__wrap($call)"
       else
-        wrapResult(call,scalaDef.tpt)
+        wrapResult(call,resultType)
     }
 
   }
