@@ -49,8 +49,8 @@ object ObjC {
     override def analyze: Analysis = super.analyze andThen {
       case (cls: TypeParts, data) =>
         val companionStmts =
-          if( cls.isClass && !cls.modifiers.hasFlag(Flag.ABSTRACT) )
-            List(genWrapperImplicit(cls.name,cls.tparams))
+          if (cls.isClass && !cls.modifiers.hasFlag(Flag.ABSTRACT))
+            List(genWrapperImplicit(cls.name, cls.tparams))
           else
             Nil
         // collect selectors to be emitted into companion object body
@@ -61,7 +61,7 @@ object ObjC {
         (cls,
           data
             .withSelectors(selectors)
-            .withAdditionalCompanionStmts(companionStmts) )
+            .withAdditionalCompanionStmts(companionStmts))
       case default => default
     }
 
@@ -73,25 +73,25 @@ object ObjC {
         val parents = transformParents(cls.modParts.parents)
 
         val annots =
-          if(isObjCClass) cls.modParts.modifiers.annotations
+          if (isObjCClass) cls.modParts.modifiers.annotations
           else cls.modParts.modifiers.annotations :+ wrapperAnnot
 
-        val transformedBody =
-          (if(cls.data.replaceClassBody.isDefined)
-            cls.data.replaceClassBody.get
-          else
-            cls.modParts.body)
-            .map {
-              case t@DefDef(mods, name, types, args, rettype, rhs) if isExtern(rhs)  =>
-                val selectorTerm = q"${cls.modParts.name.toTermName}.${genSelector(name, args)._2}"
-                val call =
-                  if(isObjCClass)
-                    genCall(q"__cls", selectorTerm,t)
-                  else
-                    genCall(q"this.__ptr",selectorTerm,t)
-                DefDef(mods, name, types, args, rettype, call)
-              case x => x
-            }
+        val transformedBody = transformBody(cls.data,cls.modParts.body,cls.modParts.name)
+//          (if (cls.data.replaceClassBody.isDefined)
+//            cls.data.replaceClassBody.get
+//          else
+//            cls.modParts.body)
+//            .map {
+//              case t@DefDef(mods, name, types, args, rettype, rhs) if isExtern(rhs) =>
+//                val selectorTerm = q"${cls.modParts.name.toTermName}.${genSelector(name, args)._2}"
+//                val call =
+//                  if (isObjCClass)
+//                    genCall(q"__cls", selectorTerm, t)
+//                  else
+//                    genCall(q"this.__ptr", selectorTerm, t)
+//                DefDef(mods, name, types, args, rettype, call)
+//              case x => x
+//            }
 
         cls
           .updAnnotations(annots)
@@ -99,6 +99,22 @@ object ObjC {
           .updParents(parents)
           .updBody(ccastImport +: transformedBody)
       //.updCtorMods(Modifiers(Flag.PROTECTED))  // ensure that the class can't be instatiated using new
+
+      /* transform traits */
+      case trt: TraitTransformData =>
+
+//        val parents = transformParents(trt.modParts.parents)
+
+        val annots =
+          if (isObjCClass) trt.modParts.modifiers.annotations
+          else trt.modParts.modifiers.annotations :+ wrapperAnnot
+
+        val transformedBody = transformBody(trt.data,trt.modParts.body,trt.modParts.name)
+
+        trt
+          .updAnnotations(annots)
+//          .updParents(parents)
+          .updBody(ccastImport +: transformedBody)
 
       /* transform companion object */
       case obj: ObjectTransformData =>
@@ -131,6 +147,22 @@ object ObjC {
       case default => default
     }
 
+    private def transformBody(data: Data, body: Seq[Tree], typeName: TypeName): Seq[Tree] =
+      (if (data.replaceClassBody.isDefined)
+        data.replaceClassBody.get
+      else body)
+        .map {
+          case t@DefDef(mods, name, types, args, rettype, rhs) if isExtern(rhs) =>
+            val selectorTerm = q"${typeName.toTermName}.${genSelector(name, args)._2}"
+            val call =
+              if (isObjCClass)
+                genCall(q"__cls", selectorTerm, t)
+              else
+                genCall(q"this.__ptr", selectorTerm, t)
+            DefDef(mods, name, types, args, rettype, call)
+          case x => x
+        }
+
     private def genWrapperImplicit(tpe: TypeName, tparams: Seq[Tree]): Tree =
       tparams.size match {
         case 0 =>
@@ -157,7 +189,7 @@ object ObjC {
     private def transformParents(parents: Seq[Tree]): Seq[Tree] =
       if(isObjCClass) parents
       else parents map (p => (p,getType(p))) map {
-        case (tree,tpe) if tpe =:= tObjCObject => tree
+        case (tree,tpe) if tpe =:= tObjCObject || tpe.typeSymbol.isAbstract => tree
         case (tree,tpe) if tpe <:< tObjCObject => q"$tree(__ptr)"
         case (tree,_) => tree
       }

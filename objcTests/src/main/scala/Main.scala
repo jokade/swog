@@ -5,7 +5,7 @@ import test._
 
 import scalanative.native._
 import objc._
-import scala.scalanative.native.objc.runtime.id
+import scala.scalanative.native.objc.runtime.{ObjCObject, id}
 
 object Main {
 //  implicit object NSStringWrapper extends Wrapper[NSString] {
@@ -39,7 +39,6 @@ object ext {
 }
 
 @ScalaObjC
-@debug
 class MyClass(self: id) extends NSObject {
   def foo(): Unit = {
     val s = $super[NSObject,NSString](self)(_.description())
@@ -50,4 +49,11 @@ class MyClass(self: id) extends NSObject {
 
 object MyClass extends NSObjectClass {
   override type InstanceType = MyClass
+}
+
+@ObjC
+@debug
+trait Foo extends ObjCObject {
+  def bar(): Unit = extern
+
 }
