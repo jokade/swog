@@ -1,7 +1,7 @@
 package scala.scalanative.native
 
 import scala.annotation.StaticAnnotation
-import scala.scalanative.native.objc.runtime.{ClassPtr, id}
+import scala.scalanative.native.objc.runtime.{ClassPtr, ObjCObject, id}
 import scala.language.experimental.macros
 
 package object objc {
@@ -13,5 +13,9 @@ package object objc {
 
 //  def $super[T,R](self: T)(f: T=>R): R = macro Macros.superImpl
 
-  def $super[T,R](self: id)(f: T=>R)(implicit wrapper: ObjCWrapper[T]): R = macro Macros.superImpl
+  def $superWithResult[T,R](self: id)(f: T=>R)(implicit wrapper: ObjCWrapper[T]): R = macro Macros.superWithResultImpl
+
+  def $super[T](self:id)(f: T=>Any): Unit = macro Macros.superImpl
+
+//  def wrapper[T<:ObjCObject](obj: T): ObjCWrapper[T] = new ObjCWrapper.Reuse[T](obj)
 }
