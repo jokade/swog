@@ -39,12 +39,16 @@ object ext {
 }
 
 @ScalaObjC
+@debug
 class MyClass(self: id) extends NSObject {
   def foo(): Unit = {
     val s = $super[NSObject,NSString](self)(_.description())
     Main.NSLog(NSString(c"%@"),s)
     println("FOO")
   }
+
+  def bar(): MyClass = this
+
 }
 
 object MyClass extends NSObjectClass {
@@ -52,7 +56,6 @@ object MyClass extends NSObjectClass {
 }
 
 @ObjC
-@debug
 trait Foo extends ObjCObject {
   def bar(): Unit = extern
 

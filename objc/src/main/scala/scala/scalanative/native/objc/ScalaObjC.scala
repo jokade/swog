@@ -184,7 +184,7 @@ object ScalaObjC {
 
     private def getExposedMembers(body: Seq[Tree]): Seq[ExposedMember] = body collect {
       case m: DefDef if isPublic(m.mods) =>
-        val returnType = getType(m.tpt)
+        val returnType = getType(m.tpt,withMacrosDisabled = true)
         ExposedMember(m.name,m.vparamss.headOption.getOrElse(Nil),m.vparamss.nonEmpty, tpe = Some(returnType), customSelector = findCustomSelector(m.mods.annotations))
       case p: ValDef if isPublic(p.mods) =>
         val tpe =
@@ -207,9 +207,13 @@ object ScalaObjC {
     private def genExposedMethodProxy(cls: ClassParts)(m: ExposedMember) = {
       import m._
       val call = if(hasParamList) q"o.$name(..${paramNames(params)})" else q"o.$name"
+      val result = m.tpe match {
+        case Some(t) if t <:< tObjCObject => q"$call.__ptr"
+        case _ => call
+      }
       q"""def ${methodProxyName(m)}(self: scalanative.native.objc.runtime.id, sel: scalanative.native.objc.runtime.SEL, ..$params) = {
             val o = scalanative.native.objc.helper.getScalaInstanceIVar[${cls.name}](self)
-            $call
+            $result
           }
        """
     }
