@@ -1,10 +1,13 @@
 package test
 
+import de.surfice.smacrotools.debug
+
 import scala.scalanative.native._
 import scala.scalanative.native.objc._
 import scala.scalanative.native.objc.runtime.{ObjCObject, id}
 
 @ObjC
+@debug
 class NSObject extends ObjCObject {
   @returnsThis
   def self(): this.type = extern

@@ -11,26 +11,11 @@ object Main {
 
 }
 
-@CObj.Mutable
-@debug
-class Foo[T](var __ref: Ref[Byte]) extends CObjWrapper {
-//  @CObj.updatesThis
-  @nullable
-  def foo(): Foo[T] = extern
+@CObj
+class Bar
+
+@CObj
+class Foo {
+  def bar(b: Bar): Unit = extern
 }
 
-//@CObj
-//class Bar extends Foo with CObjWrapper {
-//  @returnsThis
-//  def foo()(out: Out[Int]): Bar = extern
-//}
-
-//object Bar {
-//  def create(): Bar = extern
-//}
-
-//@CObj
-//abstract class X
-
-//@CObj
-//class Y extends X

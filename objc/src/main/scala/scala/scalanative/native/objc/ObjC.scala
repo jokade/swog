@@ -214,18 +214,19 @@ object ObjC {
       genCall(q"$target",q"$selectorVal",scalaDef)
 
     private def genCall(target: Tree, selectorVal: Tree, scalaDef: DefDef): Tree = {
-      val args = scalaDef.vparamss match {
+      val args = (scalaDef.vparamss match {
         case Nil => Nil
-        case List(argdefs) => argdefs map {
+        case List(argdefs) => argdefs
+        case List(inargs,outargs) => inargs ++ outargs
+        case x =>
+          c.error(c.enclosingPosition, "multiple parameter lists not supported for ObjC classes")
+          ???
+      }) map {
           case t@ValDef(_, name, tpt, _) =>
             if (isObjCObject(tpt))
               q"if($name == null) null else $name.__ptr"
             else q"$name"
         }
-        case x =>
-          c.error(c.enclosingPosition, "multiple parameter lists not supported for ObjC classes")
-          ???
-      }
 
       val resultType = getObjCType(scalaDef.tpt)
 
