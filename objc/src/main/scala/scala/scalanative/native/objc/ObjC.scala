@@ -219,7 +219,7 @@ object ObjC {
         case List(argdefs) => argdefs map {
           case t@ValDef(_, name, tpt, _) =>
             if (isObjCObject(tpt))
-              q"$name.__ptr"
+              q"if($name == null) null else $name.__ptr"
             else q"$name"
         }
         case x =>
@@ -229,20 +229,23 @@ object ObjC {
 
       val resultType = getObjCType(scalaDef.tpt)
 
+      val argNames = (1 to args.size).map(p => TermName("arg"+p))
+      val argDefs = argNames.zip(args).map(p => q"val ${p._1} = ${p._2}")
+
       val call = resultType match {
         case Some(t) if t <:< tFloat =>
-          q"scalanative.native.objc.runtime.objc_msgSend_Float($target,$selectorVal,..$args)"
+          q"scalanative.native.objc.runtime.objc_msgSend_Float($target,$selectorVal,..$argNames)"
         case Some(t) if t <:< tDouble =>
-          q"scalanative.native.objc.runtime.objc_msgSend_Double($target,$selectorVal,..$args)"
+          q"scalanative.native.objc.runtime.objc_msgSend_Double($target,$selectorVal,..$argNames)"
         case _ =>
-          q"scalanative.native.objc.runtime.objc_msgSend($target,$selectorVal,..$args)"
+          q"scalanative.native.objc.runtime.objc_msgSend($target,$selectorVal,..$argNames)"
       }
       if( returnsThis(scalaDef) )
-        q"$call;this"
+        q"..$argDefs;$call;this"
       else if ( useWrapper(scalaDef) )
-        q"__wrapper.__wrap($call)"
+        q"..$argDefs;__wrapper.__wrap($call)"
       else
-        wrapResult(call,resultType)
+        q"..$argDefs;${wrapResult(call,resultType)}"
     }
 
   }
