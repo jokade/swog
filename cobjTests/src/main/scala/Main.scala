@@ -2,20 +2,17 @@ import de.surfice.smacrotools.debug
 
 import scalanative.native._
 import cobj._
+import scala.scalanative.native.cobj.runtime.CObjObject
 
 object Main {
 
   def main(args: Array[String]): Unit = Zone{ implicit z: Zone =>
-
   }
-
 }
 
 @CObj
-class Bar
+@debug
+class GError {
+  def foo: GError = extern
 
-@CObj
-class Foo {
-  def bar(b: Bar): Unit = extern
 }
-
