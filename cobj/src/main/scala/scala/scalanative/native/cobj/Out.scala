@@ -5,12 +5,17 @@ import de.surfice.smacrotools.BlackboxMacroTools
 import scala.reflect.macros.blackbox
 import scalanative.native._
 import scala.language.experimental.macros
+import scala.scalanative.native.cobj.runtime.CObjObject
 
-final class Out[T](ptr: Ptr[Ptr[Byte]]) {
+final class Out[T](val ptr: Ptr[Ptr[Byte]]) extends CObjObject {
+  @inline def __ptr: Ptr[Byte] = ptr.cast[Ptr[Byte]]
+//  @inline def ptr: Ptr[Ptr[Byte]] = __ptr.cast[Ptr[Ptr[Byte]]]
   @inline def isDefined: Boolean = !ptr != null
   @inline def isEmpty: Boolean = !isDefined
   @inline def valuePtr: Ptr[Byte] = !ptr
-  @inline def value: Option[T] = macro Out.Macros.valueImpl[T]
+  @inline def value: T = macro Out.Macros.valueImpl[T]
+  @inline def value_=(v: T): Unit = macro Out.Macros.setValueImpl[T]
+  @inline def option: Option[T] = macro Out.Macros.optionImpl[T]
   @inline def clear(): Unit = !ptr = null
 }
 object Out {
@@ -21,6 +26,7 @@ object Out {
     import c.universe._
 
     val tAnyVal = weakTypeOf[AnyVal]
+    val tPtr = weakTypeOf[Ptr[_]]
 
     def allocImpl[T: WeakTypeTag](zone: Tree) = {
       val tpe = weakTypeOf[T]
@@ -37,6 +43,34 @@ object Out {
       val tpe = weakTypeOf[T]
       val self = c.prefix
       val tree =
+        if(tpe <:< tAnyVal || tpe <:< tPtr )
+          q"""
+               $self.valuePtr.cast[$tpe]
+             """
+        else
+          q"""
+             if($self.isDefined) new $tpe($self.valuePtr)
+             else null
+           """
+      //        println(tree)
+      tree
+    }
+
+    def setValueImpl[T: WeakTypeTag](v: Tree) = {
+      val tpe = weakTypeOf[T]
+      val self = c.prefix
+      val tree =
+        if(tpe <:< tAnyVal || tpe <:< tPtr)
+          q"""!$self.ptr = $v.cast[scalanative.native.Ptr[Byte]]"""
+        else
+          q"""!$self.ptr = $v.__ptr"""
+      tree
+    }
+
+    def optionImpl[T: WeakTypeTag] = {
+      val tpe = weakTypeOf[T]
+      val self = c.prefix
+      val tree =
         if(tpe <:< tAnyVal)
           q"""
                Some($self.valuePtr.cast[$tpe])
@@ -49,6 +83,7 @@ object Out {
       //        println(tree)
       tree
     }
+
   }
 }
 
