@@ -7,11 +7,13 @@ import scala.scalanative.native.objc._
 import scala.scalanative.native.objc.runtime.{ObjCObject, id}
 
 @ObjC
-@debug
+//@debug
 class NSObject extends ObjCObject {
   @returnsThis
   def self(): this.type = extern
-  def description(): NSString = extern
+  @returnsThis
+  def retain(): this.type = extern
+//  def description(): NSString = extern
 }
 
 @ObjCClass

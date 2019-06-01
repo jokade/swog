@@ -1,6 +1,5 @@
 package scala.scalanative.native.objc
 
-import scala.scalanative.libc.stdlib
 import scala.scalanative.native.objc.Block.BlockStruct
 import scalanative.native._
 

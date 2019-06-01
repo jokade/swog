@@ -6,7 +6,7 @@ import scalanative.native._
 import objc._
 
 @ObjC
-@debug
+//@debug
 class NSMutableArray[T<:NSObject] extends NSObject {
   @inline def addObject_(anObject: NSObject): Unit = extern
   @inline def objectAtIndex_(index: CUnsignedLong): Ptr[Byte] = extern

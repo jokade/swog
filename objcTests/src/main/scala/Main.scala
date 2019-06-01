@@ -7,37 +7,61 @@ import scalanative.native._
 import objc._
 import scala.scalanative.native.objc.runtime.{ObjCObject, id}
 
-object Main {
-//  implicit object NSStringWrapper extends Wrapper[NSString] {
-//    override def wrap(ptr: Ptr[Byte]): NSString = new NSString(ptr)
-//  }
+@ObjC
+class NSDate extends NSObject {
+}
 
+@ObjCClass
+abstract class NSDateClass extends NSObjectClass {
+  def date(): NSDate = extern
+}
+
+object NSDate extends NSDateClass {
+  override type InstanceType = NSDate
+}
+
+
+@ObjC
+@debug
+class NSMutableArray[T<:NSObject] extends NSObject {
+  def addObject_(obj: T): Unit = extern
+  def insertObject_atIndex_(anObject: T, index: CUnsignedLong): Unit = extern
+  def objectAtIndex_(index: CUnsignedLong): NSObject = extern
+}
+
+
+@ObjCClass
+abstract class NSMutableArrayClass extends NSObjectClass {
+  def arrayWithCapacity_[T<:NSObject](numItems: CUnsignedLong): NSMutableArray[T] = extern
+}
+
+object NSMutableArray extends NSMutableArrayClass {
+  override type InstanceType = NSMutableArray[_]
+}
+
+
+object Main {
   def main(args: Array[String]): Unit = Zone { implicit z =>
-//    val array = NSMutableArray.array[NSString]()
-//    array.addObject_(NSString(c"Hello"))
-//    array.addObject_(NSString(c"World"))
-//    array(1) = NSString(c"FOO")
-//    array.addObject_(str)
-//    stdio.printf(c"%x\n",foo.__ptr)
-//    ext.NSLog(str.__ptr,array.objectAtIndex_(0.toUInt).__ptr)
-//    NSLog(NSString(c"%@"),array)
-//    val d = NSString(c"42.0")
-//    println( d.doubleValue() )
-//    println( d.floatValue() )
-    val my = MyClass.alloc()
-    my.foo()
-    NSLog(NSString(c"%@"),my)
-    println("DONE")
+    val date = NSDate.date().retain()
+    val str = NSString(c"Hello world!")
+    val array = NSMutableArray.arrayWithCapacity_[NSObject](1.toUInt).retain()
+    array.addObject_(date)
+    array.insertObject_atIndex_(str,0.toUInt)
+    NSLog(array.objectAtIndex_(0.toUInt))
   }
 
-  def NSLog(format: NSString, arg1: NSObject): Unit = ext.NSLog(format.__ptr,arg1.__ptr)
+  def NSLog(str: NSString): Unit = Foundation.NSLog(str.__ptr)
+  def NSLog(obj: NSObject) = Foundation.NSLog(NSString(c"%@").__ptr,obj.__ptr)
 }
+
 
 @extern
-object ext {
-  def NSLog(format: Ptr[Byte], args: CVararg*): Unit = extern
+object Foundation {
+  def NSLog(fmt: Ptr[Byte]): Unit = extern
+  def NSLog(fmt: Ptr[Byte], obj: Ptr[Byte]): Unit = extern
 }
 
+/*
 @ScalaObjC
 @debug
 class MyClass(self: id) extends NSObject {
@@ -60,3 +84,4 @@ trait Foo extends ObjCObject {
   def bar(): Unit = extern
 
 }
+*/
