@@ -91,3 +91,19 @@ SList* slist_prepend(SList *l, void* value) {
   entry->next = l;
   return entry;
 }
+
+void* slist_item_at(SList *l, int index) {
+  if(NULL == l || index<0) {
+    return NULL;
+  }
+  SListEntry *p = l;
+  for(int i=0; i<index; i++) {
+    if(NULL != p->next) {
+      p = p->next;
+    }
+    else {
+      return NULL;
+    }
+  }
+  return p->data;
+}

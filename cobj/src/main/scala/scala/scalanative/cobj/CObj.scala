@@ -5,7 +5,6 @@ import de.surfice.smacrotools.MacroAnnotationHandler
 import scala.annotation.{StaticAnnotation, compileTimeOnly}
 import scala.language.experimental.macros
 import scala.reflect.macros.{TypecheckException, whitebox}
-import scala.scalanative.cobj.runtime.CObjObject
 import scala.scalanative.unsafe.Ptr
 
 @compileTimeOnly("enable macro paradise to expand macro annotations")
@@ -38,8 +37,9 @@ object CObj {
 
     private val tPtrByte = weakTypeOf[Ptr[Byte]]
     private val tAnyRef = weakTypeOf[AnyRef]
-    private val tCObjObject = weakTypeOf[CObjObject]
+    private val tCObject = weakTypeOf[CObject]
     private val tCObjWrapperAnnotation = weakTypeOf[CObjWrapper]
+    private val tCObjectWrapper = weakTypeOf[CObjectWrapper[_]]
     private val expExtern = q"scalanative.unsafe.extern"
     private val cobjWrapperAnnotation = q"new scalanative.cobj.CObj.CObjWrapper"
 
@@ -200,9 +200,9 @@ object CObj {
 
     private def genTransformedParents(cls: TypeTransformData[TypeParts]): Seq[Tree] = {
       cls.modParts.parents map (p => (p,getType(p,true))) map {
-        case (tree,tpe) if tpe =:= tAnyRef => tq"$tCObjObject"
-        case (tree,tpe) if tpe =:= tCObjObject || tpe.typeSymbol.isAbstract => tree
-        case (tree,tpe) if tpe <:< tCObjObject => q"$tree(__ptr)"
+        case (tree,tpe) if tpe =:= tAnyRef => tq"$tCObject"
+        case (tree,tpe) if tpe =:= tCObject || tpe.typeSymbol.isAbstract => tree
+        case (tree,tpe) if tpe <:< tCObject => q"$tree(__ptr)"
         case (tree,_) => tree
       }
     }
@@ -257,19 +257,19 @@ object CObj {
     private def genWrapperImplicit(tpe: TypeName, tparams: Seq[Tree]): Tree =
       tparams.size match {
         case 0 =>
-          q"""implicit object __wrapper extends scalanative.cobj.CObjWrapper[$tpe] {
+          q"""implicit object __wrapper extends scalanative.cobj.CObjectWrapper[$tpe] {
             def wrap(ptr: scalanative.unsafe.Ptr[Byte]) = new $tpe(ptr)
             def unwrap(value: $tpe): scalanative.unsafe.Ptr[Byte] = value.__ptr
           }
           """
         case 1 =>
-          q"""implicit object __wrapper extends scalanative.cobj.CObjWrapper[$tpe[_]] {
+          q"""implicit object __wrapper extends scalanative.cobj.CObjectWrapper[$tpe[_]] {
             def wrap(ptr: scalanative.unsafe.Ptr[Byte]) = new $tpe(ptr)
             def unwrap(value: $tpe[_]): scalanative.unsafe.Ptr[Byte] = value.__ptr
           }
           """
         case 2 =>
-          q"""implicit object __wrapper extends scalanative.cobj.CObjWrapper[$tpe[_,_]] {
+          q"""implicit object __wrapper extends scalanative.cobj.CObjectWrapper[$tpe[_,_]] {
             def wrap(ptr: scalanative.unsafe.Ptr[Byte]) = new $tpe(ptr)
             def unwrap(value: $tpe[_,_]): scalanative.unsafe.Ptr[Byte] = value.__ptr
           }
@@ -311,8 +311,9 @@ object CObj {
           case Nil => List(List(q"val self: $tPtrByte"))
           case List(params) => List(q"val self: $tPtrByte" +: transformExternalBindingParams(params,data) )
           case List(inparams,outparams) =>
+            val filteredOutparams = outparams.filter(p => !isCObjectWrapper(p.tpt) )
             List( q"val self: $tPtrByte" +:
-              (transformExternalBindingParams(inparams,data) ++ transformExternalBindingParams(outparams,data,true)) )
+              (transformExternalBindingParams(inparams,data) ++ transformExternalBindingParams(filteredOutparams,data,true)) )
           case _ =>
             c.error(c.enclosingPosition,"extern methods with more than two parameter lists are not supported for @CObj classes")
             ???
@@ -344,11 +345,12 @@ object CObj {
 
     private def genExternalCall(externalName: String, scalaDef: DefDef, isClassMethod: Boolean, data: Data): DefDef = {
       import scalaDef._
-      val args = vparamss match {
-        case Nil => None
-        case List(args) => Some(transformExternalCallArgs(args,data))
+      val (args,wrapper) = vparamss match {
+        case Nil => (None,None)
+        case List(args) => (Some(transformExternalCallArgs(args,data)),None)
         case List(inargs,outargs) =>
-          Some( transformExternalCallArgs(inargs,data) ++ transformExternalCallArgs(outargs,data) )
+          val (wrapper,filteredOutargs) = outargs.partition(p => isCObjectWrapper(p.tpt))
+          (Some( transformExternalCallArgs(inargs,data) ++ transformExternalCallArgs(filteredOutargs,data) ), wrapper.headOption.map(_.name))
         case _ =>
           c.error(c.enclosingPosition,"extern methods with more than two parameter lists are not supported for @CObj classes")
           ???
@@ -366,7 +368,7 @@ object CObj {
 //        else if(updatesThis(scalaDef))
 //          q"this.__ref = $call.cast[$tRefNothing];this"
 //        else
-          wrapExternalCallResult(call,tpt,data,nullable(scalaDef))
+          wrapExternalCallResult(call,tpt,data,nullable(scalaDef),wrapper)
 
       DefDef(mods,name,tparams,vparamss,tpt,rhs)
     }
@@ -382,25 +384,30 @@ object CObj {
       }
     }
 
-    private def wrapExternalCallResult(tree: Tree, tpt: Tree, data: Data, isNullable: Boolean): Tree = {
-      if (isExternalObject(tpt,data)) {
-        if(isNullable)
-          q"""val res = $tree; if(res == null) null else new $tpt(res)"""
-        else
-          q"""new $tpt($tree)"""
+    private def wrapExternalCallResult(tree: Tree, tpt: Tree, data: Data, isNullable: Boolean, wrapper: Option[TermName] = None): Tree =
+      wrapper match {
+        case Some(wrapper) =>
+          if(isNullable)
+            q"""val res = $tree; if(res == null) null.asInstanceOf[$tpt] else $wrapper.wrap(res)"""
+          else
+            q"$wrapper.wrap($tree)"
+        case None if isExternalObject(tpt,data) =>
+          if(isNullable)
+            q"""val res = $tree; if(res == null) null else new $tpt(res)"""
+          else
+            q"""new $tpt($tree)"""
+        case _ => tree
       }
-      else tree
-    }
 
     private def isExternalObject(tpt: Tree, data: Data): Boolean =
       try {
         val typed = getType(tpt,true)
         // TODO: do we still need the check for tCRef (or can we only check for tCObjWrapper)
-        typed.baseClasses.map(_.asType.toType).exists( t => t <:< tCObjObject) ||
+        typed.baseClasses.map(_.asType.toType).exists( t => t <:< tCObject) ||
           this.findAnnotation(typed.typeSymbol,"scalanative.cobj.CObj.CObjWrapper").isDefined ||
-          data.currentType == getQualifiedTypeName(tpt,true)
+          data.currentType == getQualifiedTypeName(tpt,true).split('[').head // we're splitting at '[' to handle types with type parameters
       } catch {
-        case ex: TypecheckException => false
+        case ex: TypecheckException => true // the type check fails for type parameters => we assume that they represent an external Object
       }
 
     private def isExtern(rhs: Tree): Boolean = rhs match {
@@ -411,6 +418,9 @@ object CObj {
       case x =>
         false
     }
+
+    private def isCObjectWrapper(tpt: Tree): Boolean =
+      getType(tpt,true) <:< tCObjectWrapper
 
     private def isAbstract(t: TypeTransformData[TypeParts]): Boolean = t match {
       case cls : ClassTransformData => t.modParts.modifiers.hasFlag(Flag.ABSTRACT)

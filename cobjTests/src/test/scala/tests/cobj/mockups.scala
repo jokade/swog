@@ -2,7 +2,6 @@ package tests.cobj
 
 import de.surfice.smacrotools.debug
 
-import scala.scalanative.cobj.runtime.CObjObject
 import scalanative.cobj._
 import scalanative.unsafe._
 
@@ -21,7 +20,7 @@ object Number {
 
 @CObj
 class Counter extends Number {
-  def increment(): CInt = extern;
+  def increment(): CInt = extern
 }
 
 object Counter {
@@ -32,14 +31,18 @@ object Counter {
 
 @CObj(prefix = "slist_")
 @debug
-class SList {
+class SList[T<:CObject] {
   def isEmpty: Boolean = extern
   def size: Int = extern
-//  def prepend(value: T): SList[T] = extern
+  def prepend(value: T): SList[T] = extern
+
+  // returns null if the specified index does not exist
+  @nullable
+  def itemAt(index: Int)(implicit wrapper:CObjectWrapper[T]): T = extern
+
 }
 
 object SList {
   @name("slist_new")
-//  def apply[T<:CObjObject](): SList[T] = extern
-  def apply(): SList = extern
+  def apply[T<:CObject](): SList[T] = extern
 }
