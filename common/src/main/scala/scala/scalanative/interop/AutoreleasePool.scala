@@ -1,4 +1,4 @@
-package scala.scalanative.native
+package scala.scalanative.interop
 
 class AutoreleasePool private (private var _allocated: List[Releasable]) {
   def register(obj: Releasable): Unit = _allocated = obj::_allocated

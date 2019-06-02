@@ -1,4 +1,4 @@
-package scala.scalanative.native.cobj
+package scala.scalanative.cobj
 
 object NamingConvention extends Enumeration {
   val None = Value

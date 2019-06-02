@@ -1,6 +1,8 @@
-package scala.scalanative.native
+package scala.scalanative.interop
 
 import scala.annotation.tailrec
+import scala.scalanative.libc.stdlib
+import scala.scalanative.unsafe.{CSize, Ptr, Zone}
 
 trait PoolZone extends Zone {
   def statInfo: String
@@ -95,6 +97,9 @@ object PoolZone {
         allocNode(size)
 
 
+    override def close(): Unit = ???
+
+    override def isClosed: Boolean = _level <= 0
 
     private def allocSmall(size: CSize): Ptr[Byte] = {
       if(size > _blocks.freeSize)

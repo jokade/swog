@@ -1,22 +1,22 @@
 organization in ThisBuild := "de.surfice"
 
-version in ThisBuild := "0.0.6"
+version in ThisBuild := "0.0.7-SNAPSHOT"
 
 scalaVersion in ThisBuild := "2.11.12"
 
 val Version = new {
   val smacrotools = "0.0.8"
-  val utest       = "0.6.6"
+  val utest       = "0.6.8-SNAPSHOT"
 }
 
 lazy val commonSettings = Seq(
   scalacOptions ++= Seq("-deprecation","-unchecked","-feature","-language:implicitConversions","-Xlint"),
   addCompilerPlugin("org.scalamacros" % "paradise" % "2.1.0" cross CrossVersion.full),
   libraryDependencies ++= Seq(
-    "de.surfice" %% "smacrotools" % Version.smacrotools
-    //"com.lihaoyi" %%% "utest" % Version.utest % "test"
-    )
-  //testFrameworks += new TestFramework("utest.runner.Framework")
+    "de.surfice" %% "smacrotools" % Version.smacrotools,
+    "com.lihaoyi" %%% "utest" % Version.utest % "test"
+    ),
+  testFrameworks += new TestFramework("utest.runner.Framework")
   )
 
 
@@ -56,7 +56,7 @@ lazy val objc = project
 import scalanative.sbtplugin.ScalaNativePluginInternal._
 
 lazy val cobjTests = project
-  .enablePlugins(ScalaNativePlugin)
+  .enablePlugins(ScalaNativePlugin,NBHAutoPlugin,NBHMakePlugin)
   .dependsOn(cobj)
   .settings(commonSettings ++ dontPublish:_*)
   .settings(
@@ -65,7 +65,8 @@ lazy val cobjTests = project
       "-lglib-2.0",
       "-lgobject-2.0",
       "-lgtk-3.0"
-    )
+    ),
+    nbhMakeProjects += NBHMakeProject(baseDirectory.value / "src" / "test" / "c" ,Seq(NBHMakeArtifact("mockups.o")))
   )
 
 lazy val objcTests = project

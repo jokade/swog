@@ -1,14 +1,14 @@
-package scala.scalanative.native.cobj
+package scala.scalanative.cobj
 
 import de.surfice.smacrotools.BlackboxMacroTools
 
 import scala.reflect.macros.blackbox
-import scalanative.native._
+import scalanative.unsafe._
 import scala.language.experimental.macros
-import scala.scalanative.native.cobj.runtime.CObjObject
+import scala.scalanative.cobj.runtime.CObjObject
 
 final class Out[T](val ptr: Ptr[Ptr[Byte]]) extends CObjObject {
-  @inline def __ptr: Ptr[Byte] = ptr.cast[Ptr[Byte]]
+  @inline def __ptr: Ptr[Byte] = ptr.asInstanceOf[Ptr[Byte]]
 //  @inline def ptr: Ptr[Ptr[Byte]] = __ptr.cast[Ptr[Ptr[Byte]]]
   @inline def isDefined: Boolean = !ptr != null
   @inline def isEmpty: Boolean = !isDefined
@@ -20,7 +20,7 @@ final class Out[T](val ptr: Ptr[Ptr[Byte]]) extends CObjObject {
 }
 object Out {
 
-  def alloc[T](implicit zone: Zone): Out[T] = new Out[T](scalanative.native.alloc[Ptr[Byte]])
+  def alloc[T](implicit zone: Zone): Out[T] = new Out[T](scalanative.unsafe.alloc[Ptr[Byte]])
 
   class Macros(val c: blackbox.Context) extends BlackboxMacroTools {
     import c.universe._

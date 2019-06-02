@@ -1,12 +1,12 @@
-package scala.scalanative.native.cobj
+package scala.scalanative.cobj
 
 import de.surfice.smacrotools.MacroAnnotationHandler
 
 import scala.annotation.{StaticAnnotation, compileTimeOnly}
 import scala.language.experimental.macros
 import scala.reflect.macros.{TypecheckException, whitebox}
-import scala.scalanative.native._
-import scala.scalanative.native.cobj.runtime.CObjObject
+import scala.scalanative.cobj.runtime.CObjObject
+import scala.scalanative.unsafe.Ptr
 
 @compileTimeOnly("enable macro paradise to expand macro annotations")
 class CObj(prefix: String = null, newSuffix: String = null, namingConvention: NamingConvention.Value = NamingConvention.SnakeCase) extends StaticAnnotation {
@@ -17,7 +17,7 @@ object CObj {
 
   class CObjWrapper extends StaticAnnotation
 
-  private[native] class Macro(val c: whitebox.Context) extends MacroBase {
+  private[cobj] class Macro(val c: whitebox.Context) extends MacroBase {
 
     def isMutable: Boolean = false
     override def annotationName = "scala.scalanative.native.cobj.CObj"
@@ -29,7 +29,7 @@ object CObj {
   }
 
 
-  private[native] abstract class MacroBase extends MacroAnnotationHandler {
+  private[cobj] abstract class MacroBase extends MacroAnnotationHandler {
     val c: whitebox.Context
 
     import c.universe._
@@ -40,8 +40,8 @@ object CObj {
     private val tAnyRef = weakTypeOf[AnyRef]
     private val tCObjObject = weakTypeOf[CObjObject]
     private val tCObjWrapperAnnotation = weakTypeOf[CObjWrapper]
-    private val expExtern = q"scalanative.native.extern"
-    private val cobjWrapperAnnotation = q"new scalanative.native.cobj.CObj.CObjWrapper"
+    private val expExtern = q"scalanative.unsafe.extern"
+    private val cobjWrapperAnnotation = q"new scalanative.cobj.CObj.CObjWrapper"
 
     private val annotationParamNames = Seq("prefix","newSuffix","namingConvention","semantics")
 
@@ -251,27 +251,27 @@ object CObj {
         case (externalName,args) => q"def ${TermName(externalName)}(..$args): $tPtrByte = $expExtern"
       }
       val defs = data.externals.values.map(_._2)
-      q"""@scalanative.native.extern object __ext {..${ctors++defs}}"""
+      q"""@scalanative.unsafe.extern object __ext {..${ctors++defs}}"""
     }
 
     private def genWrapperImplicit(tpe: TypeName, tparams: Seq[Tree]): Tree =
       tparams.size match {
         case 0 =>
-          q"""implicit object __wrapper extends scalanative.native.cobj.CObjWrapper[$tpe] {
-            def wrap(ptr: scalanative.native.Ptr[Byte]) = new $tpe(ptr)
-            def unwrap(value: $tpe): scalanative.native.Ptr[Byte] = value.__ptr
+          q"""implicit object __wrapper extends scalanative.cobj.CObjWrapper[$tpe] {
+            def wrap(ptr: scalanative.unsafe.Ptr[Byte]) = new $tpe(ptr)
+            def unwrap(value: $tpe): scalanative.unsafe.Ptr[Byte] = value.__ptr
           }
           """
         case 1 =>
-          q"""implicit object __wrapper extends scalanative.native.cobj.CObjWrapper[$tpe[_]] {
-            def wrap(ptr: scalanative.native.Ptr[Byte]) = new $tpe(ptr)
-            def unwrap(value: $tpe[_]): scalanative.native.Ptr[Byte] = value.__ptr
+          q"""implicit object __wrapper extends scalanative.cobj.CObjWrapper[$tpe[_]] {
+            def wrap(ptr: scalanative.unsafe.Ptr[Byte]) = new $tpe(ptr)
+            def unwrap(value: $tpe[_]): scalanative.unsafe.Ptr[Byte] = value.__ptr
           }
           """
         case 2 =>
-          q"""implicit object __wrapper extends scalanative.native.cobj.CObjWrapper[$tpe[_,_]] {
-            def wrap(ptr: scalanative.native.Ptr[Byte]) = new $tpe(ptr)
-            def unwrap(value: $tpe[_,_]): scalanative.native.Ptr[Byte] = value.__ptr
+          q"""implicit object __wrapper extends scalanative.cobj.CObjWrapper[$tpe[_,_]] {
+            def wrap(ptr: scalanative.unsafe.Ptr[Byte]) = new $tpe(ptr)
+            def unwrap(value: $tpe[_,_]): scalanative.unsafe.Ptr[Byte] = value.__ptr
           }
           """
       }
@@ -326,7 +326,7 @@ object CObj {
             ???
         }
       val tpt =
-        if(isExternalObject(scalaDef.tpt,data)) tq"scalanative.native.Ptr[Byte]"
+        if(isExternalObject(scalaDef.tpt,data)) tq"scalanative.unsafe.Ptr[Byte]"
         else scalaDef.tpt
       val mods = Modifiers(NoFlags,scalaDef.mods.privateWithin,scalaDef.mods.annotations) // remove flags (e.g. 'override')
       val externalDef = DefDef(mods,TermName(externalName),scalaDef.tparams,externalParams,tpt,scalaDef.rhs)
@@ -397,7 +397,7 @@ object CObj {
         val typed = getType(tpt,true)
         // TODO: do we still need the check for tCRef (or can we only check for tCObjWrapper)
         typed.baseClasses.map(_.asType.toType).exists( t => t <:< tCObjObject) ||
-          this.findAnnotation(typed.typeSymbol,"scalanative.native.cobj.CObj.CObjWrapper").isDefined ||
+          this.findAnnotation(typed.typeSymbol,"scalanative.cobj.CObj.CObjWrapper").isDefined ||
           data.currentType == getQualifiedTypeName(tpt,true)
       } catch {
         case ex: TypecheckException => false
@@ -418,6 +418,6 @@ object CObj {
     }
 
     private def nullable(m: DefDef): Boolean =
-      findAnnotation(m.mods.annotations,"scala.scalanative.native.cobj.nullable").isDefined
+      findAnnotation(m.mods.annotations,"scala.scalanative.cobj.nullable").isDefined
   }
 }
