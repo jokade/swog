@@ -1,7 +1,7 @@
 // Copyright (c) 2017. Distributed under the MIT License (see included LICENSE file).
 package scala.scalanative.native.objc
 
-import scala.scalanative.native._
+import scalanative.unsafe._
 import runtime._
 import helper._
 
@@ -18,20 +18,23 @@ object ObjCParent {
       proxy
     }
     def methodSignature(self: id, sel: SEL, selForSignature: SEL): id = {
-      val ref = getScalaInstanceIVar[Object](self).cast[id]
+      val ref = getScalaInstanceIVar[Object](self).asInstanceOf[id]
       objc_msgSend(ref,sel_methodSignatureForSelector,selForSignature)
     }
     def forwardInvocation(self: id, sel: SEL, invocation: id): id = {
-      val ref = getScalaInstanceIVar[Object](self).cast[id]
+      val ref = getScalaInstanceIVar[Object](self).asInstanceOf[id]
       println("forwarding invocation")
       self
     }
     val newCls = objc_allocateClassPair(objc_getClass(c"NSProxy"),c"ScalaParentProxy",0)
     val metaCls = object_getClass(newCls)
     addScalaInstanceIVar(newCls)
-    class_addMethod(metaCls,sel_initWithRef,CFunctionPtr.fromFunction3(init),c"@:@")
-    class_addMethod(newCls,sel_methodSignatureForSelector,CFunctionPtr.fromFunction3(methodSignature),c"@:@")
-    class_addMethod(newCls,sel_forwardInvocation,CFunctionPtr.fromFunction3(forwardInvocation),c"@:@")
+    /* TODO:
+    class_addMethod(metaCls,sel_initWithRef,CFuncPtr.fromFunction3(init),c"@:@")
+    class_addMethod(newCls,sel_methodSignatureForSelector,CFuncPtr.fromFunction3(methodSignature),c"@:@")
+    class_addMethod(newCls,sel_forwardInvocation,CFuncPtr.fromFunction3(forwardInvocation),c"@:@")
+
+     */
     objc_registerClassPair(newCls)
     newCls
   }

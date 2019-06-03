@@ -1,7 +1,9 @@
 package scala.scalanative.native.objc
 
-import scala.scalanative.native._
-import objc.runtime._
+import runtime._
+import scalanative._
+import unsafe._
+import unsigned._
 import scala.scalanative.libc.stdlib
 
 object reflect {
@@ -32,7 +34,7 @@ object reflect {
       for(i <- 0 until (!outCount).toInt) {
         methods(i) = methodsPtr(i)
       }
-      stdlib.free(methodsPtr.cast[Ptr[Byte]])
+      stdlib.free(methodsPtr.asInstanceOf[Ptr[Byte]])
       methods
     }
   }

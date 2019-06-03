@@ -1,8 +1,10 @@
 package scala.scalanative.native
 
 import scala.annotation.StaticAnnotation
-import scala.scalanative.native.objc.runtime.{ClassPtr, ObjCObject, id}
 import scala.language.experimental.macros
+import scala.scalanative.native.objc.runtime.{ClassPtr, id}
+import scalanative._
+import unsafe._
 
 package object objc {
 

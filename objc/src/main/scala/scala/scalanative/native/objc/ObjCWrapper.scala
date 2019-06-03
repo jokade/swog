@@ -1,7 +1,6 @@
 package scala.scalanative.native.objc
 
-import scala.scalanative.native.objc.runtime.ObjCObject
-import scalanative.native._
+import scalanative.unsafe._
 
 trait ObjCWrapper[T] {
   def __wrap(ptr: Ptr[Byte]): T

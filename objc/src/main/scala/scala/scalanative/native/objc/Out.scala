@@ -1,15 +1,15 @@
 package scala.scalanative.native.objc
 
-import scala.scalanative.native.objc.runtime.ObjCObject
-import scalanative.native._
-
 import de.surfice.smacrotools.BlackboxMacroTools
+
 import scala.reflect.macros.blackbox
 import scala.language.experimental.macros
+import scala.scalanative.native.objc.runtime.ObjCObject
+import scalanative.unsafe._
 
 final class Out[T](ptr: Ptr[Ptr[Byte]]) extends ObjCObject {
   !ptr = null
-  @inline override def __ptr: Ptr[Byte] = ptr.cast[Ptr[Byte]]
+  @inline override def __ptr: Ptr[Byte] = ptr.asInstanceOf[Ptr[Byte]]
   @inline def isDefined: Boolean = !ptr != null
   @inline def isEmpty: Boolean = !isDefined
   @inline def valuePtr: Ptr[Byte] = !ptr
@@ -19,7 +19,7 @@ final class Out[T](ptr: Ptr[Ptr[Byte]]) extends ObjCObject {
 object Out {
 
   def apply[T,R](f: (Out[T]) => R): R = macro Macros.applyImpl[T,R]
-  def alloc[T](implicit zone: Zone): Out[T] = new Out(scalanative.native.alloc[Ptr[Byte]])
+  def alloc[T](implicit zone: Zone): Out[T] = new Out(scalanative.unsafe.alloc[Ptr[Byte]])
 
   class Macros(val c: blackbox.Context) extends BlackboxMacroTools with ObjCMacroTools {
     import c.universe._
@@ -42,7 +42,7 @@ object Out {
       val tree =
         if(tpe <:< tAnyVal)
           q"""
-               Some($self.valuePtr.cast[$tpe])
+               Some($self.valuePtr.asInstanceOf[$tpe])
              """
         else
           q"""

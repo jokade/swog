@@ -2,9 +2,9 @@ package scala.scalanative.native.objc
 
 import de.surfice.smacrotools.BlackboxMacroTools
 
-import scalanative.native._
 import scala.reflect.macros.blackbox
 import scala.language.experimental.macros
+import scalanative.unsafe._
 
 
 sealed trait Block
@@ -23,75 +23,78 @@ object Block {
 
   protected[objc] type BlockStruct = CStruct6[Ptr[Byte],CInt,CInt,Ptr[Byte],Ptr[Byte],Ptr[Byte]]
 
-  @inline def apply[R](f: CFunctionPtr1[Ptr[Byte],R])(implicit ba: BlockAlloc): Block0[R] =
-    makeBlock(f.cast[Ptr[Byte]]).asInstanceOf[Block0[R]]
+  @inline def apply[R](f: CFuncPtr1[Ptr[Byte],R])(implicit ba: BlockAlloc): Block0[R] =
+    makeBlock(f.asInstanceOf[Ptr[Byte]]).asInstanceOf[Block0[R]]
 
-  @inline def apply[T1,R](f: CFunctionPtr2[Ptr[Byte],Ptr[Byte],R])(implicit ba: BlockAlloc): Block1[T1,R] =
-    makeBlock(f.cast[Ptr[Byte]]).asInstanceOf[Block1[T1,R]]
+  @inline def apply[T1,R](f: CFuncPtr2[Ptr[Byte],Ptr[Byte],R])(implicit ba: BlockAlloc): Block1[T1,R] =
+    makeBlock(f.asInstanceOf[Ptr[Byte]]).asInstanceOf[Block1[T1,R]]
 
-  @inline def apply[T1,T2,R](f: CFunctionPtr3[Ptr[Byte],Ptr[Byte],Ptr[Byte],R])(implicit ba: BlockAlloc): Block2[T1,T2,R] =
-    makeBlock(f.cast[Ptr[Byte]]).asInstanceOf[Block2[T1,T2,R]]
+  @inline def apply[T1,T2,R](f: CFuncPtr3[Ptr[Byte],Ptr[Byte],Ptr[Byte],R])(implicit ba: BlockAlloc): Block2[T1,T2,R] =
+    makeBlock(f.asInstanceOf[Ptr[Byte]]).asInstanceOf[Block2[T1,T2,R]]
 
-  @inline def apply[T1,T2,T3,R](f: CFunctionPtr4[Ptr[Byte],Ptr[Byte],Ptr[Byte],Ptr[Byte],R])(implicit ba: BlockAlloc): Block3[T1,T2,T3,R] =
-    makeBlock(f.cast[Ptr[Byte]]).asInstanceOf[Block3[T1,T2,T3,R]]
+  @inline def apply[T1,T2,T3,R](f: CFuncPtr4[Ptr[Byte],Ptr[Byte],Ptr[Byte],Ptr[Byte],R])(implicit ba: BlockAlloc): Block3[T1,T2,T3,R] =
+    makeBlock(f.asInstanceOf[Ptr[Byte]]).asInstanceOf[Block3[T1,T2,T3,R]]
 
-  @inline def apply[T1,T2,T3,T4,R](f: CFunctionPtr5[Ptr[Byte],Ptr[Byte],Ptr[Byte],Ptr[Byte],Ptr[Byte],R])(implicit ba: BlockAlloc): Block4[T1,T2,T3,T4,R] =
-    makeBlock(f.cast[Ptr[Byte]]).asInstanceOf[Block4[T1,T2,T3,T4,R]]
+  @inline def apply[T1,T2,T3,T4,R](f: CFuncPtr5[Ptr[Byte],Ptr[Byte],Ptr[Byte],Ptr[Byte],Ptr[Byte],R])(implicit ba: BlockAlloc): Block4[T1,T2,T3,T4,R] =
+    makeBlock(f.asInstanceOf[Ptr[Byte]]).asInstanceOf[Block4[T1,T2,T3,T4,R]]
 
-  @inline def apply[T1,T2,T3,T4,T5,R](f: CFunctionPtr6[Ptr[Byte],Ptr[Byte],Ptr[Byte],Ptr[Byte],Ptr[Byte],Ptr[Byte],R])(implicit ba: BlockAlloc): Block5[T1,T2,T3,T4,T5,R] =
-    makeBlock(f.cast[Ptr[Byte]]).asInstanceOf[Block5[T1,T2,T3,T4,T5,R]]
+  @inline def apply[T1,T2,T3,T4,T5,R](f: CFuncPtr6[Ptr[Byte],Ptr[Byte],Ptr[Byte],Ptr[Byte],Ptr[Byte],Ptr[Byte],R])(implicit ba: BlockAlloc): Block5[T1,T2,T3,T4,T5,R] =
+    makeBlock(f.asInstanceOf[Ptr[Byte]]).asInstanceOf[Block5[T1,T2,T3,T4,T5,R]]
 
-  @inline def apply[T1,T2,T3,T4,T5,T6,R](f: CFunctionPtr7[Ptr[Byte],Ptr[Byte],Ptr[Byte],Ptr[Byte],Ptr[Byte],Ptr[Byte],Ptr[Byte],R])(implicit ba: BlockAlloc): Block6[T1,T2,T3,T4,T5,T6,R] =
-    makeBlock(f.cast[Ptr[Byte]]).asInstanceOf[Block6[T1,T2,T3,T4,T5,T6,R]]
+  @inline def apply[T1,T2,T3,T4,T5,T6,R](f: CFuncPtr7[Ptr[Byte],Ptr[Byte],Ptr[Byte],Ptr[Byte],Ptr[Byte],Ptr[Byte],Ptr[Byte],R])(implicit ba: BlockAlloc): Block6[T1,T2,T3,T4,T5,T6,R] =
+    makeBlock(f.asInstanceOf[Ptr[Byte]]).asInstanceOf[Block6[T1,T2,T3,T4,T5,T6,R]]
 
-  @inline def apply[T1,T2,T3,T4,T5,T6,T7,R](f: CFunctionPtr8[Ptr[Byte],Ptr[Byte],Ptr[Byte],Ptr[Byte],Ptr[Byte],Ptr[Byte],Ptr[Byte],Ptr[Byte],R])(implicit ba: BlockAlloc): Block7[T1,T2,T3,T4,T5,T6,T7,R] =
-    makeBlock(f.cast[Ptr[Byte]]).asInstanceOf[Block7[T1,T2,T3,T4,T5,T6,T7,R]]
+  @inline def apply[T1,T2,T3,T4,T5,T6,T7,R](f: CFuncPtr8[Ptr[Byte],Ptr[Byte],Ptr[Byte],Ptr[Byte],Ptr[Byte],Ptr[Byte],Ptr[Byte],Ptr[Byte],R])(implicit ba: BlockAlloc): Block7[T1,T2,T3,T4,T5,T6,T7,R] =
+    makeBlock(f.asInstanceOf[Ptr[Byte]]).asInstanceOf[Block7[T1,T2,T3,T4,T5,T6,T7,R]]
 
-  @inline def apply[T1,T2,T3,T4,T5,T6,T7,T8,R](f: CFunctionPtr9[Block,T1,T2,T3,T4,T5,T6,T7,T8,R])(implicit ba: BlockAlloc): Block8[T1,T2,T3,T4,T5,T6,T7,T8,R] =
-    makeBlock(f.cast[Ptr[Byte]]).asInstanceOf[Block8[T1,T2,T3,T4,T5,T6,T7,T8,R]]
+  @inline def apply[T1,T2,T3,T4,T5,T6,T7,T8,R](f: CFuncPtr9[Block,T1,T2,T3,T4,T5,T6,T7,T8,R])(implicit ba: BlockAlloc): Block8[T1,T2,T3,T4,T5,T6,T7,T8,R] =
+    makeBlock(f.asInstanceOf[Ptr[Byte]]).asInstanceOf[Block8[T1,T2,T3,T4,T5,T6,T7,T8,R]]
 
-//  @inline def apply[T1,T2,T3,T4,T5,T6,T7,T8,T9,R](f: CFunctionPtr10[Block,T1,T2,T3,T4,T5,T6,T7,T8,T9,R])(implicit ba: BlockAlloc): Block9[T1,T2,T3,T4,T5,T6,T7,T8,T9,R] =
-//    makeBlock(f.cast[Ptr[Byte]]).asInstanceOf[Block9[T1,T2,T3,T4,T5,T6,T7,T8,T9,R]]
+//  @inline def apply[T1,T2,T3,T4,T5,T6,T7,T8,T9,R](f: CFuncPtr10[Block,T1,T2,T3,T4,T5,T6,T7,T8,T9,R])(implicit ba: BlockAlloc): Block9[T1,T2,T3,T4,T5,T6,T7,T8,T9,R] =
+//    makeBlock(f.asInstanceOf[Ptr[Byte]]).asInstanceOf[Block9[T1,T2,T3,T4,T5,T6,T7,T8,T9,R]]
 /*
-  @inline def apply[T1,T2,T3,T4,T5,T6,T7,T8,T9,T10,R](f: CFunctionPtr11[Block,T1,T2,T3,T4,T5,T6,T7,T8,T9,T10,R])(implicit ba: BlockAlloc): Block =
-    makeBlock(f.cast[Ptr[Byte]])
+  @inline def apply[T1,T2,T3,T4,T5,T6,T7,T8,T9,T10,R](f: CFuncPtr11[Block,T1,T2,T3,T4,T5,T6,T7,T8,T9,T10,R])(implicit ba: BlockAlloc): Block =
+    makeBlock(f.asInstanceOf[Ptr[Byte]])
 
-  @inline def apply[T1,T2,T3,T4,T5,T6,T7,T8,T9,T10,T11,R](f: CFunctionPtr12[Block,T1,T2,T3,T4,T5,T6,T7,T8,T9,T10,T11,R])(implicit ba: BlockAlloc): Block =
-    makeBlock(f.cast[Ptr[Byte]])
+  @inline def apply[T1,T2,T3,T4,T5,T6,T7,T8,T9,T10,T11,R](f: CFuncPtr12[Block,T1,T2,T3,T4,T5,T6,T7,T8,T9,T10,T11,R])(implicit ba: BlockAlloc): Block =
+    makeBlock(f.asInstanceOf[Ptr[Byte]])
 
-  @inline def apply[T1,T2,T3,T4,T5,T6,T7,T8,T9,T10,T11,T12,R](f: CFunctionPtr13[Block,T1,T2,T3,T4,T5,T6,T7,T8,T9,T10,T11,T12,R])(implicit ba: BlockAlloc): Block =
-    makeBlock(f.cast[Ptr[Byte]])
+  @inline def apply[T1,T2,T3,T4,T5,T6,T7,T8,T9,T10,T11,T12,R](f: CFuncPtr13[Block,T1,T2,T3,T4,T5,T6,T7,T8,T9,T10,T11,T12,R])(implicit ba: BlockAlloc): Block =
+    makeBlock(f.asInstanceOf[Ptr[Byte]])
 
-  @inline def apply[T1,T2,T3,T4,T5,T6,T7,T8,T9,T10,T11,T12,T13,R](f: CFunctionPtr14[Block,T1,T2,T3,T4,T5,T6,T7,T8,T9,T10,T11,T12,T13,R])(implicit ba: BlockAlloc): Block =
-    makeBlock(f.cast[Ptr[Byte]])
+  @inline def apply[T1,T2,T3,T4,T5,T6,T7,T8,T9,T10,T11,T12,T13,R](f: CFuncPtr14[Block,T1,T2,T3,T4,T5,T6,T7,T8,T9,T10,T11,T12,T13,R])(implicit ba: BlockAlloc): Block =
+    makeBlock(f.asInstanceOf[Ptr[Byte]])
 
-  @inline def apply[T1,T2,T3,T4,T5,T6,T7,T8,T9,T10,T11,T12,T13,T14,R](f: CFunctionPtr15[Block,T1,T2,T3,T4,T5,T6,T7,T8,T9,T10,T11,T12,T13,T14,R])(implicit ba: BlockAlloc): Block =
-    makeBlock(f.cast[Ptr[Byte]])
+  @inline def apply[T1,T2,T3,T4,T5,T6,T7,T8,T9,T10,T11,T12,T13,T14,R](f: CFuncPtr15[Block,T1,T2,T3,T4,T5,T6,T7,T8,T9,T10,T11,T12,T13,T14,R])(implicit ba: BlockAlloc): Block =
+    makeBlock(f.asInstanceOf[Ptr[Byte]])
 
-  @inline def apply[T1,T2,T3,T4,T5,T6,T7,T8,T9,T10,T11,T12,T13,T14,T15,R](f: CFunctionPtr16[Block,T1,T2,T3,T4,T5,T6,T7,T8,T9,T10,T11,T12,T13,T14,T15,R])(implicit ba: BlockAlloc): Block =
-    makeBlock(f.cast[Ptr[Byte]])
+  @inline def apply[T1,T2,T3,T4,T5,T6,T7,T8,T9,T10,T11,T12,T13,T14,T15,R](f: CFuncPtr16[Block,T1,T2,T3,T4,T5,T6,T7,T8,T9,T10,T11,T12,T13,T14,T15,R])(implicit ba: BlockAlloc): Block =
+    makeBlock(f.asInstanceOf[Ptr[Byte]])
 
-  @inline def apply[T1,T2,T3,T4,T5,T6,T7,T8,T9,T10,T11,T12,T13,T14,T15,T16,R](f: CFunctionPtr17[Block,T1,T2,T3,T4,T5,T6,T7,T8,T9,T10,T11,T12,T13,T14,T15,T16,R])(implicit ba: BlockAlloc): Block =
-    makeBlock(f.cast[Ptr[Byte]])
+  @inline def apply[T1,T2,T3,T4,T5,T6,T7,T8,T9,T10,T11,T12,T13,T14,T15,T16,R](f: CFuncPtr17[Block,T1,T2,T3,T4,T5,T6,T7,T8,T9,T10,T11,T12,T13,T14,T15,T16,R])(implicit ba: BlockAlloc): Block =
+    makeBlock(f.asInstanceOf[Ptr[Byte]])
 
-  @inline def apply[T1,T2,T3,T4,T5,T6,T7,T8,T9,T10,T11,T12,T13,T14,T15,T16,T17,R](f: CFunctionPtr18[Block,T1,T2,T3,T4,T5,T6,T7,T8,T9,T10,T11,T12,T13,T14,T15,T16,T17,R])(implicit ba: BlockAlloc): Block =
-    makeBlock(f.cast[Ptr[Byte]])
+  @inline def apply[T1,T2,T3,T4,T5,T6,T7,T8,T9,T10,T11,T12,T13,T14,T15,T16,T17,R](f: CFuncPtr18[Block,T1,T2,T3,T4,T5,T6,T7,T8,T9,T10,T11,T12,T13,T14,T15,T16,T17,R])(implicit ba: BlockAlloc): Block =
+    makeBlock(f.asInstanceOf[Ptr[Byte]])
 
-  @inline def apply[T1,T2,T3,T4,T5,T6,T7,T8,T9,T10,T11,T12,T13,T14,T15,T16,T17,T18,R](f: CFunctionPtr19[Block,T1,T2,T3,T4,T5,T6,T7,T8,T9,T10,T11,T12,T13,T14,T15,T16,T17,T18,R])(implicit ba: BlockAlloc): Block =
-    makeBlock(f.cast[Ptr[Byte]])
+  @inline def apply[T1,T2,T3,T4,T5,T6,T7,T8,T9,T10,T11,T12,T13,T14,T15,T16,T17,T18,R](f: CFuncPtr19[Block,T1,T2,T3,T4,T5,T6,T7,T8,T9,T10,T11,T12,T13,T14,T15,T16,T17,T18,R])(implicit ba: BlockAlloc): Block =
+    makeBlock(f.asInstanceOf[Ptr[Byte]])
 
-  @inline def apply[T1,T2,T3,T4,T5,T6,T7,T8,T9,T10,T11,T12,T13,T14,T15,T16,T17,T18,T19,R](f: CFunctionPtr20[Block,T1,T2,T3,T4,T5,T6,T7,T8,T9,T10,T11,T12,T13,T14,T15,T16,T17,T18,T19,R])(implicit ba: BlockAlloc): Block =
-    makeBlock(f.cast[Ptr[Byte]])
+  @inline def apply[T1,T2,T3,T4,T5,T6,T7,T8,T9,T10,T11,T12,T13,T14,T15,T16,T17,T18,T19,R](f: CFuncPtr20[Block,T1,T2,T3,T4,T5,T6,T7,T8,T9,T10,T11,T12,T13,T14,T15,T16,T17,T18,T19,R])(implicit ba: BlockAlloc): Block =
+    makeBlock(f.asInstanceOf[Ptr[Byte]])
 */
   private def makeBlock(f: Ptr[Byte])(implicit ba: BlockAlloc) : Block = {
     val block = ba.alloc()
+  /* TODO:
     !block._1 = null
     !block._2 = 1<<28 // mark block as global
     !block._3 = 0
-    !block._4 = f.cast[Ptr[Byte]]
+    !block._4 = f.asInstanceOf[Ptr[Byte]]
     !block._5 = null
-    !block._6 = ba.cast[Ptr[Byte]] // store the reference to the allocator so that we can use it to release the block
-    block.cast[Block]
+    !block._6 = ba.asInstanceOf[Ptr[Byte]] // store the reference to the allocator so that we can use it to release the block
+
+   */
+    block.asInstanceOf[Block]
   }
 
   def apply[R](f: Block=>R): Block = macro Macros.blockImpl
@@ -119,7 +122,7 @@ object Block {
 
   implicit final class Wrapper(val block: Block) {
     def release(): Unit = {
-      val ba = block.cast[Ptr[BlockStruct]]._6.cast[BlockAlloc]
+      val ba = block.asInstanceOf[Ptr[BlockStruct]]._6.asInstanceOf[BlockAlloc]
       ba.free(block)
     }
   }
@@ -139,49 +142,49 @@ object Block {
 //      println(call)
       vparams.size match {
         case 1 =>
-          q"scalanative.native.objc.Block(scalanative.native.CFunctionPtr.fromFunction1($call))"
+          q"scalanative.native.objc.Block(scalanative.native.CFuncPtr.fromFunction1($call))"
         case 2 =>
-          q"scalanative.native.objc.Block(scalanative.native.CFunctionPtr.fromFunction2($call))"
+          q"scalanative.native.objc.Block(scalanative.native.CFuncPtr.fromFunction2($call))"
         case 3 =>
-          q"scalanative.native.objc.Block(scalanative.native.CFunctionPtr.fromFunction3($call))"
+          q"scalanative.native.objc.Block(scalanative.native.CFuncPtr.fromFunction3($call))"
         case 4 =>
-          q"scalanative.native.objc.Block(scalanative.native.CFunctionPtr.fromFunction4($call))"
+          q"scalanative.native.objc.Block(scalanative.native.CFuncPtr.fromFunction4($call))"
         case 5 =>
-          q"scalanative.native.objc.Block(scalanative.native.CFunctionPtr.fromFunction5($call))"
+          q"scalanative.native.objc.Block(scalanative.native.CFuncPtr.fromFunction5($call))"
         case 6 =>
-          q"scalanative.native.objc.Block(scalanative.native.CFunctionPtr.fromFunction6($call))"
+          q"scalanative.native.objc.Block(scalanative.native.CFuncPtr.fromFunction6($call))"
         case 7 =>
-          q"scalanative.native.objc.Block(scalanative.native.CFunctionPtr.fromFunction7($call))"
+          q"scalanative.native.objc.Block(scalanative.native.CFuncPtr.fromFunction7($call))"
         case 8 =>
-          q"scalanative.native.objc.Block(scalanative.native.CFunctionPtr.fromFunction8($call))"
+          q"scalanative.native.objc.Block(scalanative.native.CFuncPtr.fromFunction8($call))"
         case 9 =>
-          q"scalanative.native.objc.Block(scalanative.native.CFunctionPtr.fromFunction9($call))"
+          q"scalanative.native.objc.Block(scalanative.native.CFuncPtr.fromFunction9($call))"
         case 10 =>
-          q"scalanative.native.objc.Block(scalanative.native.CFunctionPtr.fromFunction10($call))"
+          q"scalanative.native.objc.Block(scalanative.native.CFuncPtr.fromFunction10($call))"
         case 11 =>
-          q"scalanative.native.objc.Block(scalanative.native.CFunctionPtr.fromFunction11($call))"
+          q"scalanative.native.objc.Block(scalanative.native.CFuncPtr.fromFunction11($call))"
         case 12 =>
-          q"scalanative.native.objc.Block(scalanative.native.CFunctionPtr.fromFunction12($call))"
+          q"scalanative.native.objc.Block(scalanative.native.CFuncPtr.fromFunction12($call))"
         case 13 =>
-          q"scalanative.native.objc.Block(scalanative.native.CFunctionPtr.fromFunction13($call))"
+          q"scalanative.native.objc.Block(scalanative.native.CFuncPtr.fromFunction13($call))"
         case 14 =>
-          q"scalanative.native.objc.Block(scalanative.native.CFunctionPtr.fromFunction14($call))"
+          q"scalanative.native.objc.Block(scalanative.native.CFuncPtr.fromFunction14($call))"
         case 15 =>
-          q"scalanative.native.objc.Block(scalanative.native.CFunctionPtr.fromFunction15($call))"
+          q"scalanative.native.objc.Block(scalanative.native.CFuncPtr.fromFunction15($call))"
         case 16 =>
-          q"scalanative.native.objc.Block(scalanative.native.CFunctionPtr.fromFunction16($call))"
+          q"scalanative.native.objc.Block(scalanative.native.CFuncPtr.fromFunction16($call))"
         case 17 =>
-          q"scalanative.native.objc.Block(scalanative.native.CFunctionPtr.fromFunction17($call))"
+          q"scalanative.native.objc.Block(scalanative.native.CFuncPtr.fromFunction17($call))"
         case 18 =>
-          q"scalanative.native.objc.Block(scalanative.native.CFunctionPtr.fromFunction18($call))"
+          q"scalanative.native.objc.Block(scalanative.native.CFuncPtr.fromFunction18($call))"
         case 19 =>
-          q"scalanative.native.objc.Block(scalanative.native.CFunctionPtr.fromFunction19($call))"
+          q"scalanative.native.objc.Block(scalanative.native.CFuncPtr.fromFunction19($call))"
         case 20 =>
-          q"scalanative.native.objc.Block(scalanative.native.CFunctionPtr.fromFunction20($call))"
+          q"scalanative.native.objc.Block(scalanative.native.CFuncPtr.fromFunction20($call))"
         case 21 =>
-          q"scalanative.native.objc.Block(scalanative.native.CFunctionPtr.fromFunction21($call))"
+          q"scalanative.native.objc.Block(scalanative.native.CFuncPtr.fromFunction21($call))"
         case 22 =>
-          q"scalanative.native.objc.Block(scalanative.native.CFunctionPtr.fromFunction22($call))"
+          q"scalanative.native.objc.Block(scalanative.native.CFuncPtr.fromFunction22($call))"
       }
     }
 

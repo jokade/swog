@@ -3,8 +3,9 @@
 // Description: Bindings to the ObjC runtime defined in objc/*.h
 package scala.scalanative.native.objc
 
-import scala.scalanative.native
-import scala.scalanative.native._
+import scalanative._
+import unsafe._
+import unsigned._
 
 /**
  * Raw bindings to the Objective-C runtime defined in objc/\*.h
@@ -38,7 +39,7 @@ object runtime {
   /**
    * A pointer to an Objective-C method implementation.
    */
-  type IMP = CFunctionPtr
+  type IMP = CFuncPtr
 
   type objc_super = CStruct2[id,ClassPtr]
 
@@ -167,13 +168,20 @@ object runtime {
 
   def objc_registerClassPair(newClass: ClassPtr): Unit = extern
 
+  // The following signatures for objc_msgSend are only those explicitly required in other parts of
+  // non-generated runtime code. All signatures required by methods defined in @ObjC classes are generated with the
+  // class on the fly.
+  def objc_msgSend(self: Any, op: SEL): id = extern
+  def objc_msgSend(self: Any, op: SEL, arg1: SEL): id = extern
 
+/* TODO: replace with signatures generated with the ObjC classes on the fly
   def objc_msgSend(self: Any, op: SEL, args: native.CVararg*): id = extern
   @name("objc_msgSend")
   def objc_msgSend_Double(self: Any, op: SEL, args: native.CVararg*): Double = extern
 
   @name("objc_msgSend")
   def objc_msgSend_Float(self: Any, op: SEL, args: native.CVararg*): Float = extern
+  */
 //  def objc_msgSend(self: Any, op: SEL): id = extern
 //  def objc_msgSend(self: Any, op: SEL, arg1: Any): id = extern
 //  def objc_msgSend(self: Any, op: SEL, arg1: Any, arg2: Any): id = extern
@@ -186,7 +194,7 @@ object runtime {
 //  def objc_msgSend(self: Any, op: SEL, arg1: Any, arg2: Any, arg3: Any, arg4: Any, arg5: Any, arg6: Any, arg7: Any, arg8: Any): id = extern
 //  def objc_msgSend(self: Any, op: SEL, arg1: Any, arg2: Any, arg3: Any, arg4: Any, arg5: Any, arg6: Any, arg7: Any, arg8: Any, arg9: Any): id = extern
 
-  def objc_msgSendSuper(objc_super: Ptr[objc_super], op: SEL, args: native.CVararg*): id = extern
+//  def objc_msgSendSuper(objc_super: Ptr[objc_super], op: SEL, args: native.CVararg*): id = extern
 
   /**
    * Registers a method with the ObjC runtime system, maps the method name to a selector, and returns the selector value.
