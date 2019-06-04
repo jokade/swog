@@ -70,14 +70,13 @@ lazy val cobjTests = project
   )
 
 lazy val objcTests = project
-  .enablePlugins(ScalaNativePlugin)
+  .enablePlugins(ScalaNativePlugin,NBHAutoPlugin,NBHMakePlugin)
   .dependsOn(objc)
   .settings(commonSettings ++ dontPublish: _*)
   .settings(
     nativeLinkStubs := true,
-    nativeLinkingOptions ++= Seq(
-      "-framework", "Foundation"
-    )
+    nbhMakeProjects += NBHMakeProject(baseDirectory.value / "src" / "test" / "objc" ,Seq(NBHMakeArtifact("mockups.o"))),
+    nbhLinkFrameworks += "Foundation"
   )
 
 lazy val dontPublish = Seq(

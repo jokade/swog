@@ -7,6 +7,7 @@ import scala.scalanative.unsafe.Ptr
  * Base trait for all external objects represented by a Scala class annotated with @CObj
  */
 trait CObject extends ExternalObject {
+  override def equals(obj: Any): Boolean = super.equals(obj)
 }
 
 trait MutableCObject extends CObject {

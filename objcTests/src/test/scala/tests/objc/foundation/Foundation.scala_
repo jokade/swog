@@ -1,0 +1,7 @@
+package tests.objc.foundation
+
+@extern
+object Foundation {
+
+  def NSLog(format: NSString, args: CVararg*): Unit = extern
+}
