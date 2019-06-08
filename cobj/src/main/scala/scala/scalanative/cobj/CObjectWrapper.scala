@@ -2,9 +2,9 @@ package scala.scalanative.cobj
 
 import scala.scalanative.unsafe._
 
-trait CObjectWrapper[+T] {
+trait CObjectWrapper[T] {
   def wrap(ptr: Ptr[Byte]): T
-//  def unwrap[S>:T](value: S): Ptr[Byte]
+  def unwrap(value: T): Ptr[Byte]
 }
 
 object CObjectWrapper {
@@ -16,19 +16,25 @@ object CObjectWrapper {
       _instance.__ptr = ptr
       _instance
     }
+
+    override def unwrap(value: T) = ???
   }
 
   implicit object CStringWrapper extends CObjectWrapper[CString] {
     override def wrap(ptr: Ptr[CSignedChar]): CString = ptr
-//    override def unwrap[S>:CString](value: S): Ptr[Byte] = value.asInstanceOf[Ptr[Byte]]
+    override def unwrap(value: CString): Ptr[Byte] = value.asInstanceOf[Ptr[Byte]]
+  }
+
+  implicit object NullWrapper extends CObjectWrapper[Null] {
+    override def wrap(ptr: Ptr[Byte]): Null = null
+    override def unwrap(value: Null) = null
   }
 
   object Implicits {
     implicit object StringWrapper extends CObjectWrapper[String] {
       override def wrap(ptr: Ptr[Byte]): String = fromCString(ptr)
-//      override def unwrap[S>:T(value: String): Ptr[Byte] = throw new RuntimeException("CObjWrapper.StringWrapper: unwrapping a Scala String to a CString is not supported")
+      override def unwrap(value: String): Ptr[Byte] = throw new RuntimeException("CObjWrapper.StringWrapper: unwrapping a Scala String to a CString is not supported")
     }
-
   }
 
 }

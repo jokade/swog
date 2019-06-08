@@ -1,6 +1,8 @@
 package tests.cobj
 
 import utest._
+
+import scala.scalanative.unsafe.CFuncPtr0
 import scalanative.cobj._
 
 object CObjTests extends TestSuite {
@@ -12,6 +14,8 @@ object CObjTests extends TestSuite {
         number.getValue() ==> 0
         number.setValue(42)
         number.getValue() ==> 42
+        number.self().getValue() ==> 42
+        number ==> number.self()
       }
     }
 
@@ -45,12 +49,20 @@ object CObjTests extends TestSuite {
         val counter = Counter.withStepSize(2)
         val list3 = list2.prepend(counter)
         list3.size ==> 2
-        list3.itemAt(0)(defaultWrapper[Counter]) match {
+        list3.asInstanceOf[SList[Counter]].itemAt(0) match {
           case c: Counter => c.increment()
         }
         list3.itemAt(0).getValue() ==> 2
         list3.itemAt(1).getValue() ==> 42
       }
+    }
+
+    'Callbacks-{
+      val cb = new CFuncPtr0[Int] {
+        override def apply(): Int = 42
+      }
+
+      Callbacks.exec0(cb) ==> 42
     }
   }
 }

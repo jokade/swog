@@ -6,10 +6,13 @@ import scalanative.cobj._
 import scalanative.unsafe._
 
 @CObj
+@debug
 class Number {
   def getValue(): CInt = extern
   def setValue(value: CInt): Unit = extern
   def free(): Unit = extern
+  @returnsThis
+  def self(): this.type = extern
 }
 
 object Number {
@@ -30,11 +33,10 @@ object Counter {
 }
 
 @CObj(prefix = "slist_")
-@debug
-class SList[T<:CObject] {
+class SList[T] {
   def isEmpty: Boolean = extern
   def size: Int = extern
-  def prepend(value: T): SList[T] = extern
+  def prepend(value: T)(implicit wrapper: CObjectWrapper[T]): SList[T] = extern
 
   // returns null if the specified index does not exist
   @nullable
@@ -45,4 +47,9 @@ class SList[T<:CObject] {
 object SList {
   @name("slist_new")
   def apply[T<:CObject](): SList[T] = extern
+}
+
+@CObj
+object Callbacks {
+  def exec0(f: CFuncPtr0[Int]): Int = extern
 }

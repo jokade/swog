@@ -345,12 +345,13 @@ object CObj {
 
     private def genExternalCall(externalName: String, scalaDef: DefDef, isClassMethod: Boolean, data: Data): DefDef = {
       import scalaDef._
-      val (args,wrapper) = vparamss match {
-        case Nil => (None,None)
-        case List(args) => (Some(transformExternalCallArgs(args,data)),None)
+      val (args,wrappers) = vparamss match {
+        case Nil => (None,Nil)
+        case List(args) => (Some(transformExternalCallArgs(args,data)),Nil)
         case List(inargs,outargs) =>
-          val (wrapper,filteredOutargs) = outargs.partition(p => isCObjectWrapper(p.tpt))
-          (Some( transformExternalCallArgs(inargs,data) ++ transformExternalCallArgs(filteredOutargs,data) ), wrapper.headOption.map(_.name))
+          val (wrappers,filteredOutargs) = outargs.partition(p => isCObjectWrapper(p.tpt))
+          val wrapperName = wrappers.headOption.map(_.name)
+          (Some( transformExternalCallArgs(inargs,data,false,wrappers) ++ transformExternalCallArgs(filteredOutargs,data,false,wrappers) ), wrappers)
         case _ =>
           c.error(c.enclosingPosition,"extern methods with more than two parameter lists are not supported for @CObj classes")
           ???
@@ -362,37 +363,44 @@ object CObj {
         case None if isClassMethod => q"__ext.$external"
         case None => q"__ext.$external(__ptr)"
       }
-      val rhs =
-//        if(returnsThis(scalaDef))
-//          q"$call;this"
-//        else if(updatesThis(scalaDef))
-//          q"this.__ref = $call.cast[$tRefNothing];this"
-//        else
-          wrapExternalCallResult(call,tpt,data,nullable(scalaDef),wrapper)
+      val rhs = wrapExternalCallResult(call,tpt,data,nullable(scalaDef),returnsThis(scalaDef),wrappers)
 
       DefDef(mods,name,tparams,vparamss,tpt,rhs)
     }
 
-    private def transformExternalCallArgs(args: Seq[ValDef], data: Data, outArgs: Boolean = false): Seq[Tree] = {
+    private def findWrapper(tpt: Tree, wrappers: List[ValDef]): Option[TermName] =
+      if(wrappers.isEmpty) None
+      else {
+        wrappers.find {
+          case ValDef(_,_,AppliedTypeTree(_,List(Ident(n))),_) if n.toString == tpt.toString => true
+          case _ => false
+        }.map(_.name)
+      }
+
+
+    private def transformExternalCallArgs(args: Seq[ValDef], data: Data, outArgs: Boolean = false, wrappers: List[ValDef] = Nil): Seq[Tree] = {
       args map {
-        // TODO: currently crashes due to https://github.com/scala-native/scala-native/issues/1142
         case ValDef(_,name,tpt,_) if isExternalObject(tpt,data) || outArgs =>
-          //q"$name.__ref.cast[$tPtrByte]"
-          q"""if($name==null) null else $name.__ptr"""
+          findWrapper(tpt,wrappers) match {
+            case Some(wrapperName) => q"""$wrapperName.unwrap($name)"""
+            case _ => q"""if($name==null) null else $name.__ptr"""
+          }
         case ValDef(_,name,AppliedTypeTree(tpe,_),_) if tpe.toString == "_root_.scala.<repeated>" => q"$name:_*"
         case ValDef(_,name,tpt,_) => q"$name"
       }
     }
 
-    private def wrapExternalCallResult(tree: Tree, tpt: Tree, data: Data, isNullable: Boolean, wrapper: Option[TermName] = None): Tree =
-      wrapper match {
-        case Some(wrapper) =>
+    private def wrapExternalCallResult(tree: Tree, tpt: Tree, data: Data, isNullable: Boolean, returnsThis: Boolean, wrappers: List[ValDef] = Nil): Tree =
+      findWrapper(tpt,wrappers) match {
+        case Some(wrapperName) =>
           if(isNullable)
-            q"""val res = $tree; if(res == null) null.asInstanceOf[$tpt] else $wrapper.wrap(res)"""
+            q"""val res = $tree; if(res == null) null.asInstanceOf[$tpt] else $wrapperName.wrap(res)"""
           else
-            q"$wrapper.wrap($tree)"
+            q"$wrapperName.wrap($tree)"
         case None if isExternalObject(tpt,data) =>
-          if(isNullable)
+          if(returnsThis)
+            q"""$tree;this"""
+          else if(isNullable)
             q"""val res = $tree; if(res == null) null else new $tpt(res)"""
           else
             q"""new $tpt($tree)"""
@@ -429,5 +437,8 @@ object CObj {
 
     private def nullable(m: DefDef): Boolean =
       findAnnotation(m.mods.annotations,"scala.scalanative.cobj.nullable").isDefined
+
+    private def returnsThis(m: DefDef): Boolean =
+      findAnnotation(m.mods.annotations,"scala.scalanative.cobj.returnsThis").isDefined
   }
 }

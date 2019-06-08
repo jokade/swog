@@ -24,6 +24,10 @@ void number_set_value(Number* c, int value) {
   c->value = value;
 }
 
+Number* number_self(Number* c) {
+  return c;
+}
+
 
 /* Counter */
 typedef struct {
@@ -107,3 +111,11 @@ void* slist_item_at(SList *l, int index) {
   }
   return p->data;
 }
+
+/* Callbacks */
+typedef int (*Callback0) (void);
+
+int callbacks_exec0(Callback0 f) {
+  return f();
+}
+
