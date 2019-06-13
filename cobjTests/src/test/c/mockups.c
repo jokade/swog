@@ -114,8 +114,13 @@ void* slist_item_at(SList *l, int index) {
 
 /* Callbacks */
 typedef int (*Callback0) (void);
+typedef int (*Callback1) (int);
 
 int callbacks_exec0(Callback0 f) {
   return f();
+}
+
+int callbacks_exec1(Callback1 f, int i) {
+  return f(i);
 }
 

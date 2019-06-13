@@ -1,6 +1,6 @@
 organization in ThisBuild := "de.surfice"
 
-version in ThisBuild := "0.0.7-SNAPSHOT"
+version in ThisBuild := "0.1.0-SNAPSHOT"
 
 scalaVersion in ThisBuild := "2.11.12"
 
@@ -13,15 +13,15 @@ lazy val commonSettings = Seq(
   scalacOptions ++= Seq("-deprecation","-unchecked","-feature","-language:implicitConversions","-Xlint"),
   addCompilerPlugin("org.scalamacros" % "paradise" % "2.1.0" cross CrossVersion.full),
   libraryDependencies ++= Seq(
-    "de.surfice" %% "smacrotools" % Version.smacrotools,
-    "com.lihaoyi" %%% "utest" % Version.utest % "test"
-    ),
-  testFrameworks += new TestFramework("utest.runner.Framework")
+    "de.surfice" %% "smacrotools" % Version.smacrotools
+  //  "com.lihaoyi" %%% "utest" % Version.utest % "test"
+    )
+  // testFrameworks += new TestFramework("utest.runner.Framework")
   )
 
 
 lazy val root  = project.in(file("."))
-  .aggregate(common,cobj,objc)
+  .aggregate(common,cobj,objc,cxx)
   .settings(commonSettings ++ dontPublish:_*)
   .settings(
     name := "scalanative-obj-interop"
@@ -53,10 +53,18 @@ lazy val objc = project
     name := "scalanative-interop-objc"
   )
 
+lazy val cxx = project
+  .enablePlugins(ScalaNativePlugin)
+  .dependsOn(cobj)
+  .settings(commonSettings ++ publishingSettings: _*)
+  .settings(
+    name := "scalanative-interop-cxx"
+  )
+
 import scalanative.sbtplugin.ScalaNativePluginInternal._
 
 lazy val cobjTests = project
-  .enablePlugins(ScalaNativePlugin,NBHAutoPlugin,NBHMakePlugin)
+  .enablePlugins(ScalaNativePlugin,NBHAutoPlugin,NBHCxxPlugin)
   .dependsOn(cobj)
   .settings(commonSettings ++ dontPublish:_*)
   .settings(
@@ -77,6 +85,14 @@ lazy val objcTests = project
     nativeLinkStubs := true,
     nbhMakeProjects += NBHMakeProject(baseDirectory.value / "src" / "test" / "objc" ,Seq(NBHMakeArtifact("mockups.o"))),
     nbhLinkFrameworks += "Foundation"
+  )
+
+lazy val cxxTests = project
+  .enablePlugins(ScalaNativePlugin,NBHCxxPlugin)
+  .dependsOn(cxx)
+  .settings(commonSettings ++ dontPublish: _*)
+  .settings(
+    nativeLinkStubs := true
   )
 
 lazy val dontPublish = Seq(

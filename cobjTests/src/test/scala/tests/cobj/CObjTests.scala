@@ -2,7 +2,7 @@ package tests.cobj
 
 import utest._
 
-import scala.scalanative.unsafe.CFuncPtr0
+import scala.scalanative.unsafe.{CFuncPtr0, CFuncPtr1}
 import scalanative.cobj._
 
 object CObjTests extends TestSuite {
@@ -62,7 +62,12 @@ object CObjTests extends TestSuite {
         override def apply(): Int = 42
       }
 
+      val cb1 = new CFuncPtr1[Int,Int] {
+        override def apply(i: Int): Int = i
+      }
+
       Callbacks.exec0(cb) ==> 42
+      Callbacks.exec1(cb1,43) ==> 43
     }
   }
 }

@@ -52,4 +52,5 @@ object SList {
 @CObj
 object Callbacks {
   def exec0(f: CFuncPtr0[Int]): Int = extern
+  def exec1(f: CFuncPtr1[Int,Int], i: Int): Int = extern
 }
