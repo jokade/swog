@@ -361,27 +361,27 @@ abstract class CommonHandler extends MacroAnnotationHandler {
           case Nil =>
             q"""implicit object __wrapper extends scalanative.cobj.CObjectWrapper[$tpe[_,_]] {
                   def wrap(ptr: scalanative.unsafe.Ptr[Byte]) = new $tpe(ptr)
-                  def unwrap(value: $tpe[_]): scalanative.unsafe.Ptr[Byte] = value.__ptr
+                  def unwrap(value: $tpe[_,_]): scalanative.unsafe.Ptr[Byte] = value.__ptr
                 }"""
           case Seq(arg1) =>
             q"""implicit object __wrapper extends scalanative.cobj.CObjectWrapper1[$tpe[_,_],${arg1.tpt}] {
                   def wrap(ptr: scalanative.unsafe.Ptr[Byte])($arg1) = new $tpe(ptr)
-                  def unwrap(value: $tpe[_]): scalanative.unsafe.Ptr[Byte] = value.__ptr
+                  def unwrap(value: $tpe[_,_]): scalanative.unsafe.Ptr[Byte] = value.__ptr
                 }"""
           case Seq(arg1,arg2) =>
             q"""implicit object __wrapper extends scalanative.cobj.CObjectWrapper2[$tpe[_,_],${arg1.tpt},${arg2.tpt}] {
                   def wrap(ptr: scalanative.unsafe.Ptr[Byte])($arg1,$arg2) = new $tpe(ptr)
-                  def unwrap(value: $tpe[_]): scalanative.unsafe.Ptr[Byte] = value.__ptr
+                  def unwrap(value: $tpe[_,_]): scalanative.unsafe.Ptr[Byte] = value.__ptr
                 }"""
           case Seq(arg1,arg2,arg3) =>
             q"""implicit object __wrapper extends scalanative.cobj.CObjectWrapper3[$tpe[_,_],${arg1.tpt},${arg2.tpt},${arg3.tpt}] {
                   def wrap(ptr: scalanative.unsafe.Ptr[Byte])($arg1,$arg2,$arg3) = new $tpe(ptr)
-                  def unwrap(value: $tpe[_]): scalanative.unsafe.Ptr[Byte] = value.__ptr
+                  def unwrap(value: $tpe[_,_]): scalanative.unsafe.Ptr[Byte] = value.__ptr
                 }"""
           case Seq(arg1,arg2,arg3,arg4) =>
             q"""implicit object __wrapper extends scalanative.cobj.CObjectWrapper4[$tpe[_,_],${arg1.tpt},${arg2.tpt},${arg3.tpt},${arg4.tpt}] {
                   def wrap(ptr: scalanative.unsafe.Ptr[Byte])($arg1,$arg2,$arg3,$arg4) = new $tpe(ptr)
-                  def unwrap(value: $tpe[_]): scalanative.unsafe.Ptr[Byte] = value.__ptr
+                  def unwrap(value: $tpe[_,_]): scalanative.unsafe.Ptr[Byte] = value.__ptr
                 }"""
           case _ =>
             c.error(c.enclosingPosition,"constructors with more than 4 implicit parameters are not supported")
