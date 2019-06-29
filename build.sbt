@@ -13,10 +13,10 @@ lazy val commonSettings = Seq(
   scalacOptions ++= Seq("-deprecation","-unchecked","-feature","-language:implicitConversions","-Xlint"),
   addCompilerPlugin("org.scalamacros" % "paradise" % "2.1.0" cross CrossVersion.full),
   libraryDependencies ++= Seq(
-    "de.surfice" %% "smacrotools" % Version.smacrotools
-  //  "com.lihaoyi" %%% "utest" % Version.utest % "test"
-    )
-  // testFrameworks += new TestFramework("utest.runner.Framework")
+    "de.surfice" %% "smacrotools" % Version.smacrotools,
+    "com.lihaoyi" %%% "utest" % Version.utest % "test"
+    ),
+   testFrameworks += new TestFramework("utest.runner.Framework")
   )
 
 
@@ -92,7 +92,8 @@ lazy val cxxTests = project
   .dependsOn(cxx)
   .settings(commonSettings ++ dontPublish: _*)
   .settings(
-    nativeLinkStubs := true
+    nativeLinkStubs := true,
+    nbhCxxCXXFlags += "-std=c++11"
   )
 
 lazy val dontPublish = Seq(

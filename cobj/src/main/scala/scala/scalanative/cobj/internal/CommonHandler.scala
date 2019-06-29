@@ -62,12 +62,12 @@ abstract class CommonHandler extends MacroAnnotationHandler {
     val prefix = data.externalPrefix
     val typeExternals = tpe.body.collect {
       case t@DefDef(mods, name, types, args, rettype, rhs) if isExtern(rhs) =>
-        genExternalBinding(prefix,t,!tpe.isObject,data)
+        genExternalBinding(prefix,t,!tpe.isObject)(data)
     }
     val companionExternals = tpe match {
       case t: TypeParts => t.companion.map(_.body.collect {
         case t@DefDef(mods, name, types, args, rettype, rhs) if isExtern(rhs) =>
-          genExternalBinding(prefix,t,false,data)
+          genExternalBinding(prefix,t,false)(data)
       }).getOrElse(Map())
       case _ => Nil
     }
@@ -103,7 +103,8 @@ abstract class CommonHandler extends MacroAnnotationHandler {
     //      val ctors = Seq(s"val __ref: ${t.data.crefType} = ")
     imports ++ ctors ++ (t.modParts.body map {
       case tree @ DefDef(mods, name, types, args, rettype, rhs) if isExtern(rhs) =>
-        val externalName = t.data.externals(name.toString)._1
+        val externalKey = genScalaName(tree)(t.data)
+        val externalName = t.data.externals(externalKey)._1
         genExternalCall(externalName,tree,false,t.data)
       case default => default
     })
@@ -120,7 +121,8 @@ abstract class CommonHandler extends MacroAnnotationHandler {
   protected def genTransformedCompanionBody(t: TransformData[CommonParts]): Seq[Tree] = {
     t.modParts.body map {
       case tree @ DefDef(mods, name, types, args, rettype, rhs) if isExtern(rhs) =>
-        val externalName = t.data.externals(name.toString)._1
+        val externalKey = genScalaName(tree)(t.data)
+        val externalName = t.data.externals(externalKey)._1
         genExternalCall(externalName,tree,t.modParts.isObject,t.data)
       case default => default
     }
@@ -187,9 +189,9 @@ abstract class CommonHandler extends MacroAnnotationHandler {
     }
   }
 
-  protected def genExternalBinding(prefix: String, scalaDef: DefDef, isInstanceMethod: Boolean, data: Data): (String,(String,Tree)) = {
-    val scalaName = scalaDef.name.toString
-    val externalName = genExternalName(prefix,scalaName,data.namingConvention)
+  protected def genExternalBinding(prefix: String, scalaDef: DefDef, isInstanceMethod: Boolean)(implicit data: Data): (String,(String,Tree)) = {
+    val scalaName = genScalaName(scalaDef)
+    val externalName = genExternalName(prefix,scalaDef)
     val externalParams =
       if(isInstanceMethod) scalaDef.vparamss match {
         case Nil => List(List(q"val self: $tPtrByte"))
@@ -219,12 +221,25 @@ abstract class CommonHandler extends MacroAnnotationHandler {
     (scalaName,(externalName,externalDef))
   }
 
-  protected def genExternalName(prefix: String, scalaName: String, nc: NamingConvention.Value): String = nc match {
-    case NamingConvention.SnakeCase =>
-      prefix + scalaName.replaceAll("([A-Z])","_$1").toLowerCase
-    case NamingConvention.PascalCase =>
-      prefix + scalaName.head.toUpper + scalaName.tail
-    case _ => prefix + scalaName
+  protected def genExternalName(prefix: String, scalaDef: DefDef)(implicit data: Data): String = {
+    val scalaName = genScalaName(scalaDef)
+    data.namingConvention match {
+      case NamingConvention.SnakeCase =>
+        prefix + scalaName.replaceAll("([A-Z])","_$1").toLowerCase
+      case NamingConvention.PascalCase =>
+        prefix + scalaName.head.toUpper + scalaName.tail
+      case _ => prefix + scalaName
+    }
+  }
+
+  protected def genScalaName(scalaDef: DefDef)(implicit data: Data): String = data.namingConvention match {
+    case NamingConvention.CxxWrapper =>
+      scalaDef.name.toString + (scalaDef.vparamss match {
+          case Nil => ""
+          case List(params) => "_" + params.map(_.tpt).mkString.hashCode
+        })
+    case _ =>
+      scalaDef.name.toString
   }
 
   protected def wrapExternalCallResult(tree: Tree, tpt: Tree, data: Data, isNullable: Boolean, returnsThis: Boolean, wrappers: List[ValDef] = Nil): Tree =

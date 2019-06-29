@@ -11,5 +11,9 @@ object NamingConvention extends Enumeration {
    * The first letter of the method name is transformed to upper case, i.e. `fooBar` -> `FooBar`
    */
   val PascalCase = Value
+  /**
+   * Appends the argument names to the end of the function name - used internally by Cxx.
+   */
+  val CxxWrapper = Value
 }
 

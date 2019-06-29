@@ -6,6 +6,7 @@ import scala.scalanative.annotation.ExternalSource
 import scala.scalanative.cobj.CObj
 import scala.scalanative.cxx.{Cxx, constructor}
 
+/*
 object Main {
   def main(args: Array[String]): Unit = {
     val foo = Foo(3)
@@ -38,7 +39,7 @@ object Foo {
   def apply(num: Int): Foo = extern
 
 }
-
+*/
 /*
 package base {
   @Cxx

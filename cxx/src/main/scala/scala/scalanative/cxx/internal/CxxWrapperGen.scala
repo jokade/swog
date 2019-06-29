@@ -54,7 +54,7 @@ trait CxxWrapperGen extends CommonHandler {
       .flatMap(extractStringConstant)
 
     data
-      .withNamingConvention(NamingConvention.None)
+      .withNamingConvention(NamingConvention.CxxWrapper)
       .withCxxIncludes(includes)
       .withCxxFQClassName(genCxxFQClassName(tpe)(data))
   }
@@ -101,29 +101,32 @@ trait CxxWrapperGen extends CommonHandler {
   protected def genCxxMethodWrapper(scalaDef: DefDef)(implicit data: Data): String = {
     val returnType = genCxxWrapperType(scalaDef.tpt)
     val name = genCxxName(scalaDef)
+    val scalaName = genScalaName(scalaDef)
     val (params, callArgs) = genCxxParams(scalaDef)
     val clsPtr = data.cxxFQClassName + "* p"
-    s"""$returnType ${data.externalPrefix}$name(${(clsPtr+:params).mkString(", ")}) { return p->$name(${callArgs.mkString(", ")}); }"""
+    s"""$returnType ${data.externalPrefix}$scalaName(${(clsPtr+:params).mkString(", ")}) { return p->$name(${callArgs.mkString(", ")}); }"""
   }
 
   protected def genCxxFunctionWrapper(scalaDef: DefDef)(implicit data: Data): String = {
     val returnType = genCxxWrapperType(scalaDef.tpt)
     val name = genCxxName(scalaDef)
+    val scalaName = genScalaName(scalaDef)
     val (params, callArgs) = genCxxParams(scalaDef)
     s"""$returnType ${data.externalPrefix}$name(${params.mkString(", ")}) { return ${data.cxxFQClassName}::$name(${callArgs.mkString(", ")}); }"""
   }
 
   protected def genCxxConstructorWrapper(scalaDef: DefDef, clsname: Option[String])(implicit data: Data): String = {
     val name = genCxxName(scalaDef)
+    val scalaName = genScalaName(scalaDef)
     val (params, callArgs) = genCxxParams(scalaDef)
     val constructor = clsname match {
       case Some(name) => name
       case _ => data.cxxFQClassName
     }
-    s"""void* ${data.externalPrefix}$name(${params.mkString(", ")}) { return new $constructor(${callArgs.mkString(", ")}); }"""
+    s"""void* ${data.externalPrefix}$scalaName(${params.mkString(", ")}) { return new $constructor(${callArgs.mkString(", ")}); }"""
   }
 
-  protected def genCxxName(scalaDef: DefDef)(implicit data: Data): String = scalaDef.name.toString
+  protected def genCxxName(scalaDef: DefDef)(implicit data: Data): String = scalaDef.name.toString //genScalaName(scalaDef,data.namingConvention)
 
   protected def genCxxParams(scalaDef: DefDef)(implicit data: Data): (Seq[String],Seq[String]) =
     scalaDef.vparamss match {
@@ -155,11 +158,15 @@ trait CxxWrapperGen extends CommonHandler {
     case t if t =:= tPtrCString => "char**"
     case t if t =:= tRawPtr => "void*"
     case t if t <:< tPtr => "void*"
-    // TODO: this is just a temporary hack that works for the Qt bindings
-    // in the generic case we need get the fully qualified C++ type name!
-    case t if t <:< tCxxObject => t.typeSymbol.name.toString + "*"
-    case t if t <:< tCObject => "void*"
+    case t if t <:< tCxxObject => genCxxExternalType(t)
+//    case t if t <:< tCObject => "void*"
+    case t => genCxxExternalType(t)
   }
+
+  private def genCxxExternalType(tpe: Type): String =
+  // TODO: this is just a temporary hack that works for the Qt bindings
+  // in the generic case we need get the fully qualified C++ type name!
+    tpe.typeSymbol.toString + "*"
 
   protected def genCxxFQClassName(tpe: CommonParts)(data: Data): String =
     data.cxxNamespace match {
