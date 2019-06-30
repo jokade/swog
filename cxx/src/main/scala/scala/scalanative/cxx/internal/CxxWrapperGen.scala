@@ -76,8 +76,10 @@ trait CxxWrapperGen extends CommonHandler {
 
   protected def genCxxWrapper(src: String): Tree = q"""new scalanative.annotation.ExternalSource("Cxx",${Literal(Constant(src))})"""
 
-  protected def genCxxTypeWrappers(tpe: TypeParts)(implicit data: Data): Data ={
+  protected def genCxxTypeWrappers(tpe: TypeParts)(implicit data: Data): Data = {
     val methods = tpe.body.collect {
+      case t:DefDef if isDelete(t) =>
+        genCxxDeleteWrapper(t)
       case t@DefDef(mods, name, types, args, rettype, rhs) if isExtern(rhs) =>
           genCxxMethodWrapper(t)
     }
@@ -124,6 +126,12 @@ trait CxxWrapperGen extends CommonHandler {
       case _ => data.cxxFQClassName
     }
     s"""void* ${data.externalPrefix}$scalaName(${params.mkString(", ")}) { return new $constructor(${callArgs.mkString(", ")}); }"""
+  }
+
+  protected def genCxxDeleteWrapper(scalaDef: DefDef)(implicit data: Data): String = {
+    val scalaName = genScalaName(scalaDef)
+    val clsPtr = data.cxxFQClassName + "* p"
+    s"""void ${data.externalPrefix}$scalaName($clsPtr) { delete p; }"""
   }
 
   protected def genCxxName(scalaDef: DefDef)(implicit data: Data): String = scalaDef.name.toString //genScalaName(scalaDef,data.namingConvention)
@@ -182,5 +190,8 @@ trait CxxWrapperGen extends CommonHandler {
     .map(annot => extractAnnotationParameters(annot,Seq("classname")).apply("classname").flatMap(extractStringConstant))
 //      .flatMap(annot =>extractAnnotationParameters(annot,Seq("classname")).get("classname").get)
 //      .map(extractStringConstant(_))
+
+  protected def isDelete(m: DefDef): Boolean =
+    findAnnotation(m.mods.annotations,"scala.scalanative.cxx.delete").isDefined
 }
 

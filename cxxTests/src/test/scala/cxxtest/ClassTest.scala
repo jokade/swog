@@ -21,6 +21,9 @@ object ClassTest extends TestSuite {
       date2.day ==> 13
       date2.month ==> 5
       date2.year ==> 2019
+
+      date1.free()
+      date2.free()
     }
     'methods-{
       val date1 = Date()
@@ -31,6 +34,9 @@ object ClassTest extends TestSuite {
       date1.compare(date2) ==> -1
       date2.compare(date1) ==> 1
       date2.compare(date2) ==> 0
+
+      date1.free()
+      date2.free()
     }
   }
 }
@@ -83,6 +89,9 @@ class Date {
   def addDays(d: Int): Int = extern
 
   def compare(other: Date): Int = extern
+
+  @delete
+  def free(): Unit = extern
 }
 
 object Date {
@@ -91,4 +100,5 @@ object Date {
 
   @constructor
   def apply(day: Int, month: Int, year: Int): Date = extern
+
 }
