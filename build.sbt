@@ -61,6 +61,16 @@ lazy val cxx = project
     name := "scalanative-interop-cxx"
   )
 
+lazy val cxxlib = project
+  .enablePlugins(ScalaNativePlugin)
+  .dependsOn(cxx)
+  .settings(commonSettings ++ publishingSettings: _*)
+  .settings(
+    name := "scalanative-cxxlib"
+//    nativeLinkStubs := true,
+//    nbhCxxCXXFlags += "-std=c++11"
+  )
+
 import scalanative.sbtplugin.ScalaNativePluginInternal._
 
 lazy val cobjTests = project
@@ -89,7 +99,7 @@ lazy val objcTests = project
 
 lazy val cxxTests = project
   .enablePlugins(ScalaNativePlugin,NBHCxxPlugin)
-  .dependsOn(cxx)
+  .dependsOn(cxx,cxxlib)
   .settings(commonSettings ++ dontPublish: _*)
   .settings(
     nativeLinkStubs := true,
