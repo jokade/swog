@@ -37,6 +37,9 @@ trait CxxWrapperGen extends CommonHandler {
     def cxxNamespace: Option[String] = data.getOrElse("cxxNamespace",None).asInstanceOf[Option[String]]
     def withCxxNamespace(namespace: Option[String]): Data = data.updated("cxxNamespace",namespace)
 
+    def cxxClassName: Option[String] = data.getOrElse("cxxClassName",None).asInstanceOf[Option[String]]
+    def withCxxClassName(className: Option[String]) = data.updated("cxxClassName",className)
+
     def cxxFQClassName: String = data.getOrElse("cxxFQClassName",null).asInstanceOf[String]
     def withCxxFQClassName(className: String): Data = data.updated("cxxFQClassName",className)
 
@@ -177,9 +180,11 @@ trait CxxWrapperGen extends CommonHandler {
     tpe.typeSymbol.toString + "*"
 
   protected def genCxxFQClassName(tpe: CommonParts)(data: Data): String =
-    data.cxxNamespace match {
-      case Some(ns) => ns + "::" + tpe.nameString
-      case None => tpe.nameString
+    (data.cxxNamespace,data.cxxClassName) match {
+      case (None,None) => tpe.nameString
+      case (Some(ns),None) => ns + "::" + tpe.nameString
+      case (None,Some(cn)) => cn
+      case (Some(ns),Some(cn)) => ns + "::" + cn
     }
 
   protected def isConstructor(m: DefDef): Boolean =

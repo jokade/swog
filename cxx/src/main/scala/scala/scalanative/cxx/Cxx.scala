@@ -7,7 +7,7 @@ import scala.scalanative.cobj.internal.CommonHandler
 import scala.scalanative.cxx.internal.CxxWrapperGen
 
 @compileTimeOnly("enable macro paradise to expand macro annotations")
-class Cxx(namespace: String = null, prefix: String = null) extends StaticAnnotation {
+class Cxx(namespace: String = null, classname: String = null, prefix: String = null) extends StaticAnnotation {
   def macroTransform(annottees: Any*): Any = macro Cxx.Macro.impl
 }
 
@@ -21,7 +21,7 @@ object Cxx {
     override def supportsObjects: Boolean = true
     override def createCompanion: Boolean = true
 
-    val annotationParamNames = Seq("namespace","prefix")
+    val annotationParamNames = Seq("namespace","classname","prefix")
 
     import c.universe._
 
@@ -81,9 +81,17 @@ object Cxx {
         }
         case _ => None
       }
+      val classname = annotParams("classname") match {
+        case Some(cn) => extractStringConstant(cn).get.trim match {
+          case "" => None
+          case x => Some(x)
+        }
+        case _ => None
+      }
       val updData = data
         .withExternalPrefix(externalPrefix)
         .withCxxNamespace(namespace)
+        .withCxxClassName(classname)
       analyzeCxxAnnotation(tpe)(updData)
     }
 
