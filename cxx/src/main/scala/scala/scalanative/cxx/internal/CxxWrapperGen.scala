@@ -104,20 +104,22 @@ trait CxxWrapperGen extends CommonHandler {
   }
 
   protected def genCxxMethodWrapper(scalaDef: DefDef)(implicit data: Data): String = {
-    val returnType = genCxxWrapperType(scalaDef.tpt)
+    val returnType = genCxxWrapperType(scalaDef.tpt,returnsConst(scalaDef))
+    val cast = if(returnsRef(scalaDef)) s"($returnType)&" else ""
     val name = genCxxName(scalaDef)
     val scalaName = genScalaName(scalaDef)
     val (params, callArgs) = genCxxParams(scalaDef)
     val clsPtr = data.cxxFQClassName + "* p"
-    s"""$returnType ${data.externalPrefix}$scalaName(${(clsPtr+:params).mkString(", ")}) { return p->$name(${callArgs.mkString(", ")}); }"""
+    s"""$returnType ${data.externalPrefix}$scalaName(${(clsPtr+:params).mkString(", ")}) { return $cast p->$name(${callArgs.mkString(", ")}); }"""
   }
 
   protected def genCxxFunctionWrapper(scalaDef: DefDef)(implicit data: Data): String = {
-    val returnType = genCxxWrapperType(scalaDef.tpt)
+    val returnType = genCxxWrapperType(scalaDef.tpt,returnsConst(scalaDef))
+    val cast = if(returnsRef(scalaDef)) s"($returnType)&" else ""
     val name = genCxxName(scalaDef)
     val scalaName = genScalaName(scalaDef)
     val (params, callArgs) = genCxxParams(scalaDef)
-    s"""$returnType ${data.externalPrefix}$name(${params.mkString(", ")}) { return ${data.cxxFQClassName}::$name(${callArgs.mkString(", ")}); }"""
+    s"""$returnType ${data.externalPrefix}$name(${params.mkString(", ")}) { return $cast ${data.cxxFQClassName}::$name(${callArgs.mkString(", ")}); }"""
   }
 
   protected def genCxxConstructorWrapper(scalaDef: DefDef, clsname: Option[String])(implicit data: Data): String = {
@@ -148,16 +150,21 @@ trait CxxWrapperGen extends CommonHandler {
         ???
     }
 
-  protected def genCxxParam(param: ValDef): (String,String) = {
+  protected def genCxxParam(param: ValDef)(implicit data: Data): (String,String) = {
     val name = param.name.toString
-    val cxxType = genCxxWrapperType(param.tpt)
+    val cxxType = genCxxWrapperType(param.tpt,false)
     (s"$cxxType $name",name)
   }
 
-  protected def genCxxWrapperType(tpe: Tree): String =
-    genCxxWrapperType(getType(tpe, true))
+  protected def genCxxWrapperType(tpe: Tree, isConst: Boolean)(implicit data: Data): String = {
+    val cxxtype = genCxxWrapperType(getType(tpe, true))
+    if(isConst)
+      "const "+cxxtype
+    else
+      cxxtype
+  }
 
-  protected def genCxxWrapperType(tpe: Type): String = tpe match {
+  protected def genCxxWrapperType(tpe: Type)(implicit data: Data): String = tpe match {
     case t if t =:= tBoolean => "bool"
     case t if t =:= tChar => "char"
     case t if t =:= tInt => "int"
@@ -169,15 +176,22 @@ trait CxxWrapperGen extends CommonHandler {
     case t if t =:= tPtrCString => "char**"
     case t if t =:= tRawPtr => "void*"
     case t if t <:< tPtr => "void*"
-    case t if t <:< tCxxObject => genCxxExternalType(t)
+    case t if t <:< tCxxObject => "void*" //genCxxExternalType(t)
 //    case t if t <:< tCObject => "void*"
-    case t => genCxxExternalType(t)
+//    case t => genCxxExternalType(t)
   }
 
-  private def genCxxExternalType(tpe: Type): String =
+  private def genCxxExternalType(tpe: Type)(implicit data: Data): String = {
+    val cxxtype =
+      if(tpe.typeSymbol.fullName == data.currentType)
+        data.cxxFQClassName
+      else
+        tpe.typeSymbol.fullName
+    cxxtype + "*"
+  }
   // TODO: this is just a temporary hack that works for the Qt bindings
   // in the generic case we need get the fully qualified C++ type name!
-    tpe.typeSymbol.toString + "*"
+//    tpe.typeSymbol.name.toString + "*"
 
   protected def genCxxFQClassName(tpe: CommonParts)(data: Data): String =
     (data.cxxNamespace,data.cxxClassName) match {
@@ -198,5 +212,11 @@ trait CxxWrapperGen extends CommonHandler {
 
   protected def isDelete(m: DefDef): Boolean =
     findAnnotation(m.mods.annotations,"scala.scalanative.cxx.delete").isDefined
+
+  protected def returnsConst(m: DefDef): Boolean =
+    findAnnotation(m.mods.annotations,"scala.scalanative.cxx.returnsConst").isDefined
+
+  protected def returnsRef(m: DefDef): Boolean =
+    findAnnotation(m.mods.annotations,"scala.scalanative.cxx.returnsRef").isDefined
 }
 
