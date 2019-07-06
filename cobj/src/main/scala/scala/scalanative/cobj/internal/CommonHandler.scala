@@ -3,7 +3,7 @@ package scala.scalanative.cobj.internal
 import de.surfice.smacrotools.MacroAnnotationHandler
 
 import scala.reflect.macros.{TypecheckException, whitebox}
-import scala.scalanative.cobj.{CObject, CObjectWrapper, NamingConvention}
+import scala.scalanative.cobj.{CEnum, CObject, CObjectWrapper, NamingConvention}
 
 abstract class CommonHandler extends MacroAnnotationHandler {
   val c: whitebox.Context
@@ -15,7 +15,9 @@ abstract class CommonHandler extends MacroAnnotationHandler {
   protected val tCObject = weakTypeOf[CObject]
   protected val tpeCObject = tq"$tCObject"
   protected val tCObjectWrapper = weakTypeOf[CObjectWrapper[_]]
+  protected val tCEnum = weakTypeOf[CEnum#Value]
   protected val expExtern = q"scalanative.unsafe.extern"
+  protected val tpeInt = tq"Int"
   protected def tpeDefaultParent: Tree
 
   implicit class MacroData(data: Map[String,Any]) {
@@ -114,6 +116,8 @@ abstract class CommonHandler extends MacroAnnotationHandler {
     params map {
       case ValDef(mods,name,tpt,rhs) if isExternalObject(tpt,data) =>
         ValDef(mods,name,q"$tPtrByte",rhs)
+      case ValDef(mods,name,tpt,rhs) if isCEnum(tpt,data) =>
+        ValDef(mods,name,tpeInt,rhs)
       case default => default
     }
   }
@@ -184,6 +188,8 @@ abstract class CommonHandler extends MacroAnnotationHandler {
           case Some(wrapperName) => q"""$wrapperName.unwrap($name)"""
           case _ => q"""if($name==null) null else $name.__ptr"""
         }
+      case ValDef(_,name,tpt,_) if isCEnum(tpt,data) =>
+        q"$name.value"
       case ValDef(_,name,AppliedTypeTree(tpe,_),_) if tpe.toString == "_root_.scala.<repeated>" => q"$name:_*"
       case ValDef(_,name,tpt,_) => q"$name"
     }
@@ -214,6 +220,7 @@ abstract class CommonHandler extends MacroAnnotationHandler {
       }
     val tpt =
       if(isExternalObject(scalaDef.tpt,data)) tq"scalanative.unsafe.Ptr[Byte]"
+      else if(isCEnum(scalaDef.tpt,data)) tpeInt
       else scalaDef.tpt
     val mods = Modifiers(NoFlags,scalaDef.mods.privateWithin,scalaDef.mods.annotations) // remove flags (e.g. 'override')
     val externalDef = DefDef(mods,TermName(externalName),scalaDef.tparams,externalParams,tpt,scalaDef.rhs)
@@ -236,7 +243,7 @@ abstract class CommonHandler extends MacroAnnotationHandler {
     case NamingConvention.CxxWrapper =>
       scalaDef.name.toString + (scalaDef.vparamss match {
           case Nil => ""
-          case List(params) => "_" + params.map(_.tpt).mkString.hashCode
+          case List(params) => "_" + params.map(_.tpt).mkString.hashCode.abs
         })
     case _ =>
       scalaDef.name.toString
@@ -256,6 +263,8 @@ abstract class CommonHandler extends MacroAnnotationHandler {
           q"""val res = $tree; if(res == null) null else new $tpt(res)"""
         else
           q"""new $tpt($tree)"""
+      case None if isCEnum(tpt,data) =>
+        q"new $tpt($tree)"
       case _ => tree
     }
 
@@ -290,6 +299,16 @@ abstract class CommonHandler extends MacroAnnotationHandler {
 
   protected def isCObjectWrapper(tpt: Tree): Boolean =
     getType(tpt,true) <:< tCObjectWrapper
+
+  protected def isCEnum(tpt: Tree, data: Data): Boolean =
+    try {
+      val typed = getType(tpt,true)
+      // TODO: do we still need the check for tCRef (or can we only check for tCObjWrapper)
+      typed.baseClasses.map(_.asType.toType).exists( t => t <:< tCEnum)
+    } catch {
+      case ex: TypecheckException => false // if the type check fails we assume that the type isn't an enum
+    }
+
 
   protected def nullable(m: DefDef): Boolean =
     findAnnotation(m.mods.annotations,"scala.scalanative.cobj.nullable").isDefined

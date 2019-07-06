@@ -52,7 +52,7 @@ object Cxx {
       case cls: ClassTransformData =>
         cls
           .updBody(genTransformedTypeBody(cls))
-          .addAnnotations(genCxxSource(cls.data))
+          .addAnnotations(genCxxSource(cls.data),genCxxWrapperAnnot(cls.data))
           .updCtorParams(genTransformedCtorParams(cls))
           .updParents(genTransformedParents(cls))
       case obj: ObjectTransformData =>

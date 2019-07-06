@@ -1,11 +1,13 @@
 package scala.scalanative.cxx.internal
 
+import scala.annotation.StaticAnnotation
 import scala.reflect.macros.whitebox
 import scala.scalanative.cobj.NamingConvention
 import scala.scalanative.cobj.internal.CommonHandler
-import scala.scalanative.cxx.CxxObject
+import scala.scalanative.cxx.{CxxEnum, CxxObject}
 import scala.scalanative.runtime.RawPtr
 import scala.scalanative.unsafe.{CChar, CDouble, CFloat, CInt, CLong, CString, Ptr}
+
 
 trait CxxWrapperGen extends CommonHandler {
   val c: whitebox.Context
@@ -25,6 +27,24 @@ trait CxxWrapperGen extends CommonHandler {
   private val tPtr = weakTypeOf[Ptr[_]]
   private val tRawPtr = weakTypeOf[RawPtr]
   protected val tCxxObject = weakTypeOf[CxxObject]
+  protected val tCxxEnum = weakTypeOf[CxxEnum#Value]
+
+  sealed trait CxxType {
+    def string: String
+  }
+  sealed trait PrimitiveType extends CxxType
+  case object BoolType       extends PrimitiveType { val string = "bool" }
+  case object CharType       extends PrimitiveType { val string = "char" }
+  case object IntType        extends PrimitiveType { val string = "int" }
+  case object LongType       extends PrimitiveType { val string = "long" }
+  case object FloatType      extends PrimitiveType { val string = "float" }
+  case object DoubleType     extends PrimitiveType { val string = "double" }
+  case object UnitType       extends PrimitiveType { val string = "void" }
+  case object CStringType    extends PrimitiveType { val string = "char*" }
+  case object CStringPtrType extends PrimitiveType { val string = "char**" }
+  case object VoidPtr        extends PrimitiveType { val string = "void*" }
+  case class EnumType(string: String) extends CxxType
+  case class ClassType(string: String) extends CxxType
 
   implicit class CxxMacroData(data: Map[String,Any]) {
     type Data = Map[String, Any]
@@ -79,6 +99,11 @@ trait CxxWrapperGen extends CommonHandler {
 
   protected def genCxxWrapper(src: String): Tree = q"""new scalanative.annotation.ExternalSource("Cxx",${Literal(Constant(src))})"""
 
+  protected def genCxxWrapperAnnot(data: CxxMacroData): Tree = {
+    val cxxName = Literal(Constant(data.cxxFQClassName))
+    q"new scalanative.cxx.internal.CxxWrapper($cxxName)"
+  }
+
   protected def genCxxTypeWrappers(tpe: TypeParts)(implicit data: Data): Data = {
     val methods = tpe.body.collect {
       case t:DefDef if isDelete(t) =>
@@ -104,7 +129,7 @@ trait CxxWrapperGen extends CommonHandler {
   }
 
   protected def genCxxMethodWrapper(scalaDef: DefDef)(implicit data: Data): String = {
-    val returnType = genCxxWrapperType(scalaDef.tpt,returnsConst(scalaDef))
+    val returnType = genCxxReturnType(scalaDef,returnsConst(scalaDef))
     val cast = if(returnsRef(scalaDef)) s"($returnType)&" else ""
     val name = genCxxName(scalaDef)
     val scalaName = genScalaName(scalaDef)
@@ -114,12 +139,12 @@ trait CxxWrapperGen extends CommonHandler {
   }
 
   protected def genCxxFunctionWrapper(scalaDef: DefDef)(implicit data: Data): String = {
-    val returnType = genCxxWrapperType(scalaDef.tpt,returnsConst(scalaDef))
+    val returnType = genCxxReturnType(scalaDef,returnsConst(scalaDef))
     val cast = if(returnsRef(scalaDef)) s"($returnType)&" else ""
     val name = genCxxName(scalaDef)
     val scalaName = genScalaName(scalaDef)
     val (params, callArgs) = genCxxParams(scalaDef)
-    s"""$returnType ${data.externalPrefix}$name(${params.mkString(", ")}) { return $cast ${data.cxxFQClassName}::$name(${callArgs.mkString(", ")}); }"""
+    s"""$returnType ${data.externalPrefix}$scalaName(${params.mkString(", ")}) { return $cast ${data.cxxFQClassName}::$name(${callArgs.mkString(", ")}); }"""
   }
 
   protected def genCxxConstructorWrapper(scalaDef: DefDef, clsname: Option[String])(implicit data: Data): String = {
@@ -137,6 +162,17 @@ trait CxxWrapperGen extends CommonHandler {
     val scalaName = genScalaName(scalaDef)
     val clsPtr = data.cxxFQClassName + "* p"
     s"""void ${data.externalPrefix}$scalaName($clsPtr) { delete p; }"""
+  }
+
+  protected def genCxxReturnType(scalaDef: DefDef, returnsConst: Boolean)(implicit data: Data): String = {
+    val cxxType = genCxxWrapperType(getType(scalaDef.tpt,true)) match {
+      case EnumType(_) => "int"
+      case x => x.string
+    }
+    if(returnsConst)
+      "const "+cxxType
+    else
+      cxxType
   }
 
   protected def genCxxName(scalaDef: DefDef)(implicit data: Data): String = scalaDef.name.toString //genScalaName(scalaDef,data.namingConvention)
@@ -159,26 +195,46 @@ trait CxxWrapperGen extends CommonHandler {
   protected def genCxxWrapperType(tpe: Tree, isConst: Boolean)(implicit data: Data): String = {
     val cxxtype = genCxxWrapperType(getType(tpe, true))
     if(isConst)
-      "const "+cxxtype
+      "const "+cxxtype.string
     else
-      cxxtype
+      cxxtype.string
   }
 
-  protected def genCxxWrapperType(tpe: Type)(implicit data: Data): String = tpe match {
-    case t if t =:= tBoolean => "bool"
-    case t if t =:= tChar => "char"
-    case t if t =:= tInt => "int"
-    case t if t =:= tLong => "long"
-    case t if t =:= tFloat => "float"
-    case t if t =:= tDouble => "double"
-    case t if t =:= tUnit => "void"
-    case t if t =:= tCString => "char*"
-    case t if t =:= tPtrCString => "char**"
-    case t if t =:= tRawPtr => "void*"
-    case t if t <:< tPtr => "void*"
-    case t if t <:< tCxxObject => "void*" //genCxxExternalType(t)
+  protected def genCxxWrapperType(tpe: Type)(implicit data: Data): CxxType = tpe match {
+    case t if t =:= tBoolean    => BoolType
+    case t if t =:= tChar       => CharType
+    case t if t =:= tInt        => IntType
+    case t if t =:= tLong       => LongType
+    case t if t =:= tFloat      => FloatType
+    case t if t =:= tDouble     => DoubleType
+    case t if t =:= tUnit       => UnitType
+    case t if t =:= tCString    => CStringType
+    case t if t =:= tPtrCString => CStringPtrType
+    case t if t =:= tRawPtr     => VoidPtr
+    case t if t <:< tPtr        => VoidPtr
+    case t if t <:< tCxxObject  => ClassType(genCxxExternalType(t))
+    case t if t <:< tCxxEnum    => EnumType(genCxxEnumType(t))
 //    case t if t <:< tCObject => "void*"
-//    case t => genCxxExternalType(t)
+    case t => ClassType(genCxxExternalType(t))
+  }
+
+  private def genCxxEnumType(t: Type): String = {
+    (try{
+      val clazz = Class.forName(t.toString.stripSuffix(".Value")+"$")
+      clazz.getField("MODULE$").get(clazz).asInstanceOf[CxxEnum].cxxType match {
+        case null => None
+        case x => Some(x)
+      }
+    }
+    catch {
+      case ex:Throwable =>
+        c.warning(c.enclosingPosition,s"could not load CxxEnum '$t': ${ex.getMessage}")
+        None
+    }) match {
+      case Some(cxxType) => cxxType
+      case _ =>
+        t.resultType.toString.split("\\.").dropRight(1).last
+    }
   }
 
   private def genCxxExternalType(tpe: Type)(implicit data: Data): String = {
@@ -186,12 +242,13 @@ trait CxxWrapperGen extends CommonHandler {
       if(tpe.typeSymbol.fullName == data.currentType)
         data.cxxFQClassName
       else
-        tpe.typeSymbol.fullName
+        extractAnnotationParameters(tpe.typeSymbol,"scala.scalanative.cxx.internal.CxxWrapper",Seq("cxxType")) match {
+          case Some(args) => extractStringConstant(args("cxxType").get).get
+          case _ =>
+            genCxxFQClassName(tpe)
+        }
     cxxtype + "*"
   }
-  // TODO: this is just a temporary hack that works for the Qt bindings
-  // in the generic case we need get the fully qualified C++ type name!
-//    tpe.typeSymbol.name.toString + "*"
 
   protected def genCxxFQClassName(tpe: CommonParts)(data: Data): String =
     (data.cxxNamespace,data.cxxClassName) match {
@@ -200,6 +257,9 @@ trait CxxWrapperGen extends CommonHandler {
       case (None,Some(cn)) => cn
       case (Some(ns),Some(cn)) => ns + "::" + cn
     }
+
+  protected def genCxxFQClassName(tpe: Type)(implicit data: Data): String =
+    tpe.typeSymbol.fullName.replaceAll("\\.","::")
 
   protected def isConstructor(m: DefDef): Boolean =
     findAnnotation(m.mods.annotations,"scala.scalanative.cxx.constructor").isDefined
