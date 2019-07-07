@@ -174,7 +174,16 @@ trait CxxWrapperGen extends CommonHandler {
       cxxType
   }
 
-  protected def genCxxName(scalaDef: DefDef)(implicit data: Data): String = scalaDef.name.toString //genScalaName(scalaDef,data.namingConvention)
+  protected def genCxxName(scalaDef: DefDef)(implicit data: Data): String =
+    findAnnotation(scalaDef.mods.annotations,"scala.scalanative.cxx.cxxName") match {
+      case Some(annot) => extractAnnotationParameters(annot,Seq("name")).apply("name") match {
+        case Some(name) =>
+          extractStringConstant(name).getOrElse(scalaDef.name.toString)
+        case _ => ???
+      }
+      case _ => scalaDef.name.toString
+    }
+
 
   protected def genCxxParams(scalaDef: DefDef)(implicit data: Data): (Seq[String],Seq[String]) =
     scalaDef.vparamss match {
