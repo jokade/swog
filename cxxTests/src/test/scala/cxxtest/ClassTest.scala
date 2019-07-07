@@ -43,7 +43,6 @@ object ClassTest extends TestSuite {
 
 
 @Cxx
-@debug
 @ExternalSource("Cxx",
 """
 class Date {

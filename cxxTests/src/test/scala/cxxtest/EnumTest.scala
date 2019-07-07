@@ -19,13 +19,8 @@ object EnumTest extends TestSuite {
     }
   }
 
-  object FooEnum extends CxxEnum {
-    val Foo = Value(1)
-    val Bar = Value(2)
-  }
 
   @Cxx
-  @debug
   class TestEnum {
     def get: FooEnum.Value = extern
   }

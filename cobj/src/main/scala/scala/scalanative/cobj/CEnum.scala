@@ -1,8 +1,15 @@
 package scala.scalanative.cobj
 
 abstract class CEnum {
-  case class Value(value: Int) {
+  class Value(val value: Int) {
     def |(or: Value): Value = Value(value | or.value)
     def &(and: Value): Value = Value(value & and.value)
+
+    override def hashCode(): Int = value
+    override def equals(other: Any): Boolean = other match {
+      case that: Value => this.value == that.value
+      case _ => false
+    }
   }
+  def Value(v: Int): Value = new Value(v)
 }

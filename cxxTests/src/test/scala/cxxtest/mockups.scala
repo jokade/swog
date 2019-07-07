@@ -1,7 +1,11 @@
 package cxxtest
 
+import de.surfice.smacrotools.debug
+
 import scala.scalanative.annotation.ExternalSource
+import scala.scalanative.cobj.CEnum
 import scala.scalanative.cxx.CxxEnum
+import scala.scalanative.unsafe.name
 
 @ExternalSource("Cxx",
 """
@@ -21,8 +25,8 @@ object mockups {
   def loadCxx() = {}
 }
 
-object FooEnum extends CxxEnum {
+@CxxEnum("FooEnum")
+object FooEnum extends CEnum {
   val Foo = Value(1)
   val Bar = Value(2)
-
 }

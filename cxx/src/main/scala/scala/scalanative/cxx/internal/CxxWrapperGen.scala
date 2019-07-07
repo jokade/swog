@@ -27,7 +27,6 @@ trait CxxWrapperGen extends CommonHandler {
   private val tPtr = weakTypeOf[Ptr[_]]
   private val tRawPtr = weakTypeOf[RawPtr]
   protected val tCxxObject = weakTypeOf[CxxObject]
-  protected val tCxxEnum = weakTypeOf[CxxEnum#Value]
 
   sealed trait CxxType {
     def name: String
@@ -218,29 +217,17 @@ trait CxxWrapperGen extends CommonHandler {
     case t if t =:= tRawPtr     => VoidPtr
     case t if t <:< tPtr        => VoidPtr
     case t if t <:< tCxxObject  => ClassType(genCxxExternalType(t))
-    case t if t <:< tCxxEnum    => EnumType(genCxxEnumType(t))
+    case t if t <:< tCEnum    => EnumType(genCxxEnumType(t))
 //    case t if t <:< tCObject => "void*"
     case t => ClassType(genCxxExternalType(t))
   }
 
-  private def genCxxEnumType(t: Type): String = {
-    (try{
-      val clazz = Class.forName(t.toString.stripSuffix(".Value")+"$")
-      clazz.getField("MODULE$").get(clazz).asInstanceOf[CxxEnum].cxxType match {
-        case null => None
-        case x => Some(x)
-      }
-    }
-    catch {
-      case ex:Throwable =>
-        c.warning(c.enclosingPosition,s"could not load CxxEnum '$t': ${ex.toString}")
-        None
-    }) match {
-      case Some(cxxType) => cxxType
-      case _ =>
+  private def genCxxEnumType(t: Type): String =
+    extractAnnotationParameters(t.typeSymbol,"scala.scalanative.unsafe.name",Seq("name")).get.apply("name") match {
+      case Some(name) => extractStringConstant(name).get
+      case None =>
         t.resultType.toString.split("\\.").dropRight(1).last
     }
-  }
 
   private def genCxxExternalType(tpe: Type)(implicit data: Data): String = {
     if(tpe.typeSymbol.fullName == data.currentType)
