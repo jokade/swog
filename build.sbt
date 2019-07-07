@@ -24,14 +24,14 @@ lazy val root  = project.in(file("."))
   .aggregate(common,cobj,objc,cxx)
   .settings(commonSettings ++ dontPublish:_*)
   .settings(
-    name := "scalanative-obj-interop"
+    name := "swog"
   )
 
 lazy val common = project
   .enablePlugins(ScalaNativePlugin)
   .settings(commonSettings ++ publishingSettings:_*)
   .settings(
-    name := "scalanative-interop-common",
+    name := "swog-common",
     libraryDependencies ++= Seq(
       //"org.scala-native" %%% "posixlib" % "0.3.9-SNAPSHOT"
     )
@@ -42,7 +42,7 @@ lazy val cobj = project
   .dependsOn(common)
   .settings(commonSettings ++ publishingSettings:_*)
   .settings(
-    name := "scalanative-interop-cobj"
+    name := "swog-cobj"
   )
 
 lazy val objc = project
@@ -50,7 +50,7 @@ lazy val objc = project
   .dependsOn(common)
   .settings(commonSettings ++ publishingSettings:_*)
   .settings(
-    name := "scalanative-interop-objc"
+    name := "swog-objc"
   )
 
 lazy val cxx = project
@@ -58,7 +58,7 @@ lazy val cxx = project
   .dependsOn(cobj)
   .settings(commonSettings ++ publishingSettings: _*)
   .settings(
-    name := "scalanative-interop-cxx"
+    name := "swog-cxx"
   )
 
 lazy val cxxlib = project
@@ -66,7 +66,7 @@ lazy val cxxlib = project
   .dependsOn(cxx)
   .settings(commonSettings ++ publishingSettings: _*)
   .settings(
-    name := "scalanative-cxxlib"
+    name := "swog-cxxlib"
 //    nativeLinkStubs := true,
 //    nbhCxxCXXFlags += "-std=c++11"
   )
@@ -128,13 +128,13 @@ lazy val publishingSettings = Seq(
     <url>https://github.com/jokade/scalantive-obj-interop</url>
     <licenses>
       <license>
-        <name>MIT License</name>
-        <url>http://www.opensource.org/licenses/mit-license.php</url>
+        <name>Apache 2.0 License</name>
+        <url>https://opensource.org/licenses/Apache-2.0</url>
       </license>
     </licenses>
     <scm>
-      <url>git@github.com:jokade/scalantive-obj-interop</url>
-      <connection>scm:git:git@github.com:jokade/scalantive-obj-interop.git</connection>
+      <url>git@github.com:jokade/swog</url>
+      <connection>scm:git:git@github.com:jokade/swog.git</connection>
     </scm>
     <developers>
       <developer>
