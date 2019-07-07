@@ -1,27 +1,25 @@
+package tests.objc
+
 import de.surfice.smacrotools.debug
 
 import scalanative._
 import unsafe._
 import objc._
-
-object Main {
-  def main(args: Array[String]): Unit = {
-    val i = Number.alloc()
-    println(i.get())
-    println("done")
-  }
-}
+import scala.scalanative.objc.runtime.id
 
 @ObjC
 @debug
 class Number extends ObjCObject {
-  def get(): Int = extern
-
-//  def init(i: Init): Int = extern
+  def init(i: Int): Unit = extern
+  def get: Int = extern
 }
 
 @ObjCClass
-abstract class NumberClass extends ObjCClassObject {
+@debug
+abstract class NumberClass extends ObjCObject {
+  type InstanceType
+  def __cls: id
+  def __ptr: Ptr[Byte] = null
   def alloc(): Number = extern
 }
 

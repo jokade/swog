@@ -1,18 +1,8 @@
-import de.surfice.smacrotools.debug
-
-import scalanative.native._
-import cobj._
-import scala.scalanative.native.cobj.runtime.CObjObject
+import scala.scalanative.unsafe._
 
 object Main {
 
   def main(args: Array[String]): Unit = Zone{ implicit z: Zone =>
+    println("YES")
   }
-}
-
-@CObj
-@debug
-class GError {
-  def foo: GError = extern
-
 }
