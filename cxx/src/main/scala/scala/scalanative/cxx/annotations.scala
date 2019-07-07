@@ -13,4 +13,9 @@ class delete extends StaticAnnotation
  */
 class returnsConst extends StaticAnnotation
 
+/**
+ * Indicates that the annotated method returns a reference instead of a pointer.
+ */
 class returnsRef extends StaticAnnotation
+
+class ref extends StaticAnnotation

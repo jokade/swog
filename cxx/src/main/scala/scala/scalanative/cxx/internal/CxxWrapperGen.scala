@@ -30,21 +30,24 @@ trait CxxWrapperGen extends CommonHandler {
   protected val tCxxEnum = weakTypeOf[CxxEnum#Value]
 
   sealed trait CxxType {
-    def string: String
+    def name: String
+    def default: String
+    def ptr: String = name + "*"
+    def ref: String = name + "&"
   }
-  sealed trait PrimitiveType extends CxxType
-  case object BoolType       extends PrimitiveType { val string = "bool" }
-  case object CharType       extends PrimitiveType { val string = "char" }
-  case object IntType        extends PrimitiveType { val string = "int" }
-  case object LongType       extends PrimitiveType { val string = "long" }
-  case object FloatType      extends PrimitiveType { val string = "float" }
-  case object DoubleType     extends PrimitiveType { val string = "double" }
-  case object UnitType       extends PrimitiveType { val string = "void" }
-  case object CStringType    extends PrimitiveType { val string = "char*" }
-  case object CStringPtrType extends PrimitiveType { val string = "char**" }
-  case object VoidPtr        extends PrimitiveType { val string = "void*" }
-  case class EnumType(string: String) extends CxxType
-  case class ClassType(string: String) extends CxxType
+  sealed trait PrimitiveType extends CxxType { def default = name }
+  case object BoolType       extends PrimitiveType { val name = "bool" }
+  case object CharType       extends PrimitiveType { val name = "char" }
+  case object IntType        extends PrimitiveType { val name = "int" }
+  case object LongType       extends PrimitiveType { val name = "long" }
+  case object FloatType      extends PrimitiveType { val name = "float" }
+  case object DoubleType     extends PrimitiveType { val name = "double" }
+  case object UnitType       extends PrimitiveType { val name = "void" }
+  case object CStringType    extends PrimitiveType { val name = "char*" }
+  case object CStringPtrType extends PrimitiveType { val name = "char**" }
+  case object VoidPtr        extends PrimitiveType { val name = "void*" }
+  case class EnumType(name: String) extends CxxType { def default = "int" }
+  case class ClassType(name: String) extends CxxType { def default = ptr }
 
   implicit class CxxMacroData(data: Map[String,Any]) {
     type Data = Map[String, Any]
@@ -165,10 +168,7 @@ trait CxxWrapperGen extends CommonHandler {
   }
 
   protected def genCxxReturnType(scalaDef: DefDef, returnsConst: Boolean)(implicit data: Data): String = {
-    val cxxType = genCxxWrapperType(getType(scalaDef.tpt,true)) match {
-      case EnumType(_) => "int"
-      case x => x.string
-    }
+    val cxxType = genCxxWrapperType(getType(scalaDef.tpt,true)).default
     if(returnsConst)
       "const "+cxxType
     else
@@ -189,16 +189,21 @@ trait CxxWrapperGen extends CommonHandler {
   protected def genCxxParam(param: ValDef)(implicit data: Data): (String,String) = {
     val name = param.name.toString
     val cxxType = genCxxWrapperType(param.tpt,false)
-    (s"$cxxType $name",name)
+    val cast = castParam(cxxType,isRef(param))
+    (s"${cxxType.default} $name",s"$cast$name")
   }
 
-  protected def genCxxWrapperType(tpe: Tree, isConst: Boolean)(implicit data: Data): String = {
-    val cxxtype = genCxxWrapperType(getType(tpe, true))
-    if(isConst)
-      "const "+cxxtype.string
-    else
-      cxxtype.string
-  }
+  private def castParam(cxxType: CxxType, isRef: Boolean): String = cxxType match {
+      case en: EnumType =>
+        s"(${en.name + (if(isRef) "&" else "")})"
+      case x if isRef =>
+        "*"
+//        s"(${x.name}&)"
+      case _ => ""
+    }
+
+  protected def genCxxWrapperType(tpe: Tree, isConst: Boolean)(implicit data: Data): CxxType =
+    genCxxWrapperType(getType(tpe, true))
 
   protected def genCxxWrapperType(tpe: Type)(implicit data: Data): CxxType = tpe match {
     case t if t =:= tBoolean    => BoolType
@@ -228,7 +233,7 @@ trait CxxWrapperGen extends CommonHandler {
     }
     catch {
       case ex:Throwable =>
-        c.warning(c.enclosingPosition,s"could not load CxxEnum '$t': ${ex.getMessage}")
+        c.warning(c.enclosingPosition,s"could not load CxxEnum '$t': ${ex.toString}")
         None
     }) match {
       case Some(cxxType) => cxxType
@@ -238,16 +243,14 @@ trait CxxWrapperGen extends CommonHandler {
   }
 
   private def genCxxExternalType(tpe: Type)(implicit data: Data): String = {
-    val cxxtype =
-      if(tpe.typeSymbol.fullName == data.currentType)
-        data.cxxFQClassName
-      else
-        extractAnnotationParameters(tpe.typeSymbol,"scala.scalanative.cxx.internal.CxxWrapper",Seq("cxxType")) match {
-          case Some(args) => extractStringConstant(args("cxxType").get).get
-          case _ =>
-            genCxxFQClassName(tpe)
-        }
-    cxxtype + "*"
+    if(tpe.typeSymbol.fullName == data.currentType)
+      data.cxxFQClassName
+    else
+      extractAnnotationParameters(tpe.typeSymbol,"scala.scalanative.cxx.internal.CxxWrapper",Seq("cxxType")) match {
+        case Some(args) => extractStringConstant(args("cxxType").get).get
+        case _ =>
+          genCxxFQClassName(tpe)
+      }
   }
 
   protected def genCxxFQClassName(tpe: CommonParts)(data: Data): String =
@@ -278,5 +281,8 @@ trait CxxWrapperGen extends CommonHandler {
 
   protected def returnsRef(m: DefDef): Boolean =
     findAnnotation(m.mods.annotations,"scala.scalanative.cxx.returnsRef").isDefined
+
+  protected def isRef(p: ValDef): Boolean =
+    findAnnotation(p.mods.annotations,"scala.scalanative.cxx.ref").isDefined
 }
 

@@ -24,4 +24,5 @@ object mockups {
 object FooEnum extends CxxEnum {
   val Foo = Value(1)
   val Bar = Value(2)
+
 }

@@ -28,7 +28,6 @@ object EnumTest extends TestSuite {
   @debug
   class TestEnum {
     def get: FooEnum.Value = extern
-
   }
   object TestEnum {
     @constructor
