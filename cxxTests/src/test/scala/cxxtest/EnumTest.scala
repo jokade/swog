@@ -7,7 +7,7 @@ import unsafe._
 import cxx._
 import utest._
 
-import scala.scalanative.annotation.ExternalSource
+import scala.scalanative.annotation.InlineSource
 
 object EnumTest extends TestSuite {
   mockups.loadCxx()

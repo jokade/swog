@@ -4,7 +4,7 @@ import de.surfice.smacrotools.debug
 import utest._
 
 import scala.scalanative._
-import annotation.ExternalSource
+import annotation.InlineSource
 import unsafe._
 import cxx._
 
@@ -43,7 +43,7 @@ object ClassTest extends TestSuite {
 
 
 @Cxx
-@ExternalSource("Cxx",
+@InlineSource("Cxx",
 """
 class Date {
   int d, m, y;

@@ -2,7 +2,7 @@ import de.surfice.smacrotools.debug
 
 import scalanative._
 import unsafe._
-import scala.scalanative.annotation.ExternalSource
+import scala.scalanative.annotation.InlineSource
 import scala.scalanative.cobj.CObj
 import scala.scalanative.cxx.{Cxx, constructor}
 
@@ -17,7 +17,7 @@ object Main {
 
 @Cxx
 @debug
-@ExternalSource("Cxx",
+@InlineSource("Cxx",
 """
 class Foo {
     int num;
@@ -44,7 +44,7 @@ object Foo {
 package base {
   @Cxx
   @debug
-  @ExternalSource("Cxx",
+  @InlineSource("Cxx",
 """
 namespace base::bar {
   int get() { return 123; }

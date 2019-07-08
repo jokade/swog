@@ -15,7 +15,6 @@ import scala.scalanative.interop.AutoReleasable
  */
 @Cxx(namespace = "std", classname = "string")
 @include("<string>")
-@debug
 class CxxString extends CxxObject with AutoReleasable {
   final def length: Int = extern
 

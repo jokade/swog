@@ -2,12 +2,12 @@ package cxxtest
 
 import de.surfice.smacrotools.debug
 
-import scala.scalanative.annotation.ExternalSource
+import scala.scalanative.annotation.InlineSource
 import scala.scalanative.cobj.CEnum
 import scala.scalanative.cxx.CxxEnum
 import scala.scalanative.unsafe.name
 
-@ExternalSource("Cxx",
+@InlineSource("Cxx",
 """
 enum FooEnum {
    Foo = 1,

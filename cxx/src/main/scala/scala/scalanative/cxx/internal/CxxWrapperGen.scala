@@ -99,7 +99,7 @@ trait CxxWrapperGen extends CommonHandler {
     genCxxWrapper( includes + """extern "C" {""" + "\n" + data.cxxWrappers.mkString("\n") + "\n}" )
   }
 
-  protected def genCxxWrapper(src: String): Tree = q"""new scalanative.annotation.ExternalSource("Cxx",${Literal(Constant(src))})"""
+  protected def genCxxWrapper(src: String): Tree = q"""new scalanative.annotation.InlineSource("Cxx",${Literal(Constant(src))})"""
 
   protected def genCxxWrapperAnnot(data: CxxMacroData): Tree = {
     val cxxName = Literal(Constant(data.cxxFQClassName))
