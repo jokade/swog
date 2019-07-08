@@ -24,6 +24,10 @@ trait CxxWrapperGen extends CommonHandler {
   private val tDouble = weakTypeOf[CDouble]
   private val tCString = weakTypeOf[CString]
   private val tPtrCString = weakTypeOf[Ptr[CString]]
+  private val tPtrInt = weakTypeOf[Ptr[Int]]
+  private val tPtrLong = weakTypeOf[Ptr[Long]]
+  private val tPtrDouble = weakTypeOf[Ptr[Double]]
+  private val tPtrFloat = weakTypeOf[Ptr[Float]]
   private val tPtr = weakTypeOf[Ptr[_]]
   private val tRawPtr = weakTypeOf[RawPtr]
   protected val tCxxObject = weakTypeOf[CxxObject]
@@ -44,6 +48,10 @@ trait CxxWrapperGen extends CommonHandler {
   case object UnitType       extends PrimitiveType { val name = "void" }
   case object CStringType    extends PrimitiveType { val name = "char*" }
   case object CStringPtrType extends PrimitiveType { val name = "char**" }
+  case object IntPtrType     extends PrimitiveType { val name = "int*" }
+  case object LongPtrType    extends PrimitiveType { val name = "long*" }
+  case object FloatPtrType   extends PrimitiveType { val name = "float*" }
+  case object DoublePtrType  extends PrimitiveType { val name = "double*" }
   case object VoidPtr        extends PrimitiveType { val name = "void*" }
   case class EnumType(name: String) extends CxxType { def default = "int" }
   case class ClassType(name: String) extends CxxType { def default = ptr }
@@ -223,6 +231,10 @@ trait CxxWrapperGen extends CommonHandler {
     case t if t =:= tUnit       => UnitType
     case t if t =:= tCString    => CStringType
     case t if t =:= tPtrCString => CStringPtrType
+    case t if t =:= tPtrInt     => IntPtrType
+    case t if t =:= tPtrLong    => LongPtrType
+    case t if t =:= tPtrFloat   => FloatPtrType
+    case t if t =:= tPtrDouble  => DoublePtrType
     case t if t =:= tRawPtr     => VoidPtr
     case t if t <:< tPtr        => VoidPtr
     case t if t <:< tCxxObject  => ClassType(genCxxExternalType(t))
