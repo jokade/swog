@@ -12,7 +12,7 @@ trait ObjCMacroTools extends CommonMacroTools {
   implicit class MacroData(var data: Map[String, Any]) {
     type Data = Map[String, Any]
     type Selectors = Seq[(String, TermName)]
-    type Externals = Seq[External]
+    type Externals = Set[External]
     type Statements = Seq[Tree]
 
     def companionName: TermName = data.getOrElse("companionName",null).asInstanceOf[TermName]
@@ -62,15 +62,18 @@ trait ObjCMacroTools extends CommonMacroTools {
   protected[this] val tObjCObject = c.weakTypeOf[ObjCObject]
   protected[this] val tFloat = c.weakTypeOf[Float]
   protected[this] val tDouble = c.weakTypeOf[Double]
+  protected[this] val tBoolean = c.weakTypeOf[Boolean]
   protected[this] val tInt = c.weakTypeOf[Int]
-  protected[this] val tLong = c.weakTypeOf[Int]
+  protected[this] val tLong = c.weakTypeOf[Long]
   protected[this] val tUnit = c.weakTypeOf[Unit]
   protected[this] val tPtr = c.weakTypeOf[Ptr[_]]
+  protected[this] val tChar = c.weakTypeOf[Char]
   protected[this] val tAnyVal = c.weakTypeOf[AnyVal]
 
   private val tpePtr = tq"scalanative.unsafe.Ptr[Byte]"
 
   protected[this] val msgSendNameAnnot = Modifiers(NoFlags,typeNames.EMPTY,List(q"new name(${Literal(Constant("objc_msgSend"))})"))
+  protected[this] val msgSendFpretNameAnnot = Modifiers(NoFlags,typeNames.EMPTY,List(q"new name(${Literal(Constant("objc_msgSend_fpret"))})"))
 
   protected[this] def genSelector(name: TermName, args: List[List[ValDef]]): (String, TermName) = {
     val s = genSelectorString(name, args)
@@ -92,20 +95,6 @@ trait ObjCMacroTools extends CommonMacroTools {
 
   protected[this] def genSelectorString(name: TermName, args: List[List[ValDef]]): String =
     name.toString.replaceAll("_",":")
-  /*
-    if(name.toString.contains("_"))
-      name.toString.replaceAll("_",":")
-    else args match {
-      case Nil | List(Nil) => selectorMethodName(name)
-      case List(args) => selectorMethodName(name) +: (args.tail map {
-        case ValDef(_, name, _, _) => name.toString
-      }) mkString("", ":", ":")
-      case x =>
-        c.error(c.enclosingPosition, "multiple parameter lists not supported for ObjC classes")
-        ???
-    }
-  */
-
 
   private def selectorMethodName(name: TermName): String = {
     val s = name.toString
@@ -134,24 +123,28 @@ trait ObjCMacroTools extends CommonMacroTools {
     case _ => true
   }
 
-//  protected[this] def isAnyVal(tpe: Option[Type]): Boolean = tpe.exists(_ <:< tAnyVal)
-
   protected[this] def wrapResult(result: Tree, resultType: Tree): Tree = {
     val tpe = getObjCType(resultType)
     wrapResult(result,tpe)
   }
 
-  protected[this] def wrapResult(result: Tree, resultType: Option[Type]): Tree = {
-    if (isObjCObject(resultType))
-      q"{val r = $result; if(r==null) null else new ${resultType.get}(r)}"
-    else if (resultType.isDefined)
-      q"$result.asInstanceOf[${resultType.get}]"
-    else
-      q"$result"
+  protected def wrapResult(result: Tree, resultType: Option[Type]): Tree = resultType match {
+    case Some(t) if t <:< tInt || t <:< tLong || t <:< tBoolean || t <:< tFloat || t <:< tDouble || t <:< tChar =>
+      result
+    case Some(t) if t <:< tPtr =>
+      q"scalanative.runtime.fromRawPtr($result)"
+    case _ =>
+      q"{val r = $result; if(r==null) null else new ${resultType.get}(scalanative.runtime.fromRawPtr(r))}"
   }
 
   private def genTypeCode(tpt: Tree): String = getType(tpt,true) match {
-    case t if t <:< tInt || t <:< tObjCObject || t <:< tPtr => "i"
+    case t if t <:< tInt => "i"
+    case t if t <:< tLong => "l"
+    case t if t <:< tBoolean => "b"
+    case t if t <:< tChar => "c"
+    case t if t <:< tDouble => "d"
+    case t if t <:< tFloat => "f"
+    case t if t <:< tObjCObject || t <:< tPtr => "p"
     case t if t <:< tUnit => "v"
     case _ =>
       c.error(c.enclosingPosition,s"unsupported type: $tpt")
@@ -175,7 +168,8 @@ trait ObjCMacroTools extends CommonMacroTools {
         c.error(c.enclosingPosition, "multiple parameter lists not supported for ObjC classes")
         ???
     }
-    TermName("msgSend_"+suffix+genTypeCode(scalaDef.tpt))
+    val retType = genTypeCode(scalaDef.tpt)
+    TermName("msgSend_"+retType+suffix)
   }
 
 
@@ -188,10 +182,24 @@ trait ObjCMacroTools extends CommonMacroTools {
         q"val $name: ${t._1}"
       }
     }
-    val res = mapTypeForExternalCall(scalaDef.tpt)
-    External( q"$msgSendNameAnnot def $name(self: id, sel: SEL, ..$args): $res = extern" )
+    genTypeCode(scalaDef.tpt) match {
+      case "i" =>
+        External(name.toString)(q"$msgSendNameAnnot def $name(self: id, sel: SEL, ..$args): Int = extern" )
+      case "l" =>
+        External(name.toString)(q"$msgSendNameAnnot def $name(self: id, sel: SEL, ..$args): Long = extern" )
+      case "b" =>
+        External(name.toString)(q"$msgSendNameAnnot def $name(self: id, sel: SEL, ..$args): Boolean = extern" )
+      case "d" =>
+        External(name.toString)(q"$msgSendFpretNameAnnot def $name(self: id, sel: SEL, ..$args): Double = extern" )
+      case "f" =>
+        External(name.toString)(q"$msgSendFpretNameAnnot def $name(self: id, sel: SEL, ..$args): Float = extern" )
+      case "c" =>
+        External(name.toString)(q"$msgSendNameAnnot def $name(self: id, sel: SEL, ..$args): Char = extern" )
+      case _ =>
+        External(name.toString)(q"$msgSendNameAnnot def $name(self: id, sel: SEL, ..$args): scalanative.runtime.RawPtr = extern" )
+    }
   }
 
 
-  case class External(decl: Tree)
+  case class External(name: String)(val decl: Tree)
 }

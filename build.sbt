@@ -88,7 +88,7 @@ lazy val cobjTests = project
   )
 
 lazy val objcTests = project
-  .enablePlugins(ScalaNativePlugin,NBHAutoPlugin,NBHMakePlugin)
+  .enablePlugins(ScalaNativePlugin,NBHAutoPlugin,NBHCxxPlugin)
   .dependsOn(objc)
   .settings(commonSettings ++ dontPublish: _*)
   .settings(

@@ -62,7 +62,7 @@ object ObjC {
           data
             .withCompanionName(cls.name.toTermName)
             .withSelectors(selectors)
-            .withExternals(externals)
+            .withExternals(externals.toSet)
             .withAdditionalCompanionStmts(companionStmts))
       case default => default
     }
@@ -223,15 +223,9 @@ object ObjC {
       val argNames = (1 to args.size).map(p => TermName("arg"+p))
       val argDefs = argNames.zip(args).map(p => q"val ${p._1} = ${p._2}")
 
-      val call = resultType match {
-        case Some(t) if t <:< tFloat =>
-          q"scalanative.objc.runtime.objc_msgSend_Float($target,$selectorVal,..$argNames)"
-        case Some(t) if t <:< tDouble =>
-          q"scalanative.objc.runtime.objc_msgSend_Double($target,$selectorVal,..$argNames)"
-        case _ =>
-          val msgSendName = genMsgSendName(scalaDef)
-          q"""${data.companionName}.__ext.$msgSendName($target,$selectorVal,..$argNames)"""
-      }
+      val msgSendName = genMsgSendName(scalaDef)
+      val call = q"""${data.companionName}.__ext.$msgSendName($target,$selectorVal,..$argNames)"""
+
       if( returnsThis(scalaDef) )
         q"..$argDefs;$call;this"
       else if ( useWrapper(scalaDef) )

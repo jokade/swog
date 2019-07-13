@@ -3,6 +3,7 @@ import de.surfice.smacrotools.debug
 import scalanative._
 import unsafe._
 import objc._
+import scala.scalanative.runtime.RawPtr
 
 object Main {
   def main(args: Array[String]): Unit = {
@@ -21,6 +22,7 @@ class Number extends ObjCObject {
 }
 
 @ObjCClass
+@debug
 abstract class NumberClass extends ObjCClassObject {
   def alloc(): Number = extern
 }
