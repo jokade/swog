@@ -83,8 +83,7 @@ lazy val cobjTests = project
       "-lglib-2.0",
       "-lgobject-2.0",
       "-lgtk-3.0"
-    ),
-    nbhMakeProjects += NBHMakeProject(baseDirectory.value / "src" / "test" / "c" ,Seq(NBHMakeArtifact("mockups.o")))
+    )
   )
 
 lazy val objcTests = project

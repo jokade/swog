@@ -2,7 +2,8 @@ package tests.cobj
 
 import utest._
 
-import scala.scalanative.unsafe.{CFuncPtr0, CFuncPtr1}
+import scala.scalanative.runtime.Intrinsics
+import scala.scalanative.unsafe._
 import scalanative.cobj._
 
 object CObjTests extends TestSuite {
@@ -69,5 +70,44 @@ object CObjTests extends TestSuite {
       Callbacks.exec0(cb) ==> 42
       Callbacks.exec1(cb1,43) ==> 43
     }
+
+    'OutArgs-{
+      'Int- {
+        implicit val out = Result.stackalloc[Int]
+        OutArgs.int()
+        out.value ==> 42
+      }
+      'Long-{
+        implicit val out = Result.stackalloc[Long]
+        OutArgs.long()
+        out.value ==> Long.MaxValue
+      }
+      'Double-{
+        implicit val out = Result.stackalloc[Double]
+        OutArgs.double()
+        out.value ==> Double.MaxValue
+      }
+      'StructByValue-{
+        implicit val out = Result.stackalloc[OutArgs.OutStruct]
+        OutArgs.struct()
+        out.value._1 ==> 42
+      }
+      'CObject-{
+        implicit val out = Result.stackalloc[Number]
+        OutArgs.number()
+        out.wrappedValue.getValue() ==> 42
+      }
+      'alloc-{
+        Zone{ implicit z =>
+          implicit val intRes = Result.alloc[Int]
+          implicit val objRes = Result.alloc[Number]
+          OutArgs.int()
+          intRes.value ==> 42
+          OutArgs.number()
+          objRes.wrappedValue.getValue() ==> 42
+        }
+      }
+    }
+
   }
 }

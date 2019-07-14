@@ -315,4 +315,7 @@ abstract class CommonHandler extends MacroAnnotationHandler {
 
   protected def returnsThis(m: DefDef): Boolean =
     findAnnotation(m.mods.annotations,"scala.scalanative.cobj.returnsThis").isDefined
+
+  protected def returnsValue(m: DefDef): Boolean =
+    findAnnotation(m.mods.annotations,"scala.scalanative.cobj.returnsValue").isDefined
 }

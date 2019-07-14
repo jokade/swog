@@ -2,11 +2,41 @@ package tests.cobj
 
 import de.surfice.smacrotools.debug
 
-import scalanative.cobj._
+import scala.scalanative.annotation.InlineSource
+import scalanative.cobj.{Result, _}
 import scalanative.unsafe._
 
 @CObj
-@debug
+@InlineSource("C",
+"""
+#include <stdlib.h>
+
+typedef struct {
+  int value;
+} Number;
+
+Number* number_new() {
+  Number *c = malloc(sizeof(Number));
+  c->value = 0;
+  return c;
+}
+
+void number_free(Number* c) {
+  free(c);
+}
+
+int number_get_value(Number* c) {
+  return c->value;
+}
+
+void number_set_value(Number* c, int value) {
+  c->value = value;
+}
+
+Number* number_self(Number* c) {
+  return c;
+}
+""")
 class Number {
   def getValue(): CInt = extern
   def setValue(value: CInt): Unit = extern
@@ -22,6 +52,33 @@ object Number {
 
 
 @CObj
+@InlineSource("C",
+"""
+#include <stdlib.h>
+
+typedef struct {
+  int value;
+  int stepSize;
+} Counter;
+
+Counter* counter_new() {
+  Counter *c = malloc(sizeof(Counter));
+  c->value = 0;
+  c->stepSize = 1;
+  return c;
+}
+
+Counter* counter_with_step_size(int stepSize) {
+  Counter *c = counter_new();
+  c->stepSize = stepSize;
+  return c;
+}
+
+int counter_increment(Counter* c) {
+  c->value += c->stepSize;
+  return c->value;
+}
+""")
 class Counter extends Number {
   def increment(): CInt = extern
 }
@@ -33,6 +90,67 @@ object Counter {
 }
 
 @CObj(prefix = "slist_")
+@InlineSource("C",
+"""
+#include <stdlib.h>
+
+typedef struct _SListEntry {
+  void* data;
+  struct _SListEntry *next;
+} SListEntry;
+
+typedef SListEntry SList;
+
+SList* slist_new() {
+  SList *list = calloc(1,sizeof(SList));
+  return list;
+}
+
+int slist_is_empty(SList *l) {
+  return (NULL == l) || (NULL == l->data);
+}
+
+int slist_size(SList *l) {
+  if(slist_is_empty(l)) {
+    return 0;
+  }
+  SListEntry *p = l;
+  int size = 1;
+  while((NULL != p->next)) {
+    p = p->next;
+    if(NULL != p->data) {
+      size += 1;
+    }
+    else {
+      break;
+    }
+  }
+  return size;
+}
+
+SList* slist_prepend(SList *l, void* value) {
+  SListEntry *entry = slist_new();
+  entry->data = value;
+  entry->next = l;
+  return entry;
+}
+
+void* slist_item_at(SList *l, int index) {
+  if(NULL == l || index<0) {
+    return NULL;
+  }
+  SListEntry *p = l;
+  for(int i=0; i<index; i++) {
+    if(NULL != p->next) {
+      p = p->next;
+    }
+    else {
+      return NULL;
+    }
+  }
+  return p->data;
+}
+""")
 class SList[T] {
   def isEmpty: Boolean = extern
   def size: Int = extern
@@ -49,8 +167,73 @@ object SList {
   def apply[T<:CObject](): SList[T] = extern
 }
 
+
 @CObj
+@InlineSource("C",
+"""
+typedef int (*Callback0) (void);
+typedef int (*Callback1) (int);
+
+int callbacks_exec0(Callback0 f) {
+  return f();
+}
+
+int callbacks_exec1(Callback1 f, int i) {
+  return f(i);
+}
+""")
 object Callbacks {
   def exec0(f: CFuncPtr0[Int]): Int = extern
   def exec1(f: CFuncPtr1[Int,Int], i: Int): Int = extern
 }
+
+
+@CObj
+@InlineSource("C",
+"""
+#include <limits.h>
+#include <float.h>
+#include <stdlib.h>
+
+void out_args_int(int* out) {
+  *out = 42;
+}
+
+void out_args_long(long* out) {
+  *out = LONG_MAX;
+}
+
+void out_args_double(double* out) {
+  *out = DBL_MAX;
+}
+
+typedef struct {
+  int foo;
+} OutStruct;
+
+
+void out_args_struct(OutStruct* out) {
+  out->foo = 42;
+}
+
+typedef struct {
+  int value;
+} OutClass;
+
+
+void out_args_number(OutClass** out) {
+  *out = malloc(sizeof(OutClass));
+  (*out)->value = 42;
+}
+""")
+object OutArgs {
+  type OutStruct = CStruct1[Int]
+
+  def int()(implicit out: Result[Int]): Unit = extern
+  def long()(implicit out: Result[Long]): Unit = extern
+  def double()(implicit out: Result[Double]): Unit = extern
+  def struct()(implicit out: Result[OutStruct]): Unit = extern
+  def number()(implicit out: Result[Number]): Unit = extern
+}
+
+

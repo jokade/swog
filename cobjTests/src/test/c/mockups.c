@@ -1,5 +1,6 @@
 /* Provides functions used to test the CObj interop features */
 #include <stdlib.h>
+#include <limit.h>
 
 /* Number */
 typedef struct {
@@ -124,3 +125,12 @@ int callbacks_exec1(Callback1 f, int i) {
   return f(i);
 }
 
+
+/* OutArgs */
+void out_args_int(int* out) {
+  *out = 42;
+}
+
+void out_args_long(long* out) {
+  *out = LONG_MAX;
+}
