@@ -2,7 +2,7 @@ package scala.scalanative.cxx.internal
 
 import scala.annotation.StaticAnnotation
 import scala.reflect.macros.whitebox
-import scala.scalanative.cobj.{NamingConvention, Result, ResultValue}
+import scala.scalanative.cobj.{NamingConvention, ResultPtr, ResultValue}
 import scala.scalanative.cobj.internal.CommonHandler
 import scala.scalanative.cxx.{CxxEnum, CxxObject}
 import scala.scalanative.runtime.RawPtr

@@ -3,7 +3,7 @@ package tests.cobj
 import de.surfice.smacrotools.debug
 
 import scala.scalanative.annotation.InlineSource
-import scalanative.cobj.{Result, _}
+import scalanative.cobj.{ResultPtr, _}
 import scalanative.unsafe._
 
 @CObj
@@ -229,11 +229,11 @@ void out_args_number(OutClass** out) {
 object OutArgs {
   type OutStruct = CStruct1[Int]
 
-  def int()(implicit out: Result[Int]): Unit = extern
-  def long()(implicit out: Result[Long]): Unit = extern
-  def double()(implicit out: Result[Double]): Unit = extern
-  def struct()(implicit out: Result[OutStruct]): Unit = extern
-  def number()(implicit out: Result[Number]): Unit = extern
+  def int()(implicit out: ResultPtr[Int]): Unit = extern
+  def long()(implicit out: ResultPtr[Long]): Unit = extern
+  def double()(implicit out: ResultPtr[Double]): Unit = extern
+  def struct()(implicit out: ResultPtr[OutStruct]): Unit = extern
+  def number()(implicit out: ResultPtr[Number]): Unit = extern
 }
 
 

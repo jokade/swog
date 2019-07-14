@@ -7,7 +7,7 @@ import scala.scalanative._
 import annotation.InlineSource
 import unsafe._
 import cxx._
-import scala.scalanative.cobj.{Result, ResultValue}
+import scala.scalanative.cobj.{ResultPtr, ResultValue}
 
 object ClassTest extends TestSuite {
 

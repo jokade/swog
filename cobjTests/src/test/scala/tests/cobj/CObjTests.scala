@@ -73,34 +73,34 @@ object CObjTests extends TestSuite {
 
     'OutArgs-{
       'Int- {
-        implicit val out = Result.stackalloc[Int]
+        implicit val out = ResultPtr.stackalloc[Int]
         OutArgs.int()
         out.value ==> 42
       }
       'Long-{
-        implicit val out = Result.stackalloc[Long]
+        implicit val out = ResultPtr.stackalloc[Long]
         OutArgs.long()
         out.value ==> Long.MaxValue
       }
       'Double-{
-        implicit val out = Result.stackalloc[Double]
+        implicit val out = ResultPtr.stackalloc[Double]
         OutArgs.double()
         out.value ==> Double.MaxValue
       }
       'StructByValue-{
-        implicit val out = Result.stackalloc[OutArgs.OutStruct]
+        implicit val out = ResultPtr.stackalloc[OutArgs.OutStruct]
         OutArgs.struct()
         out.value._1 ==> 42
       }
       'CObject-{
-        implicit val out = Result.stackalloc[Number]
+        implicit val out = ResultPtr.stackalloc[Number]
         OutArgs.number()
         out.wrappedValue.getValue() ==> 42
       }
       'alloc-{
         Zone{ implicit z =>
-          implicit val intRes = Result.alloc[Int]
-          implicit val objRes = Result.alloc[Number]
+          implicit val intRes = ResultPtr.alloc[Int]
+          implicit val objRes = ResultPtr.alloc[Number]
           OutArgs.int()
           intRes.value ==> 42
           OutArgs.number()

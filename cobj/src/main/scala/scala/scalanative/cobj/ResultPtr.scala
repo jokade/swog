@@ -6,21 +6,21 @@ import scala.language.experimental.macros
 import scala.reflect.macros.blackbox
 import scala.scalanative.unsafe._
 
-final class Result[T](val ptr: Ptr[T])(implicit tag: Tag[T]) extends CObject {
+final class ResultPtr[T](val ptr: Ptr[T])(implicit tag: Tag[T]) extends CObject {
   @inline def __ptr: Ptr[Byte] = ptr.asInstanceOf[Ptr[Byte]]
   @inline def isDefined: Boolean = !ptr != null
   @inline def isEmpty: Boolean = !isDefined
 //  @inline def valuePtr: Ptr[Byte] = !ptr
-  @inline def value: T = macro Result.Macros.valueImpl[T]
-  @inline def wrappedValue(implicit wrapper: CObjectWrapper[T]): T = macro Result.Macros.wrappedValueImpl[T]
+  @inline def value: T = macro ResultPtr.Macros.valueImpl[T]
+  @inline def wrappedValue(implicit wrapper: CObjectWrapper[T]): T = macro ResultPtr.Macros.wrappedValueImpl[T]
 //  @inline def value_=(v: T): Unit = macro Result.Macros.setValueImpl[T]
 //  @inline def option: Option[T] = macro Result.Macros.optionImpl[T]
 //  @inline def clear(): Unit = !ptr = null
 }
-object Result {
+object ResultPtr {
 
-  def alloc[T](implicit tag: Tag[T], zone: Zone): Result[T] = macro Macros.allocImpl[T]
-  def stackalloc[T]: Result[T] = macro Macros.stackallocImpl[T]
+  def alloc[T](implicit tag: Tag[T], zone: Zone): ResultPtr[T] = macro Macros.allocImpl[T]
+  def stackalloc[T]: ResultPtr[T] = macro Macros.stackallocImpl[T]
 
   class Macros(val c: blackbox.Context) extends BlackboxMacroTools {
     import c.universe._
@@ -34,9 +34,9 @@ object Result {
       val tpe = weakTypeOf[T]
       val tree =
         if(tpe <:< tCObject)
-          q"new scalanative.cobj.Result(scalanative.unsafe.alloc[Ptr[Byte]]($tag.asInstanceOf[scalanative.unsafe.Tag[scalanative.unsafe.Ptr[Byte]]],$zone).asInstanceOf[scalanative.unsafe.Ptr[$tpe]])"
+          q"new scalanative.cobj.ResultPtr(scalanative.unsafe.alloc[Ptr[Byte]]($tag.asInstanceOf[scalanative.unsafe.Tag[scalanative.unsafe.Ptr[Byte]]],$zone).asInstanceOf[scalanative.unsafe.Ptr[$tpe]])"
         else
-          q"new scalanative.cobj.Result(scalanative.unsafe.alloc[$tpe]($tag,$zone))"
+          q"new scalanative.cobj.ResultPtr(scalanative.unsafe.alloc[$tpe]($tag,$zone))"
       tree
     }
 
@@ -44,9 +44,9 @@ object Result {
       val tpe = weakTypeOf[T]
       val tree =
         if(tpe <:< tCObject)
-          q"new scalanative.cobj.Result(scalanative.unsafe.stackalloc[Ptr[Byte]].asInstanceOf[Ptr[$tpe]])"
+          q"new scalanative.cobj.ResultPtr(scalanative.unsafe.stackalloc[Ptr[Byte]].asInstanceOf[Ptr[$tpe]])"
         else
-          q"new scalanative.cobj.Result(scalanative.unsafe.stackalloc[$tpe])"
+          q"new scalanative.cobj.ResultPtr(scalanative.unsafe.stackalloc[$tpe])"
       tree
     }
 
