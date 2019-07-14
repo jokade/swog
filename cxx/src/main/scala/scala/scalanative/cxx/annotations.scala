@@ -18,6 +18,8 @@ class returnsConst extends StaticAnnotation
  */
 class returnsRef extends StaticAnnotation
 
+class returnsValue extends StaticAnnotation
+
 class ref extends StaticAnnotation
 
 class cxxName(name: String) extends StaticAnnotation

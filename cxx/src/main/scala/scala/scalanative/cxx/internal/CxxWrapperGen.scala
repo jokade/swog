@@ -77,6 +77,15 @@ trait CxxWrapperGen extends CommonHandler {
     def withCxxIncludes(headers: Seq[String]): Data = data.updated("cxxIncludes",headers)
   }
 
+  private def genSizeOfExternal(data: Data): Tree = {
+    val name = TermName(data.externalPrefix+"__sizeof")
+    q"def $name(): Int = extern"
+  }
+
+  private def genSizeOfVal(data: Data): Tree = {
+    val name = TermName(data.externalPrefix+"__sizeof")
+    q"lazy val __sizeof: Int = __ext.$name()"
+  }
 
   def analyzeCxxAnnotation(tpe: CommonParts)(data: Data): Data = {
     val includes = findAnnotations(tpe.modifiers.annotations)
@@ -90,6 +99,8 @@ trait CxxWrapperGen extends CommonHandler {
       .withNamingConvention(NamingConvention.CxxWrapper)
       .withCxxIncludes(includes)
       .withCxxFQClassName(genCxxFQClassName(tpe)(data))
+      .addExternals(Seq("__sizeof"->("__sizeof"->genSizeOfExternal(data))))
+      .withAdditionalCompanionStmts(Seq(genSizeOfVal(data)))
   }
 
   def analyzeCxxBody(tpe: CommonParts)(data: Data): Data = tpe match {
@@ -102,9 +113,10 @@ trait CxxWrapperGen extends CommonHandler {
     case o: ObjectParts => genCxxObjectWrappers(o)(data)
   }
 
-  def genCxxSource(data: CxxMacroData): Tree = {
+  def genCxxSource(data: Data): Tree = {
     val includes = data.cxxIncludes.map( i => "#include "+i ).mkString("","\n","\n\n")
-    genCxxWrapper( includes + """extern "C" {""" + "\n" + data.cxxWrappers.mkString("\n") + "\n}" )
+    val sizeof = s"""  int ${data.externalPrefix}__sizeof() { return sizeof(${data.cxxFQClassName}); }\n"""
+    genCxxWrapper( includes + """extern "C" {""" + "\n" + sizeof + data.cxxWrappers.mkString("\n") + "\n}" )
   }
 
   protected def genCxxWrapper(src: String): Tree = q"""new scalanative.annotation.InlineSource("Cxx",${Literal(Constant(src))})"""
@@ -149,7 +161,7 @@ trait CxxWrapperGen extends CommonHandler {
       case "void" => ""
       case _ => "return " + cast
     }
-    s"""$returnType ${data.externalPrefix}$scalaName(${(clsPtr+:params).mkString(", ")}) { $ret p->$name(${callArgs.mkString(", ")}); }"""
+    s"""  $returnType ${data.externalPrefix}$scalaName(${(clsPtr+:params).mkString(", ")}) { $ret p->$name(${callArgs.mkString(", ")}); }"""
   }
 
   protected def genCxxFunctionWrapper(scalaDef: DefDef)(implicit data: Data): String = {
@@ -162,7 +174,7 @@ trait CxxWrapperGen extends CommonHandler {
       case "void" => ""
       case _ => "return " + cast
     }
-    s"""$returnType ${data.externalPrefix}$scalaName(${params.mkString(", ")}) { $ret ${data.cxxFQClassName}::$name(${callArgs.mkString(", ")}); }"""
+    s"""  $returnType ${data.externalPrefix}$scalaName(${params.mkString(", ")}) { $ret ${data.cxxFQClassName}::$name(${callArgs.mkString(", ")}); }"""
   }
 
   protected def genCxxConstructorWrapper(scalaDef: DefDef, clsname: Option[String])(implicit data: Data): String = {
@@ -173,13 +185,13 @@ trait CxxWrapperGen extends CommonHandler {
       case Some(name) => name
       case _ => data.cxxFQClassName
     }
-    s"""void* ${data.externalPrefix}$scalaName(${params.mkString(", ")}) { return new $constructor(${callArgs.mkString(", ")}); }"""
+    s"""  void* ${data.externalPrefix}$scalaName(${params.mkString(", ")}) { return new $constructor(${callArgs.mkString(", ")}); }"""
   }
 
   protected def genCxxDeleteWrapper(scalaDef: DefDef)(implicit data: Data): String = {
     val scalaName = genScalaName(scalaDef)
     val clsPtr = data.cxxFQClassName + "* p"
-    s"""void ${data.externalPrefix}$scalaName($clsPtr) { delete p; }"""
+    s"""  void ${data.externalPrefix}$scalaName($clsPtr) { delete p; }"""
   }
 
   protected def genCxxReturnType(scalaDef: DefDef, returnsConst: Boolean)(implicit data: Data): String = {

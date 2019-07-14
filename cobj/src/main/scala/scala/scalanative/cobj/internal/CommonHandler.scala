@@ -38,7 +38,8 @@ abstract class CommonHandler extends MacroAnnotationHandler {
     def withConstructors(ctors: Seq[(String,Seq[Tree])]): Data = data.updated("constructors",ctors)
 
     def externals: Externals = data.getOrElse("externals", Map()).asInstanceOf[Externals]
-    def withExternals(externals: Externals): Data = data.updated("externals",externals)
+//    def withExternals(externals: Externals): Data = data.updated("externals",externals)
+    def addExternals(externals: Iterable[(String,(String,Tree))]): Data = data.updated("externals",data.externals ++ externals)
 
     def currentType: String = data.getOrElse("currentType","").asInstanceOf[String]
     def withCurrentType(tpe: String): Data = data.updated("currentType",tpe)
@@ -74,7 +75,7 @@ abstract class CommonHandler extends MacroAnnotationHandler {
       case _ => Nil
     }
 
-    data.withExternals( (typeExternals ++ companionExternals).toMap )
+    data.addExternals( (typeExternals ++ companionExternals).toMap )
   }
 
   protected def genTransformedCtorParams(cls: ClassTransformData): Seq[Tree] =
