@@ -34,7 +34,7 @@ object Cxx {
         val updData = (
           analyzeMainAnnotation(cls) _
             andThen analyzeTypes(cls) _
-//            andThen analyzeConstructor(cls) _
+            andThen analyzeConstructor(cls) _
             andThen analyzeBody(cls) _
           )(data)
         (cls, updData)
@@ -95,6 +95,16 @@ object Cxx {
       analyzeCxxAnnotation(tpe)(updData)
     }
 
+    private def analyzeConstructor(cls: ClassParts)(data: Data): Data = {
+      val companionStmts =
+        if (cls.isClass && !cls.modifiers.hasFlag(Flag.ABSTRACT))
+          List(genWrapperImplicit(cls.name, cls.tparams))
+        else
+          Nil
+      data
+        .withAdditionalCompanionStmts(data.additionalCompanionStmts ++ companionStmts)
+    }
+
     private def genPrefixName(tpe: CommonParts): String =
       tpe.fullName.replaceAll("\\.","_") + "_"
 
@@ -102,6 +112,27 @@ object Cxx {
     override def analyzeBody(tpe: CommonParts)(data: Data): Data =
       ( super.analyzeBody(tpe) _ andThen analyzeCxxBody(tpe) _ )(data)
 
+    private def genWrapperImplicit(tpe: TypeName, tparams: Seq[Tree]): Tree =
+      tparams.size match {
+        case 0 =>
+          q"""implicit object __wrapper extends scalanative.cobj.CObjectWrapper[$tpe] {
+            def wrap(ptr: scalanative.unsafe.Ptr[Byte]) = new $tpe(ptr)
+            def unwrap(value: $tpe): scalanative.unsafe.Ptr[Byte] = value.__ptr
+          }
+          """
+        case 1 =>
+          q"""implicit object __wrapper extends scalanative.cobj.CObjectWrapper[$tpe[_]] {
+            def wrap(ptr: scalanative.unsafe.Ptr[Byte]) = new $tpe(ptr)
+            def unwrap(value: $tpe[_]): scalanative.unsafe.Ptr[Byte] = value.__ptr
+          }
+          """
+        case 2 =>
+          q"""implicit object __wrapper extends scalanative.cobj.CObjectWrapper[$tpe[_,_]] {
+            def wrap(ptr: scalanative.unsafe.Ptr[Byte]) = new $tpe(ptr)
+            def unwrap(value: $tpe[_,_]): scalanative.unsafe.Ptr[Byte] = value.__ptr
+          }
+          """
+      }
 
   }
 }

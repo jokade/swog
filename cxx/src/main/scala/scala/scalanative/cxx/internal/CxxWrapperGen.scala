@@ -2,7 +2,7 @@ package scala.scalanative.cxx.internal
 
 import scala.annotation.StaticAnnotation
 import scala.reflect.macros.whitebox
-import scala.scalanative.cobj.NamingConvention
+import scala.scalanative.cobj.{NamingConvention, Result, ResultValue}
 import scala.scalanative.cobj.internal.CommonHandler
 import scala.scalanative.cxx.{CxxEnum, CxxObject}
 import scala.scalanative.runtime.RawPtr
@@ -30,6 +30,7 @@ trait CxxWrapperGen extends CommonHandler {
   private val tPtrFloat = weakTypeOf[Ptr[Float]]
   private val tPtr = weakTypeOf[Ptr[_]]
   private val tRawPtr = weakTypeOf[RawPtr]
+  private val tResultValue = weakTypeOf[ResultValue[_]]
   protected val tCxxObject = weakTypeOf[CxxObject]
 
   sealed trait CxxType {
@@ -171,6 +172,7 @@ trait CxxWrapperGen extends CommonHandler {
     val scalaName = genScalaName(scalaDef)
     val (params, callArgs) = genCxxParams(scalaDef)
     val ret = returnType match {
+      case "void" if returnsValue(scalaDef) => "*__res = "
       case "void" => ""
       case _ => "return " + cast
     }
@@ -195,7 +197,10 @@ trait CxxWrapperGen extends CommonHandler {
   }
 
   protected def genCxxReturnType(scalaDef: DefDef, returnsConst: Boolean)(implicit data: Data): String = {
-    val cxxType = genCxxWrapperType(getType(scalaDef.tpt,true)).default
+    val cxxType = genCxxWrapperType(getType(scalaDef.tpt,true)).default /* match {
+      case rt if returnsValue(scalaDef) => "void"
+      case rt => rt.default
+    }*/
     if(returnsConst)
       "const "+cxxType
     else
@@ -217,16 +222,18 @@ trait CxxWrapperGen extends CommonHandler {
     scalaDef.vparamss match {
       case Nil => (Nil,Nil)
       case List(args) => args.map(genCxxParam).unzip
+      case List(inargs,outargs) => (inargs++outargs).map(genCxxParam).unzip
       case _ =>
         c.error(c.enclosingPosition,"extern methods with multiple parameter lists are not supported for @Cxx classes")
         ???
     }
 
   protected def genCxxParam(param: ValDef)(implicit data: Data): (String,String) = {
-    val name = param.name.toString
+    val isResultVal = getType(param.tpt) <:< tResultValue
+    val name = if(isResultVal) "__res" else param.name.toString
     val cxxType = genCxxWrapperType(param.tpt,false)
     val cast = castParam(cxxType,isRef(param))
-    (s"${cxxType.default} $name",s"$cast$name")
+    (s"${cxxType.default} $name",if(isResultVal) "" else s"$cast$name")
   }
 
   private def castParam(cxxType: CxxType, isRef: Boolean): String = cxxType match {
@@ -258,7 +265,8 @@ trait CxxWrapperGen extends CommonHandler {
     case t if t =:= tRawPtr     => VoidPtr
     case t if t <:< tPtr        => VoidPtr
     case t if t <:< tCxxObject  => ClassType(genCxxExternalType(t))
-    case t if t <:< tCEnum    => EnumType(genCxxEnumType(t))
+    case t if t <:< tCEnum      => EnumType(genCxxEnumType(t))
+    case t if t <:< tResultValue     => ClassType(genCxxExternalType(t.typeArgs.head))
 //    case t if t <:< tCObject => "void*"
     case t => ClassType(genCxxExternalType(t))
   }

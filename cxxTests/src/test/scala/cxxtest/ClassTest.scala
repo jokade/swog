@@ -7,6 +7,7 @@ import scala.scalanative._
 import annotation.InlineSource
 import unsafe._
 import cxx._
+import scala.scalanative.cobj.{Result, ResultValue}
 
 object ClassTest extends TestSuite {
 
@@ -38,66 +39,23 @@ object ClassTest extends TestSuite {
       date1.free()
       date2.free()
     }
+    'sizeof-{
+      Date.__sizeof ==> 12
+    }
+    'returnsValue-{
+      'stackalloc-{
+        implicit val out = ResultValue.stackalloc[Date]
+        Date.value()
+        out.wrappedValue.year ==> 1900
+      }
+      'alloc-{ Zone { implicit z =>
+        implicit val out = ResultValue.alloc[Date]
+        Date.value()
+        out.wrappedValue.year ==> 1900
+      }}
+    }
   }
 }
 
 
-@Cxx
-@InlineSource("Cxx",
-"""
-class Date {
-  int d, m, y;
-public:
-  Date() : Date(1,1,1900) {
-  }
 
-  Date(int day, int month, int year) :
-   d{day}, m{month}, y{year} {
-  }
-
-  int day() const { return d; }
-  int month() const { return m; }
-  int year() const { return y; }
-  int hash() const { return d + 12*m + 366*y; }
-
-  int addDays(int days) {
-    d += days;
-    return d;
-  }
-
-  int compare(Date* other) const {
-    int thash = this->hash();
-    int ohash = other->hash();
-    if(thash < ohash) {
-      return -1;
-    }
-    else if(thash > ohash) {
-      return 1;
-    }
-    else {
-      return 0;
-    }
-  }
-};
-""")
-class Date {
-  def day: Int = extern
-  def month: Int = extern
-  def year: Int = extern
-
-  def addDays(d: Int): Int = extern
-
-  def compare(other: Date): Int = extern
-
-  @delete
-  def free(): Unit = extern
-}
-
-object Date {
-  @constructor
-  def apply(): Date = extern
-
-  @constructor
-  def apply(day: Int, month: Int, year: Int): Date = extern
-
-}

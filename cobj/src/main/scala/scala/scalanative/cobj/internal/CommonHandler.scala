@@ -245,6 +245,10 @@ abstract class CommonHandler extends MacroAnnotationHandler {
       scalaDef.name.toString + (scalaDef.vparamss match {
           case Nil => ""
           case List(params) => "_" + params.map(_.tpt).mkString.hashCode.abs
+          case List(inargs,outargs) => "_" + (inargs++outargs).map(_.tpt).mkString.hashCode.abs
+          case _ =>
+            c.error(c.enclosingPosition,"external bindings with more than two parameter lists ar enot supported")
+            ???
         })
     case _ =>
       scalaDef.name.toString
