@@ -1,0 +1,353 @@
+
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>CObj - Object-oriented C Bindings &mdash; swog  documentation</title>
+  
+
+  
+  
+  
+  
+
+  
+  <script type="text/javascript" src="_static/js/modernizr.min.js"></script>
+  
+    
+      <script type="text/javascript" id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
+        <script type="text/javascript" src="_static/jquery.js"></script>
+        <script type="text/javascript" src="_static/underscore.js"></script>
+        <script type="text/javascript" src="_static/doctools.js"></script>
+        <script type="text/javascript" src="_static/language_data.js"></script>
+    
+    <script type="text/javascript" src="_static/js/theme.js"></script>
+
+    
+
+  
+  <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="C++ Bindings" href="cxx.html" />
+    <link rel="prev" title="Getting Started" href="start.html" /> 
+</head>
+
+<body class="wy-body-for-nav">
+
+   
+  <div class="wy-grid-for-nav">
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+          
+
+          
+            <a href="index.html" class="icon icon-home"> swog
+          
+
+          
+          </a>
+
+          
+            
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+              
+            
+            
+              <p class="caption"><span class="caption-text">Contents:</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="start.html">Getting Started</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">CObj Bindings</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#introduction">Introduction</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#basic-principles">Basic Principles</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#naming-convention">Naming Convention</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#instantiation">Instantiation</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#de-allocation">De-allocation</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#under-the-hood-debugging">Under the Hood &amp; Debugging</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#enums">Enums</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#inheritance">Inheritance</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#generics-wrapper-factories">Generics &amp; Wrapper Factories</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#out-parameters-return-by-value">Out Parameters &amp; Return-by-Value</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#implicit-constructor-params">Implicit Constructor Params</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="cxx.html">C++ Bindings</a></li>
+<li class="toctree-l1"><a class="reference internal" href="objc.html">Objective-C Bindings</a></li>
+</ul>
+<p class="caption"><span class="caption-text">Examples:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="example_gtk.html">Gtk+</a></li>
+<li class="toctree-l1"><a class="reference internal" href="example_qt.html">Qt5</a></li>
+<li class="toctree-l1"><a class="reference internal" href="example_cocoa.html">Cocoa</a></li>
+</ul>
+
+            
+          
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" aria-label="top navigation">
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">swog</a>
+        
+      </nav>
+
+
+      <div class="wy-nav-content">
+        
+        <div class="rst-content">
+        
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="index.html">Docs</a> &raquo;</li>
+        
+      <li>CObj - Object-oriented C Bindings</li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+            
+            <a href="_sources/cobj.rst.txt" rel="nofollow"> View page source</a>
+          
+        
+      </li>
+    
+  </ul>
+
+  
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <div class="section" id="cobj-object-oriented-c-bindings">
+<h1>CObj - Object-oriented C Bindings<a class="headerlink" href="#cobj-object-oriented-c-bindings" title="Permalink to this headline">¶</a></h1>
+<div class="section" id="introduction">
+<h2>Introduction<a class="headerlink" href="#introduction" title="Permalink to this headline">¶</a></h2>
+<p>The simplest form of object-oriented programming in C is based on a simple convention:
+an object consists of a structure and a set of functions operating on that structure, e.g.:</p>
+<div class="highlight-c notranslate"><div class="highlight"><pre><span></span><span class="k">typedef</span> <span class="k">struct</span> <span class="p">{</span>
+  <span class="kt">int</span> <span class="n">num</span><span class="p">;</span>
+  <span class="kt">int</span> <span class="n">denom</span><span class="p">;</span>
+<span class="p">}</span> <span class="n">Fraction</span><span class="p">;</span>
+
+<span class="c1">// creates a new Fraction instance</span>
+<span class="n">Fraction</span><span class="o">*</span> <span class="nf">fraction_new</span><span class="p">(</span><span class="kt">int</span> <span class="n">num</span><span class="p">,</span> <span class="kt">int</span> <span class="n">denom</span><span class="p">);</span>
+
+<span class="c1">// accessor for property &#39;num&#39;</span>
+<span class="kt">int</span> <span class="nf">fraction_get_numerator</span><span class="p">(</span><span class="n">Fraction</span> <span class="o">*</span><span class="n">this</span><span class="p">);</span>
+
+<span class="c1">// instance method to multiply a fraction with another one</span>
+<span class="kt">void</span> <span class="nf">fraction_multiply</span><span class="p">(</span><span class="n">Fraction</span> <span class="n">this</span><span class="p">,</span> <span class="n">Fraction</span> <span class="n">that</span><span class="p">);</span>
+</pre></div>
+</div>
+<p>The struct along with the functions constitute the class <code class="docutils literal notranslate"><span class="pre">Fraction</span></code>. Two basic principles establish
+the class character, purely by convention:</p>
+<ul class="simple">
+<li><p>the struct and its associated functions use a common name prefix (<code class="docutils literal notranslate"><span class="pre">fraction</span></code>)</p></li>
+<li><p>all functions operating on an instance of the struct (i.e. “methods”) take that instance as the first argument.</p></li>
+</ul>
+<p>It is straightforward to use this type from Scala Native <code class="docutils literal notranslate"><span class="pre">&#64;extern</span></code> bindings:</p>
+<div class="highlight-scala notranslate"><div class="highlight"><pre><span></span><span class="nd">@extern</span>
+<span class="k">object</span> <span class="nc">Fraction</span> <span class="o">{</span>
+  <span class="k">def</span> <span class="n">fraction_new</span><span class="o">(</span><span class="n">num</span><span class="k">:</span> <span class="kt">Int</span><span class="o">,</span> <span class="n">denom</span><span class="k">:</span> <span class="kt">Int</span><span class="o">)</span><span class="k">:</span> <span class="kt">Ptr</span><span class="o">[</span><span class="kt">Byte</span><span class="o">]</span> <span class="k">=</span> <span class="n">extern</span>
+  <span class="k">def</span> <span class="n">fraction_get_numerator</span><span class="o">(</span><span class="n">f</span><span class="k">:</span> <span class="kt">Ptr</span><span class="o">[</span><span class="kt">Byte</span><span class="o">])</span><span class="k">:</span> <span class="kt">Int</span>
+  <span class="c1">// ...</span>
+<span class="o">}</span>
+
+<span class="k">val</span> <span class="n">f</span> <span class="k">=</span> <span class="nc">Fraction</span><span class="o">.</span><span class="n">fraction_new</span><span class="o">(</span><span class="mi">2</span><span class="o">,</span><span class="mi">3</span><span class="o">)</span>
+<span class="k">val</span> <span class="n">g</span> <span class="k">=</span> <span class="nc">Fraction</span><span class="o">.</span><span class="n">fraction_new</span><span class="o">(</span><span class="mi">6</span><span class="o">,</span><span class="mi">5</span><span class="o">)</span>
+<span class="nc">Fraction</span><span class="o">.</span><span class="n">fraction_multiply</span><span class="o">(</span><span class="n">f</span><span class="o">,</span><span class="n">g</span><span class="o">)</span>
+</pre></div>
+</div>
+<p>However, this approach does not only result in tedious code, but it is also not type-safe,
+since instances of any other C class would be represented by a <cite>Ptr[Byte]</cite> as well.</p>
+<p>It would be more idiomatic and safe, if we could use this C type like a normal Scala class, and also
+define it like one:</p>
+<div class="highlight-scala notranslate"><div class="highlight"><pre><span></span><span class="k">import</span> <span class="nn">scalanative._</span>
+<span class="k">import</span> <span class="nn">unsafe._</span>
+<span class="k">import</span> <span class="nn">cobj._</span>
+
+<span class="nd">@CObj</span>
+<span class="k">class</span> <span class="nc">Fraction</span> <span class="o">{</span>
+  <span class="k">def</span> <span class="n">getNumerator</span><span class="o">()</span><span class="k">:</span> <span class="kt">Int</span> <span class="o">=</span> <span class="n">extern</span>
+  <span class="k">def</span> <span class="n">multiply</span><span class="o">(</span><span class="n">that</span><span class="k">:</span> <span class="kt">Fraction</span><span class="o">)</span><span class="k">:</span> <span class="kt">Unit</span> <span class="o">=</span> <span class="n">extern</span>
+<span class="o">}</span>
+<span class="k">object</span> <span class="nc">Fraction</span> <span class="o">{</span>
+  <span class="k">def</span> <span class="n">apply</span><span class="o">(</span><span class="n">num</span><span class="k">:</span> <span class="kt">Int</span><span class="o">,</span> <span class="n">denom</span><span class="k">:</span> <span class="kt">Int</span><span class="o">)</span><span class="k">:</span> <span class="kt">Fraction</span> <span class="o">=</span> <span class="n">extern</span>
+<span class="o">}</span>
+
+<span class="k">val</span> <span class="n">f</span> <span class="k">=</span> <span class="nc">Fraction</span><span class="o">(</span><span class="mi">2</span><span class="o">,</span><span class="mi">3</span><span class="o">)</span>
+<span class="k">val</span> <span class="n">g</span> <span class="k">=</span> <span class="nc">Fraction</span><span class="o">(</span><span class="mi">6</span><span class="o">,</span><span class="mi">5</span><span class="o">)</span>
+<span class="n">f</span><span class="o">.</span><span class="n">multiply</span><span class="o">(</span><span class="n">g</span><span class="o">)</span>
+</pre></div>
+</div>
+<p>Indeed, the previous example shows how to define the C type as a Scala class with swog.
+The following properties distinguish <cite>Fraction</cite> from a “normal” Scala class:</p>
+<dl class="simple">
+<dt><code class="docutils literal notranslate"><span class="pre">&#64;CObj</span></code> annotation:</dt><dd><p>This is actually a <a class="reference external" href="https://docs.scala-lang.org/overviews/macros/annotations.html">macro annotation</a>
+that generates the required wrapper code on the fly during compilation. Don’t forget to add this
+annotation to all classes representing an external C type.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">extern</span></code> methods:</dt><dd><p>Similar to functions in <code class="docutils literal notranslate"><span class="pre">&#64;external</span></code> objects, the body of external instance methods is replaced with <code class="docutils literal notranslate"><span class="pre">extern</span></code>.</p>
+</dd>
+<dt>Instantiation:</dt><dd><p>From the user’s point of view, the most notable difference arises on instantiation:
+<code class="docutils literal notranslate"><span class="pre">&#64;CObj</span></code> classes are (usually) not instantiated using <code class="docutils literal notranslate"><span class="pre">new</span></code> but by calling a function
+on its companion object.</p>
+</dd>
+<dt>Function names:</dt><dd><p>As it is customary in Scala, the snake_case names of the C functions are replaced with camelCase
+notation. Furthermore, the leading <cite>fraction_</cite> prefix of the C function names has been dropped,
+since it is superfluous in Scala.
+However, the mapping between Scala names and C names is configurable, and may be overwritten
+for every function using the standard <code class="docutils literal notranslate"><span class="pre">&#64;name</span></code> annotation.</p>
+</dd>
+</dl>
+<div class="admonition important">
+<p class="admonition-title">Important</p>
+<p>As the next sections will explain, swog is quite flexible in how to map a C type with a corresponding set
+of functions into a Scala class. However there is <em>one hard rule</em> to which the C API must adhere to:</p>
+<p><strong>Every C function that operates on an instance of the type, must take a pointer to that type as its first argument.</strong></p>
+</div>
+</div>
+<div class="section" id="basic-principles">
+<h2>Basic Principles<a class="headerlink" href="#basic-principles" title="Permalink to this headline">¶</a></h2>
+<div class="section" id="naming-convention">
+<h3>Naming Convention<a class="headerlink" href="#naming-convention" title="Permalink to this headline">¶</a></h3>
+<p>TODO</p>
+</div>
+<div class="section" id="instantiation">
+<h3>Instantiation<a class="headerlink" href="#instantiation" title="Permalink to this headline">¶</a></h3>
+<p>TODO</p>
+</div>
+<div class="section" id="de-allocation">
+<h3>De-allocation<a class="headerlink" href="#de-allocation" title="Permalink to this headline">¶</a></h3>
+<p>TODO</p>
+</div>
+<div class="section" id="under-the-hood-debugging">
+<h3>Under the Hood &amp; Debugging<a class="headerlink" href="#under-the-hood-debugging" title="Permalink to this headline">¶</a></h3>
+<p>TODO</p>
+</div>
+</div>
+<div class="section" id="enums">
+<h2>Enums<a class="headerlink" href="#enums" title="Permalink to this headline">¶</a></h2>
+<p>TODO</p>
+</div>
+<div class="section" id="inheritance">
+<h2>Inheritance<a class="headerlink" href="#inheritance" title="Permalink to this headline">¶</a></h2>
+<p>TODO</p>
+</div>
+<div class="section" id="generics-wrapper-factories">
+<h2>Generics &amp; Wrapper Factories<a class="headerlink" href="#generics-wrapper-factories" title="Permalink to this headline">¶</a></h2>
+<p>TODO</p>
+</div>
+<div class="section" id="out-parameters-return-by-value">
+<h2>Out Parameters &amp; Return-by-Value<a class="headerlink" href="#out-parameters-return-by-value" title="Permalink to this headline">¶</a></h2>
+<p>TODO</p>
+</div>
+<div class="section" id="implicit-constructor-params">
+<h2>Implicit Constructor Params<a class="headerlink" href="#implicit-constructor-params" title="Permalink to this headline">¶</a></h2>
+<p>TODO</p>
+</div>
+</div>
+
+
+           </div>
+           
+          </div>
+          <footer>
+  
+    <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
+      
+        <a href="cxx.html" class="btn btn-neutral float-right" title="C++ Bindings" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right"></span></a>
+      
+      
+        <a href="start.html" class="btn btn-neutral float-left" title="Getting Started" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+      
+    </div>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright 2019, jokade
+
+    </p>
+  </div>
+  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/rtfd/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script>
+
+  
+  
+    
+   
+
+</body>
+</html>
