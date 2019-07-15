@@ -1,48 +1,9 @@
-=========================
-scalanative-obj-interop
-=========================
+swog - ScalaNative Wrapper Object Generator
+===========================================
 
-This project is a protoype for a Scala Native interop layer that allows idiomatic Scala to be used with external object systems. Targets are:
+[Documentation](http://jokade.surfice.de/swog/)
 
-* C (provided by CObj),
-* Objective-C (provided by ObjC),
-* and C++ (provided by Cxx).
 
-If you need to integrate with a scripting language take a look at `scalanative-scriptbridge <https://github.com/jokade/scalanative-scriptbridge>`_.
-
-.. contents:: Contents
-  :depth: 3
-
-SBT Settings
-============
-
-CObj
-----
-CObj interop requires Scala Native 0.3.8+.
-
-Add this to your ``build.sbt``:
-
-.. code:: Scala
-
-  addCompilerPlugin("org.scalamacros" % "paradise" % "2.1.0" cross CrossVersion.full)
-
-  libraryDependencies += "de.surfice" %%% "scalanative-interop-cobj" % "0.0.6"
-
-ObjC
-----
-ObjC interop requires Scala Native 0.4.0+.
-
-Add this to your ``build.sbt``:
-
-.. code:: Scala
-
-  addCompilerPlugin("org.scalamacros" % "paradise" % "2.1.0" cross CrossVersion.full)
-
-  libraryDependencies += "de.surfice" %%% "scalanative-interop-cobj" % "0.0.7-SNAPSHOT"
-
-Cxx
----
-Not supported yet.
 
 General Notes
 ===============
