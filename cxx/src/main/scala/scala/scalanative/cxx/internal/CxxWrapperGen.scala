@@ -30,7 +30,6 @@ trait CxxWrapperGen extends CommonHandler {
   private val tPtrFloat = weakTypeOf[Ptr[Float]]
   private val tPtr = weakTypeOf[Ptr[_]]
   private val tRawPtr = weakTypeOf[RawPtr]
-  private val tResultValue = weakTypeOf[ResultValue[_]]
   protected val tCxxObject = weakTypeOf[CxxObject]
 
   sealed trait CxxType {
@@ -76,6 +75,9 @@ trait CxxWrapperGen extends CommonHandler {
 
     def cxxIncludes: Seq[String] = data.getOrElse("cxxIncludes",Nil).asInstanceOf[Seq[String]]
     def withCxxIncludes(headers: Seq[String]): Data = data.updated("cxxIncludes",headers)
+
+    def cxxType: String = data.getOrElse("cxxType",cxxFQClassName).asInstanceOf[String]
+    def withCxxType(tpe: Option[String]): Data = if(tpe.isDefined) data.updated("cxxType",tpe.get) else data
   }
 
   private def genSizeOfExternal(data: Data): Tree = {
@@ -116,7 +118,7 @@ trait CxxWrapperGen extends CommonHandler {
 
   def genCxxSource(data: Data): Tree = {
     val includes = data.cxxIncludes.map( i => "#include "+i ).mkString("","\n","\n\n")
-    val sizeof = s"""  int ${data.externalPrefix}__sizeof() { return sizeof(${data.cxxFQClassName}); }\n"""
+    val sizeof = s"""  int ${data.externalPrefix}__sizeof() { return sizeof(${data.cxxType}); }\n"""
     genCxxWrapper( includes + """extern "C" {""" + "\n" + sizeof + data.cxxWrappers.mkString("\n") + "\n}" )
   }
 
@@ -142,7 +144,9 @@ trait CxxWrapperGen extends CommonHandler {
     val functions = obj.body.collect {
       case t@DefDef(mods, name, types, args, rettype, rhs) if isExtern(rhs) => findConstructor(t) match {
         case Some(clsname) =>
-          genCxxConstructorWrapper(t,clsname)
+          val argsNoImplicits = args.head.filter(! _.mods.hasFlag(Flag.IMPLICIT))
+          val constr = DefDef(mods,name,types,List(argsNoImplicits),rettype,rhs)
+          genCxxConstructorWrapper(constr,clsname)
         case _ =>
           genCxxFunctionWrapper(t)
       }
@@ -221,8 +225,8 @@ trait CxxWrapperGen extends CommonHandler {
   protected def genCxxParams(scalaDef: DefDef)(implicit data: Data): (Seq[String],Seq[String]) =
     scalaDef.vparamss match {
       case Nil => (Nil,Nil)
-      case List(args) => args.map(genCxxParam).unzip
-      case List(inargs,outargs) => (inargs++outargs).map(genCxxParam).unzip
+      case List(args) => args.filter(implicitParamsFilter).map(genCxxParam).unzip
+      case List(inargs,outargs) => (inargs++outargs).filter(implicitParamsFilter).map(genCxxParam).unzip
       case _ =>
         c.error(c.enclosingPosition,"extern methods with multiple parameter lists are not supported for @Cxx classes")
         ???
@@ -280,7 +284,7 @@ trait CxxWrapperGen extends CommonHandler {
 
   private def genCxxExternalType(tpe: Type)(implicit data: Data): String = {
     if(tpe.typeSymbol.fullName == data.currentType)
-      data.cxxFQClassName
+      data.cxxType
     else
       extractAnnotationParameters(tpe.typeSymbol,"scala.scalanative.cxx.internal.CxxWrapper",Seq("cxxType")) match {
         case Some(args) => extractStringConstant(args("cxxType").get).get

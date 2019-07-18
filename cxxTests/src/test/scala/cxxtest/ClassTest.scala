@@ -54,6 +54,13 @@ object ClassTest extends TestSuite {
         out.wrappedValue.year ==> 1900
       }}
     }
+
+    'implicitConstructor-{
+      implicit val s = "implicit"
+      val obj = ImplicitConstructor()
+      obj.string ==> s
+      obj.self().string ==> s
+    }
   }
 }
 

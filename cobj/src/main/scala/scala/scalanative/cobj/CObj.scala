@@ -99,7 +99,7 @@ object CObj {
     private def analyzeConstructor(cls: ClassParts)(data: Data): Data = {
       val companionStmts =
         if (cls.isClass && !cls.modifiers.hasFlag(Flag.ABSTRACT))
-          List(genWrapperImplicit(cls.name, cls.tparams))
+          List(genWrapperImplicit(cls.name, cls.tparams, cls.params))
         else
           Nil
       data
@@ -109,7 +109,7 @@ object CObj {
 
 
 
-
+/*
     private def genWrapperImplicit(tpe: TypeName, tparams: Seq[Tree]): Tree =
       tparams.size match {
         case 0 =>
@@ -131,7 +131,7 @@ object CObj {
           }
           """
       }
-
+*/
 
     private def genPrefixName(clsName: String): String =
       clsName.replaceAll("(.)([A-Z])","$1_$2").toLowerCase + "_"

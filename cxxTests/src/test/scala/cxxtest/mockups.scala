@@ -71,7 +71,6 @@ public:
   static Date value() { return Date(); }
 };
 """)
-@debug
 class Date {
   def day: Int = extern
   def month: Int = extern
@@ -94,4 +93,22 @@ object Date extends CxxClass {
 
   @returnsValue
   def value()(implicit res: ResultValue[Date]): Unit = extern
+}
+
+@Cxx
+@InlineSource("Cxx",
+"""
+class ImplicitConstructor {
+public:
+  ImplicitConstructor* self() { return this; }
+};
+""")
+@debug
+class ImplicitConstructor()(implicit s: String) {
+  def string: String = s
+  def self()(implicit s: String): ImplicitConstructor = extern
+}
+object ImplicitConstructor {
+  @constructor
+  def apply()(implicit s: String): ImplicitConstructor = extern
 }

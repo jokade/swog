@@ -7,7 +7,7 @@ import scala.scalanative.cobj.internal.CommonHandler
 import scala.scalanative.cxx.internal.CxxWrapperGen
 
 @compileTimeOnly("enable macro paradise to expand macro annotations")
-class Cxx(namespace: String = null, classname: String = null, prefix: String = null) extends StaticAnnotation {
+class Cxx(namespace: String = null, classname: String = null, prefix: String = null, cxxType: String = null) extends StaticAnnotation {
   def macroTransform(annottees: Any*): Any = macro Cxx.Macro.impl
 }
 
@@ -21,7 +21,7 @@ object Cxx {
     override def supportsObjects: Boolean = true
     override def createCompanion: Boolean = true
 
-    val annotationParamNames = Seq("namespace","classname","prefix")
+    val annotationParamNames = Seq("namespace","classname","prefix","cxxType")
 
     import c.universe._
 
@@ -88,17 +88,22 @@ object Cxx {
         }
         case _ => None
       }
+      val cxxType = annotParams("cxxType") match {
+        case Some(t) => Some(extractStringConstant(t).get)
+        case None => None
+      }
       val updData = data
         .withExternalPrefix(externalPrefix)
         .withCxxNamespace(namespace)
         .withCxxClassName(classname)
+        .withCxxType(cxxType)
       analyzeCxxAnnotation(tpe)(updData)
     }
 
     private def analyzeConstructor(cls: ClassParts)(data: Data): Data = {
       val companionStmts =
         if (cls.isClass && !cls.modifiers.hasFlag(Flag.ABSTRACT))
-          List(genWrapperImplicit(cls.name, cls.tparams))
+          List(genWrapperImplicit(cls.name, cls.tparams, cls.params))
         else
           Nil
       data
@@ -112,27 +117,6 @@ object Cxx {
     override def analyzeBody(tpe: CommonParts)(data: Data): Data =
       ( super.analyzeBody(tpe) _ andThen analyzeCxxBody(tpe) _ )(data)
 
-    private def genWrapperImplicit(tpe: TypeName, tparams: Seq[Tree]): Tree =
-      tparams.size match {
-        case 0 =>
-          q"""implicit object __wrapper extends scalanative.cobj.CObjectWrapper[$tpe] {
-            def wrap(ptr: scalanative.unsafe.Ptr[Byte]) = new $tpe(ptr)
-            def unwrap(value: $tpe): scalanative.unsafe.Ptr[Byte] = value.__ptr
-          }
-          """
-        case 1 =>
-          q"""implicit object __wrapper extends scalanative.cobj.CObjectWrapper[$tpe[_]] {
-            def wrap(ptr: scalanative.unsafe.Ptr[Byte]) = new $tpe(ptr)
-            def unwrap(value: $tpe[_]): scalanative.unsafe.Ptr[Byte] = value.__ptr
-          }
-          """
-        case 2 =>
-          q"""implicit object __wrapper extends scalanative.cobj.CObjectWrapper[$tpe[_,_]] {
-            def wrap(ptr: scalanative.unsafe.Ptr[Byte]) = new $tpe(ptr)
-            def unwrap(value: $tpe[_,_]): scalanative.unsafe.Ptr[Byte] = value.__ptr
-          }
-          """
-      }
 
   }
 }

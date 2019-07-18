@@ -3,7 +3,7 @@ package scala.scalanative.cobj.internal
 import de.surfice.smacrotools.MacroAnnotationHandler
 
 import scala.reflect.macros.{TypecheckException, whitebox}
-import scala.scalanative.cobj.{CEnum, CObject, CObjectWrapper, NamingConvention}
+import scala.scalanative.cobj.{CEnum, CObject, CObjectWrapper, NamingConvention, ResultPtr, ResultValue}
 
 abstract class CommonHandler extends MacroAnnotationHandler {
   val c: whitebox.Context
@@ -16,6 +16,8 @@ abstract class CommonHandler extends MacroAnnotationHandler {
   protected val tpeCObject = tq"$tCObject"
   protected val tCObjectWrapper = weakTypeOf[CObjectWrapper[_]]
   protected val tCEnum = weakTypeOf[CEnum#Value]
+  protected val tResultPtr = weakTypeOf[ResultPtr[_]]
+  protected val tResultValue = weakTypeOf[ResultValue[_]]
   protected val expExtern = q"scalanative.unsafe.extern"
   protected val tpeInt = tq"Int"
   protected def tpeDefaultParent: Tree
@@ -78,11 +80,11 @@ abstract class CommonHandler extends MacroAnnotationHandler {
     data.addExternals( (typeExternals ++ companionExternals).toMap )
   }
 
-  protected def genTransformedCtorParams(cls: ClassTransformData): Seq[Tree] =
+  protected def genTransformedCtorParams(cls: ClassTransformData): (Seq[Tree],Seq[Tree]) =
     if(cls.data.parentIsCObj)
-      Seq(q"override val __ptr: $tPtrByte")
+      (Seq(q"override val __ptr: $tPtrByte"),cls.modParts.params)
     else
-      Seq(q"val __ptr: $tPtrByte")
+      (Seq(q"val __ptr: $tPtrByte"),cls.modParts.params)
 
   protected def genTransformedParents(cls: TypeTransformData[TypeParts]): Seq[Tree] = {
     cls.modParts.parents map (p => (p,getType(p,true))) map {
@@ -97,13 +99,7 @@ abstract class CommonHandler extends MacroAnnotationHandler {
     val companion = t.modParts.companion.get.name
     val imports = Seq(q"import $companion.__ext")
     val ctors = genSecondaryConstructor(t)
-    //        if(isMutable)
-    //          Nil
-    //        else if(isAbstract(t))
-    //          Seq(q"def __ref: scalanative.native.cobj.Ref[${t.data.crefType}]")
-    //        else
-    //          genSecondaryConstructor(t)
-    //      val ctors = Seq(s"val __ref: ${t.data.crefType} = ")
+
     imports ++ ctors ++ (t.modParts.body map {
       case tree @ DefDef(mods, name, types, args, rettype, rhs) if isExtern(rhs) =>
         val externalKey = genScalaName(tree)(t.data)
@@ -113,8 +109,14 @@ abstract class CommonHandler extends MacroAnnotationHandler {
     })
   }
 
+  protected def implicitParamsFilter(param: ValDef): Boolean =
+    !param.mods.hasFlag(Flag.IMPLICIT) || (getType(param.tpt) match {
+      case t if (t <:< tResultPtr || t <:< tResultValue) => true
+      case _ => false
+    })
+
   protected def transformExternalBindingParams(params: List[ValDef], data: Data, outParams: Boolean = false): List[ValDef] = {
-    params map {
+    params filter(implicitParamsFilter) map {
       case ValDef(mods,name,tpt,rhs) if isExternalObject(tpt,data) =>
         ValDef(mods,name,q"$tPtrByte",rhs)
       case ValDef(mods,name,tpt,rhs) if isCEnum(tpt,data) =>
@@ -183,7 +185,7 @@ abstract class CommonHandler extends MacroAnnotationHandler {
   }
 
   protected def transformExternalCallArgs(args: Seq[ValDef], data: Data, outArgs: Boolean = false, wrappers: List[ValDef] = Nil): Seq[Tree] = {
-    args map {
+    args filter(implicitParamsFilter) map {
       case ValDef(_,name,tpt,_) if isExternalObject(tpt,data) || outArgs =>
         findWrapper(tpt,wrappers) match {
           case Some(wrapperName) => q"""$wrapperName.unwrap($name)"""
@@ -244,8 +246,8 @@ abstract class CommonHandler extends MacroAnnotationHandler {
     case NamingConvention.CxxWrapper =>
       scalaDef.name.toString + (scalaDef.vparamss match {
           case Nil => ""
-          case List(params) => "_" + params.map(_.tpt).mkString.hashCode.abs
-          case List(inargs,outargs) => "_" + (inargs++outargs).map(_.tpt).mkString.hashCode.abs
+          case List(params) => "_" + params.filter(implicitParamsFilter).map(_.tpt).mkString.hashCode.abs
+          case List(inargs,outargs) => "_" + (inargs++outargs).filter(implicitParamsFilter).map(_.tpt).mkString.hashCode.abs
           case _ =>
             c.error(c.enclosingPosition,"external bindings with more than two parameter lists ar enot supported")
             ???
@@ -281,6 +283,115 @@ abstract class CommonHandler extends MacroAnnotationHandler {
         case _ => false
       }.map(_.name)
     }
+
+  protected def genWrapperImplicit(tpe: TypeName, tparams: Seq[Tree], params: Seq[Tree]): Tree = {
+    val implicits = params.collect{
+      case v: ValDef if !implicitParamsFilter(v) => v
+    }
+    tparams.size match {
+      case 0 =>
+        implicits match {
+          case Nil =>
+            q"""implicit object __wrapper extends scalanative.cobj.CObjectWrapper[$tpe] {
+                  def wrap(ptr: scalanative.unsafe.Ptr[Byte]) = new $tpe(ptr)
+                  def unwrap(value: $tpe): scalanative.unsafe.Ptr[Byte] = value.__ptr
+                }
+             """
+          case Seq(arg1) =>
+            q"""implicit object __wrapper extends scalanative.cobj.CObjectWrapper1[$tpe,${arg1.tpt}] {
+                  def wrap(ptr: scalanative.unsafe.Ptr[Byte])($arg1) = new $tpe(ptr)
+                  def unwrap(value: $tpe): scalanative.unsafe.Ptr[Byte] = value.__ptr
+                }
+             """
+          case Seq(arg1,arg2) =>
+            q"""implicit object __wrapper extends scalanative.cobj.CObjectWrapper2[$tpe,${arg1.tpt},${arg2.tpt}] {
+                  def wrap(ptr: scalanative.unsafe.Ptr[Byte])($arg1,$arg2) = new $tpe(ptr)
+                  def unwrap(value: $tpe): scalanative.unsafe.Ptr[Byte] = value.__ptr
+                }
+             """
+          case Seq(arg1,arg2,arg3) =>
+            q"""implicit object __wrapper extends scalanative.cobj.CObjectWrapper3[$tpe,${arg1.tpt},${arg2.tpt},${arg3.tpt}] {
+                  def wrap(ptr: scalanative.unsafe.Ptr[Byte])($arg1,$arg2,$arg3) = new $tpe(ptr)
+                  def unwrap(value: $tpe): scalanative.unsafe.Ptr[Byte] = value.__ptr
+                }
+             """
+          case Seq(arg1,arg2,arg3,arg4) =>
+            q"""implicit object __wrapper extends scalanative.cobj.CObjectWrapper4[$tpe,${arg1.tpt},${arg2.tpt},${arg3.tpt},${arg4.tpt}] {
+                  def wrap(ptr: scalanative.unsafe.Ptr[Byte])($arg1,$arg2,$arg3,$arg4) = new $tpe(ptr)
+                  def unwrap(value: $tpe): scalanative.unsafe.Ptr[Byte] = value.__ptr
+                }
+             """
+          case _ =>
+            c.error(c.enclosingPosition,"constructors with more than 4 implicit parameters are not supported")
+            ???
+        }
+      case 1 =>
+        implicits match {
+          case Nil =>
+            q"""implicit object __wrapper extends scalanative.cobj.CObjectWrapper[$tpe[_]] {
+                  def wrap(ptr: scalanative.unsafe.Ptr[Byte]) = new $tpe(ptr)
+                  def unwrap(value: $tpe[_]): scalanative.unsafe.Ptr[Byte] = value.__ptr
+                }"""
+          case Seq(arg1) =>
+            q"""implicit object __wrapper extends scalanative.cobj.CObjectWrapper1[$tpe[_],${arg1.tpt}] {
+                  def wrap(ptr: scalanative.unsafe.Ptr[Byte])($arg1) = new $tpe(ptr)
+                  def unwrap(value: $tpe[_]): scalanative.unsafe.Ptr[Byte] = value.__ptr
+                }"""
+          case Seq(arg1,arg2) =>
+            q"""implicit object __wrapper extends scalanative.cobj.CObjectWrapper2[$tpe[_],${arg1.tpt},${arg2.tpt}] {
+                  def wrap(ptr: scalanative.unsafe.Ptr[Byte])($arg1,$arg2) = new $tpe(ptr)
+                  def unwrap(value: $tpe[_]): scalanative.unsafe.Ptr[Byte] = value.__ptr
+                }"""
+          case Seq(arg1,arg2,arg3) =>
+            q"""implicit object __wrapper extends scalanative.cobj.CObjectWrapper3[$tpe[_],${arg1.tpt},${arg2.tpt},${arg3.tpt}] {
+                  def wrap(ptr: scalanative.unsafe.Ptr[Byte])($arg1,$arg2,$arg3) = new $tpe(ptr)
+                  def unwrap(value: $tpe[_]): scalanative.unsafe.Ptr[Byte] = value.__ptr
+                }"""
+          case Seq(arg1,arg2,arg3,arg4) =>
+            q"""implicit object __wrapper extends scalanative.cobj.CObjectWrapper4[$tpe[_],${arg1.tpt},${arg2.tpt},${arg3.tpt},${arg4.tpt}] {
+                  def wrap(ptr: scalanative.unsafe.Ptr[Byte])($arg1,$arg2,$arg3,$arg4) = new $tpe(ptr)
+                  def unwrap(value: $tpe[_]): scalanative.unsafe.Ptr[Byte] = value.__ptr
+                }"""
+          case _ =>
+            c.error(c.enclosingPosition,"constructors with more than 4 implicit parameters are not supported")
+            ???
+        }
+      case 2 =>
+        implicits match {
+          case Nil =>
+            q"""implicit object __wrapper extends scalanative.cobj.CObjectWrapper[$tpe[_,_]] {
+                  def wrap(ptr: scalanative.unsafe.Ptr[Byte]) = new $tpe(ptr)
+                  def unwrap(value: $tpe[_]): scalanative.unsafe.Ptr[Byte] = value.__ptr
+                }"""
+          case Seq(arg1) =>
+            q"""implicit object __wrapper extends scalanative.cobj.CObjectWrapper1[$tpe[_,_],${arg1.tpt}] {
+                  def wrap(ptr: scalanative.unsafe.Ptr[Byte])($arg1) = new $tpe(ptr)
+                  def unwrap(value: $tpe[_]): scalanative.unsafe.Ptr[Byte] = value.__ptr
+                }"""
+          case Seq(arg1,arg2) =>
+            q"""implicit object __wrapper extends scalanative.cobj.CObjectWrapper2[$tpe[_,_],${arg1.tpt},${arg2.tpt}] {
+                  def wrap(ptr: scalanative.unsafe.Ptr[Byte])($arg1,$arg2) = new $tpe(ptr)
+                  def unwrap(value: $tpe[_]): scalanative.unsafe.Ptr[Byte] = value.__ptr
+                }"""
+          case Seq(arg1,arg2,arg3) =>
+            q"""implicit object __wrapper extends scalanative.cobj.CObjectWrapper3[$tpe[_,_],${arg1.tpt},${arg2.tpt},${arg3.tpt}] {
+                  def wrap(ptr: scalanative.unsafe.Ptr[Byte])($arg1,$arg2,$arg3) = new $tpe(ptr)
+                  def unwrap(value: $tpe[_]): scalanative.unsafe.Ptr[Byte] = value.__ptr
+                }"""
+          case Seq(arg1,arg2,arg3,arg4) =>
+            q"""implicit object __wrapper extends scalanative.cobj.CObjectWrapper4[$tpe[_,_],${arg1.tpt},${arg2.tpt},${arg3.tpt},${arg4.tpt}] {
+                  def wrap(ptr: scalanative.unsafe.Ptr[Byte])($arg1,$arg2,$arg3,$arg4) = new $tpe(ptr)
+                  def unwrap(value: $tpe[_]): scalanative.unsafe.Ptr[Byte] = value.__ptr
+                }"""
+          case _ =>
+            c.error(c.enclosingPosition,"constructors with more than 4 implicit parameters are not supported")
+            ???
+        }
+      case _ =>
+        c.error(c.enclosingPosition,"CObj / Cxx classes with more than two type parameters are not supported")
+        ???
+    }
+  }
 
   protected def isExtern(rhs: Tree): Boolean = rhs match {
     case Ident(TermName(id)) =>
