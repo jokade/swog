@@ -45,6 +45,9 @@ class Date {
   @returnsValue
   def self()(implicit res: ResultValue[Date]): Unit = extern
 
+  @cxxBody("return 42;")
+  def foo(): Int = extern
+
   @delete
   def free(): Unit = extern
 }
@@ -98,6 +101,10 @@ object Date extends CxxClass {
 
   @returnsValue
   def value()(implicit res: ResultValue[Date]): Unit = extern
+
+
+  @cxxBody("return 43;")
+  def bar(): Int = extern
 }
 
 @Cxx

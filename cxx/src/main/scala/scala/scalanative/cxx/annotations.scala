@@ -23,3 +23,10 @@ class returnsValue extends StaticAnnotation
 class ref extends StaticAnnotation
 
 class cxxName(name: String) extends StaticAnnotation
+
+/**
+ * Allows manual definition of the C++ wrapper body for an extern method.
+ *
+ * @param body
+ */
+class cxxBody(body: String) extends StaticAnnotation

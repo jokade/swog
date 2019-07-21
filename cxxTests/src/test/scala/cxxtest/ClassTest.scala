@@ -69,6 +69,15 @@ object ClassTest extends TestSuite {
         }}
       }
     }
+    'cxxBody-{
+      'method-{
+        val d = Date()
+        d.foo() ==> 42
+      }
+      'function-{
+        Date.bar() ==> 43
+      }
+    }
 
     'implicitConstructor-{
       implicit val s = "implicit"
