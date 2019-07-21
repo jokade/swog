@@ -43,16 +43,31 @@ object ClassTest extends TestSuite {
       Date.__sizeof ==> 12
     }
     'returnsValue-{
-      'stackalloc-{
-        implicit val out = ResultValue.stackalloc[Date]
-        Date.value()
-        out.wrappedValue.year ==> 1900
+      'static-{
+        'stackalloc-{
+          implicit val out = ResultValue.stackalloc[Date]
+          Date.value()
+          out.wrappedValue.year ==> 1900
+        }
+        'alloc-{ Zone { implicit z =>
+          implicit val out = ResultValue.alloc[Date]
+          Date.value()
+          out.wrappedValue.year ==> 1900
+        }}
       }
-      'alloc-{ Zone { implicit z =>
-        implicit val out = ResultValue.alloc[Date]
-        Date.value()
-        out.wrappedValue.year ==> 1900
-      }}
+      'instance-{
+        val d = Date()
+        'stackalloc-{
+          implicit val out = ResultValue.stackalloc[Date]
+          d.self()
+          out.wrappedValue.year ==> 1900
+        }
+        'alloc-{ Zone { implicit z =>
+          implicit val out = ResultValue.alloc[Date]
+          d.self()
+          out.wrappedValue.year ==> 1900
+        }}
+      }
     }
 
     'implicitConstructor-{

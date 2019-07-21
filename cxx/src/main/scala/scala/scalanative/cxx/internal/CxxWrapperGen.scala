@@ -163,6 +163,7 @@ trait CxxWrapperGen extends CommonHandler {
     val (params, callArgs) = genCxxParams(scalaDef)
     val clsPtr = data.cxxFQClassName + "* p"
     val ret = returnType match {
+      case "void" if returnsValue(scalaDef) => "*__res = "
       case "void" => ""
       case _ => "return " + cast
     }
@@ -233,7 +234,7 @@ trait CxxWrapperGen extends CommonHandler {
     }
 
   protected def genCxxParam(param: ValDef)(implicit data: Data): (String,String) = {
-    val isResultVal = getType(param.tpt) <:< tResultValue
+    val isResultVal = isResultValue(param.tpt)
     val name = if(isResultVal) "__res" else param.name.toString
     val cxxType = genCxxWrapperType(param.tpt,false)
     val cast = castParam(cxxType,isRef(param))
@@ -250,7 +251,8 @@ trait CxxWrapperGen extends CommonHandler {
     }
 
   protected def genCxxWrapperType(tpe: Tree, isConst: Boolean)(implicit data: Data): CxxType =
-    genCxxWrapperType(getType(tpe, true))
+    try{ genCxxWrapperType(getType(tpe, true)) }
+    catch { case _:Throwable => VoidPtr }
 
   protected def genCxxWrapperType(tpe: Type)(implicit data: Data): CxxType = tpe match {
     case t if t =:= tBoolean    => BoolType
@@ -324,5 +326,12 @@ trait CxxWrapperGen extends CommonHandler {
 
   protected def isRef(p: ValDef): Boolean =
     findAnnotation(p.mods.annotations,"scala.scalanative.cxx.ref").isDefined
+
+  protected def isResultValue(tree: Tree): Boolean =
+    try{
+      getType(tree) <:< tResultValue
+    } catch {
+      case _:Throwable => false
+    }
 }
 

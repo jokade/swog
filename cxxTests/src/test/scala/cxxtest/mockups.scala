@@ -32,6 +32,23 @@ object FooEnum extends CEnum {
 }
 
 @Cxx
+@debug
+class Date {
+  def day: Int = extern
+  def month: Int = extern
+  def year: Int = extern
+
+  def addDays(d: Int): Int = extern
+
+  def compare(other: Date): Int = extern
+
+  @returnsValue
+  def self()(implicit res: ResultValue[Date]): Unit = extern
+
+  @delete
+  def free(): Unit = extern
+}
+
 @InlineSource("Cxx",
 """
 class Date {
@@ -48,6 +65,7 @@ public:
   int month() const { return m; }
   int year() const { return y; }
   int hash() const { return d + 12*m + 366*y; }
+  Date self() { return *this; }
 
   int addDays(int days) {
     d += days;
@@ -71,19 +89,6 @@ public:
   static Date value() { return Date(); }
 };
 """)
-class Date {
-  def day: Int = extern
-  def month: Int = extern
-  def year: Int = extern
-
-  def addDays(d: Int): Int = extern
-
-  def compare(other: Date): Int = extern
-
-  @delete
-  def free(): Unit = extern
-}
-
 object Date extends CxxClass {
   @constructor
   def apply(): Date = extern
@@ -96,6 +101,10 @@ object Date extends CxxClass {
 }
 
 @Cxx
+class ImplicitConstructor()(implicit s: String) {
+  def string: String = s
+  def self()(implicit s: String): ImplicitConstructor = extern
+}
 @InlineSource("Cxx",
 """
 class ImplicitConstructor {
@@ -103,11 +112,6 @@ public:
   ImplicitConstructor* self() { return this; }
 };
 """)
-@debug
-class ImplicitConstructor()(implicit s: String) {
-  def string: String = s
-  def self()(implicit s: String): ImplicitConstructor = extern
-}
 object ImplicitConstructor {
   @constructor
   def apply()(implicit s: String): ImplicitConstructor = extern
