@@ -161,13 +161,13 @@ trait CxxWrapperGen extends CommonHandler {
     val name = genCxxName(scalaDef)
     val scalaName = genScalaName(scalaDef)
     val (params, callArgs) = genCxxParams(scalaDef)
-    val clsPtr = data.cxxFQClassName + "* p"
+    val clsPtr = data.cxxFQClassName + "* __p"
     val ret = returnType match {
       case "void" if returnsValue(scalaDef) => "*__res = "
       case "void" => ""
       case _ => "return " + cast
     }
-    val body = findCxxBody(scalaDef).getOrElse(s"$ret p->$name(${callArgs.mkString(", ")});")
+    val body = findCxxBody(scalaDef).getOrElse(s"$ret __p->$name(${callArgs.mkString(", ")});")
     s"""  $returnType ${data.externalPrefix}$scalaName(${(clsPtr+:params).mkString(", ")}) { $body }"""
   }
 
@@ -204,14 +204,17 @@ trait CxxWrapperGen extends CommonHandler {
   }
 
   protected def genCxxReturnType(scalaDef: DefDef, returnsConst: Boolean)(implicit data: Data): String = {
-    val cxxType = genCxxWrapperType(getType(scalaDef.tpt,true)).default /* match {
-      case rt if returnsValue(scalaDef) => "void"
-      case rt => rt.default
-    }*/
+    val cxxType =
+      try{ genCxxWrapperType(getType(scalaDef.tpt,true)) }
+      catch { case _:Throwable => VoidPtr }
+//    val cxxType = genCxxWrapperType(getType(scalaDef.tpt,true)).default
+//      case rt if returnsValue(scalaDef) => "void"
+//      case rt => rt.default
+//    }*/
     if(returnsConst)
-      "const "+cxxType
+      "const "+cxxType.default
     else
-      cxxType
+      cxxType.default
   }
 
   protected def genCxxName(scalaDef: DefDef)(implicit data: Data): String =
