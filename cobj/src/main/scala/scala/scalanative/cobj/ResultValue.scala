@@ -19,6 +19,8 @@ final class ResultValue[T<:CObject](val __ptr: Ptr[Byte])(implicit tag: Tag[T]) 
 }
 object ResultValue {
 
+  def apply[T<:CObject](obj: T)(implicit tag: Tag[T], zone: Zone): ResultValue[T] = new ResultValue[T](obj.__ptr)
+
   def alloc[T](implicit tag: Tag[Byte], zone: Zone): ResultValue[T] = macro Macros.allocImpl[T]
   def stackalloc[T]: ResultValue[T] = macro Macros.stackallocImpl[T]
 
