@@ -57,7 +57,12 @@ object CxxEnum {
     private def genTransformedBody(obj: ObjectTransformData): Seq[Tree] = {
       val nameArg = Literal(Constant(obj.data.enumName))
       obj.modParts.body ++ Seq(
-        q"@scalanative.unsafe.name($nameArg) class Value(value: Int) extends super.Value(value)",
+        q"""
+           @scalanative.unsafe.name($nameArg) class Value(value: Int) extends super.Value(value) {
+              def |(or: Value): Value = new Value(value | or.value)
+              def &(and: Value): Value = new Value(value & and.value)
+           }
+         """,
         q"override def Value(value: Int): Value = new Value(value)"
       )
     }
