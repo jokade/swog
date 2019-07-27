@@ -6,20 +6,17 @@ import scala.language.experimental.macros
 import scala.reflect.macros.blackbox
 import scala.scalanative.unsafe._
 
-final class ResultValue[T<:CObject](val __ptr: Ptr[Byte])(implicit tag: Tag[T]) extends CObject {
-//  @inline def __ptr: Ptr[Byte] = ptr.asInstanceOf[Ptr[Byte]]
-//  @inline def isDefined: Boolean = !ptr != null
-//  @inline def isEmpty: Boolean = !isDefined
-//  @inline def valuePtr: Ptr[Byte] = !ptr
-//  @inline def value: T = macro Result.Macros.valueImpl[T]
-  @inline def wrappedValue(implicit wrapper: CObjectWrapper[T]): T = macro ResultValue.Macros.wrappedValueImpl[T]
-//  @inline def value_=(v: T): Unit = macro Result.Macros.setValueImpl[T]
-//  @inline def option: Option[T] = macro Result.Macros.optionImpl[T]
-//  @inline def clear(): Unit = !ptr = null
+trait ResultValue[T<:CObject] extends CObject {
+  def __ptr: Ptr[Byte]
+  @inline def wrappedValue(implicit wrapper: CObjectWrapper[T]): T = macro ResultValue.Macros.wrappedThis[T]
+  @inline final def :=(f: Function1[ResultValue[T],_]): Unit = f(this)
 }
 object ResultValue {
+  final class Impl[T<:CObject](val __ptr: Ptr[Byte])(implicit tag: Tag[T]) extends ResultValue[T] {
+    @inline override def wrappedValue(implicit wrapper: CObjectWrapper[T]): T = macro ResultValue.Macros.wrappedValueImpl[T]
+  }
 
-  def apply[T<:CObject](obj: T)(implicit tag: Tag[T]): ResultValue[T] = new ResultValue[T](obj.__ptr)
+  def apply[T<:CObject](obj: T)(implicit tag: Tag[T]): ResultValue[T] = new Impl[T](obj.__ptr)
 
   def alloc[T](implicit tag: Tag[Byte], zone: Zone): ResultValue[T] = macro Macros.allocImpl[T]
   def stackalloc[T]: ResultValue[T] = macro Macros.stackallocImpl[T]
@@ -36,7 +33,7 @@ object ResultValue {
       val tpe = weakTypeOf[T]
       val tree =
         if(tpe <:< tCObject)
-          q"new scalanative.cobj.ResultValue[$tpe](scalanative.unsafe.alloc[Byte](${tpe.typeSymbol.companion}.__sizeof)($tag,$zone))"
+          q"new scalanative.cobj.ResultValue.Impl[$tpe](scalanative.unsafe.alloc[Byte](${tpe.typeSymbol.companion}.__sizeof)($tag,$zone))"
         else
         ???
       tree
@@ -46,7 +43,7 @@ object ResultValue {
       val tpe = weakTypeOf[T]
       val tree =
         if(tpe <:< tCObject)
-          q"new scalanative.cobj.ResultValue[$tpe](scalanative.unsafe.stackalloc[Byte](${tpe.typeSymbol.companion}.__sizeof))"
+          q"new scalanative.cobj.ResultValue.Impl[$tpe](scalanative.unsafe.stackalloc[Byte](${tpe.typeSymbol.companion}.__sizeof))"
         else
         ???
       tree
@@ -67,6 +64,9 @@ object ResultValue {
            """
       c.Expr(tree)
     }
+
+    def wrappedThis[T: WeakTypeTag](wrapper: Tree) =
+      c.Expr(q"this")
 
    }
 
