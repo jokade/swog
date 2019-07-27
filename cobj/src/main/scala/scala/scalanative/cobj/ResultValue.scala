@@ -9,7 +9,7 @@ import scala.scalanative.unsafe._
 trait ResultValue[T<:CObject] extends CObject {
   def __ptr: Ptr[Byte]
   @inline def wrappedValue(implicit wrapper: CObjectWrapper[T]): T = macro ResultValue.Macros.wrappedThis[T]
-  @inline final def :=(f: Function1[ResultValue[T],_]): Unit = f(this)
+  @inline final def :=[R](f: Function1[ResultValue[T],R]): R = f(this)
 }
 object ResultValue {
   final class Impl[T<:CObject](val __ptr: Ptr[Byte])(implicit tag: Tag[T]) extends ResultValue[T] {

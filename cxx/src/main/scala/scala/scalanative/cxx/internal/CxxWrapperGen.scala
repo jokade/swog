@@ -161,7 +161,7 @@ trait CxxWrapperGen extends CommonHandler {
     val name = genCxxName(scalaDef)
     val scalaName = genScalaName(scalaDef)
     val (params, callArgs) = genCxxParams(scalaDef)
-    val clsPtr = data.cxxFQClassName + "* __p"
+    val clsPtr = data.cxxType + "* __p"
     val ret = returnType match {
       case "void" if returnsValue(scalaDef) => "*__res = "
       case "void" => ""
@@ -182,6 +182,7 @@ trait CxxWrapperGen extends CommonHandler {
       case "void" => ""
       case _ => "return " + cast
     }
+
     val body = findCxxBody(scalaDef).getOrElse(s"$ret ${data.cxxFQClassName}::$name(${callArgs.mkString(", ")});")
     s"""  $returnType ${data.externalPrefix}$scalaName(${params.mkString(", ")}) { $body }"""
   }
@@ -228,15 +229,17 @@ trait CxxWrapperGen extends CommonHandler {
     }
 
 
-  protected def genCxxParams(scalaDef: DefDef)(implicit data: Data): (Seq[String],Seq[String]) =
-    scalaDef.vparamss match {
-      case Nil => (Nil,Nil)
+  protected def genCxxParams(scalaDef: DefDef)(implicit data: Data): (Seq[String],Seq[String]) = {
+    val (params,callArgs) = scalaDef.vparamss match {
+      case Nil => (Nil, Nil)
       case List(args) => args.filter(implicitParamsFilter).map(genCxxParam).unzip
-      case List(inargs,outargs) => (inargs++outargs).filter(implicitParamsFilter).map(genCxxParam).unzip
+      case List(inargs, outargs) => (inargs ++ outargs).filter(implicitParamsFilter).map(genCxxParam).unzip
       case _ =>
-        c.error(c.enclosingPosition,"extern methods with multiple parameter lists are not supported for @Cxx classes")
+        c.error(c.enclosingPosition, "extern methods with multiple parameter lists are not supported for @Cxx classes")
         ???
     }
+    (params, callArgs.filter(_.nonEmpty))
+  }
 
   protected def genCxxParam(param: ValDef)(implicit data: Data): (String,String) = {
     val isResultVal = isResultValue(param.tpt)
