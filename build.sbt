@@ -21,7 +21,7 @@ lazy val commonSettings = Seq(
 
 
 lazy val root  = project.in(file("."))
-  .aggregate(common,cobj,objc,cxx)
+  .aggregate(common,cobj,objc,cxx,scriptbridge,lua)
   .settings(commonSettings ++ dontPublish:_*)
   .settings(
     name := "swog"
@@ -71,6 +71,21 @@ lazy val cxxlib = project
 //    nbhCxxCXXFlags += "-std=c++11"
   )
 
+lazy val scriptbridge = project
+  .enablePlugins(ScalaNativePlugin)
+  .settings(commonSettings ++ publishingSettings: _*)
+  .settings(
+    name := "swog-scriptbridge"
+  )
+
+lazy val lua = project
+  .enablePlugins(ScalaNativePlugin)
+  .dependsOn(scriptbridge,cobj)
+  .settings(commonSettings ++ publishingSettings: _*)
+  .settings(
+    name := "swog-lua"
+  )
+
 import scalanative.sbtplugin.ScalaNativePluginInternal._
 
 lazy val cobjTests = project
@@ -103,6 +118,15 @@ lazy val cxxTests = project
   .settings(
     nativeLinkStubs := true,
     nbhCxxCXXFlags += "-std=c++11"
+  )
+
+lazy val luaTests = project
+  .enablePlugins(ScalaNativePlugin,NBHAutoPlugin)
+  .dependsOn(lua)
+  .settings(commonSettings ++ dontPublish: _*)
+  .settings(
+    nativeLinkStubs := true,
+    nbhPkgConfigModules += "lua-5.3"
   )
 
 lazy val dontPublish = Seq(
