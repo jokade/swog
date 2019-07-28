@@ -82,7 +82,7 @@ trait CxxWrapperGen extends CommonHandler {
 
   private def genSizeOfExternal(data: Data): Tree = {
     val name = TermName(data.externalPrefix+"__sizeof")
-    q"def $name(): Int = extern"
+    q"def $name(): Int = $expExtern"
   }
 
   private def genSizeOfVal(data: Data): Tree = {

@@ -38,6 +38,11 @@ object Cxx {
             andThen analyzeBody(cls) _
           )(data)
         (cls, updData)
+      case (trt: TraitParts, data) =>
+        val updData = (
+          analyzeMainAnnotation(trt) _
+          )(data)
+        (trt,updData)
       case (obj: ObjectParts, data) =>
         val updData = (
           analyzeMainAnnotation(obj) _
@@ -55,6 +60,9 @@ object Cxx {
           .addAnnotations(genCxxWrapperAnnot(cls.data))
           .updCtorParams(genTransformedCtorParams(cls))
           .updParents(genTransformedParents(cls))
+      case trt: TraitTransformData =>
+        trt
+          .addAnnotations(genCxxWrapperAnnot(trt.data))
       case obj: ObjectTransformData =>
         val transformedBody = genTransformedCompanionBody(obj) ++ obj.data.additionalCompanionStmts :+ genBindingsObject(obj.data)
         obj
