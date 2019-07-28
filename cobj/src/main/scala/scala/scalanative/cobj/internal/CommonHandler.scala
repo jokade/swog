@@ -238,6 +238,8 @@ abstract class CommonHandler extends MacroAnnotationHandler {
         prefix + scalaName.replaceAll("([A-Z])","_$1").toLowerCase
       case NamingConvention.PascalCase =>
         prefix + scalaName.head.toUpper + scalaName.tail
+      case NamingConvention.LowerCase =>
+        prefix + scalaName.toLowerCase
       case _ => prefix + scalaName
     }
   }
