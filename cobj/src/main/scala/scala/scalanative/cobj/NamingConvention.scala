@@ -15,5 +15,9 @@ object NamingConvention extends Enumeration {
    * Appends the argument names to the end of the function name - used internally by Cxx.
    */
   val CxxWrapper = Value
+  /**
+   * Upper case letters are replaced with lower case; no further transformation.
+   */
+  val LowerCase = Value
 }
 
