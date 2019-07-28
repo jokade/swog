@@ -36,6 +36,17 @@ object ObjCTests extends TestSuite {
       'Float-{
         EUT.getFloatMax() ==> Float.MaxValue
       }
+      'Object-{
+        println( EUT.alloc() )
+      }
+    }
+    'args-{
+      'Int-{
+        EUT.incInt_(42) ==> 43
+      }
+      'Long-{
+        EUT.incLong_(123456789123456789L) ==> 123456789123456790L
+      }
     }
   }
 
@@ -43,7 +54,7 @@ object ObjCTests extends TestSuite {
 
 @ObjC
 class EUT extends ObjCObject {
-
+  def name: CString = extern
 }
 
 @ObjCClass
@@ -59,6 +70,9 @@ abstract class ClassTests extends ObjCClassObject {
   def getCString(): CString = extern
   def getDoubleMax(): Double = extern
   def getFloatMax(): Float = extern
+  def incInt_(i: Int): Int = extern
+  def incLong_(l: Long): Long = extern
+  def alloc(): EUT = extern
 }
 
 @InlineSource("ObjC",
@@ -78,6 +92,9 @@ abstract class ClassTests extends ObjCClassObject {
   + (char*)getCString;
   + (double)getDoubleMax;
   + (float)getFloatMax;
+  + (int)incInt:(int)i;
+  + (long)incLong:(long)l;
+  - (char*)name;
 @end
 
 @implementation EUT
@@ -91,6 +108,9 @@ abstract class ClassTests extends ObjCClassObject {
   + (char*)getCString { return "Hello"; }
   + (double)getDoubleMax { return DBL_MAX; }
   + (float)getFloatMax { return FLT_MAX; }
+  + (int)incInt:(int)i { return i+1; }
+  + (long)incLong:(long)l { return l+1; }
+  - (char*)name { return "EUT"; }
 @end
 """)
 object EUT extends ClassTests {

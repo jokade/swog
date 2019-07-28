@@ -6,51 +6,32 @@ import scala.scalanative.annotation.InlineSource
 import scala.scalanative.cobj.CObj
 import scala.scalanative.cxx.{Cxx, constructor}
 
-/*
+
 object Main {
   def main(args: Array[String]): Unit = {
-    val foo = Foo(3)
-    println(foo.get(2))
-//    println(base.bar.get())
+//    val foo = Foo()
+//    foo.bar()
   }
 }
+/*
+@Cxx
+@debug
+class Bar {
+
+}
+
 
 @Cxx
 @debug
-@InlineSource("Cxx",
-"""
 class Foo {
-    int num;
-  public:
-    Foo(int n);
-    int get(int i);
-};
-Foo::Foo(int n) {
-  num = n;
-}
-int Foo::get(int i) { return num + i; }
-""")
-class Foo {
-  def get(i: Int): Int = extern
+  def bar(): Bar = extern
 }
 
 object Foo {
-  @constructor("Bar")
-  def apply(num: Int): Foo = extern
+  @constructor
+  def apply(): Foo = extern
 
-}
-*/
-/*
-package base {
-  @Cxx
-  @debug
-  @InlineSource("Cxx",
-"""
-namespace base::bar {
-  int get() { return 123; }
-}""")
-  object bar {
-    def get(): Int = extern
-  }
+  def doSomethind(f: Boolean): Int = extern
+
 }
 */
