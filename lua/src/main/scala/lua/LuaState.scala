@@ -1,12 +1,20 @@
 package lua
 
+import lua.LuaState.{FunctionTable, ScalaModule}
+
 import scalanative._
 import unsafe._
 import cobj._
+import scala.collection.mutable
 import scala.scalanative.interop.AutoReleasable
+import scala.scalanative.runtime.{Intrinsics, RawPtr}
 
 @CObj(prefix = "lua_", namingConvention = NamingConvention.LowerCase)
 class LuaState extends AutoReleasable {
+  private val registeredModules = mutable.Map.empty[String,ScalaModule]
+
+  // store the pointer to this instance in the raw C lua state so that we can retrieve it by LuaState.getInstance()
+  Intrinsics.storeObject(LuaState.getExtraSpace(this),this)
 
   @name("luaL_loadstring")
   def loadString(str: CString): LuaResult = extern
@@ -59,7 +67,7 @@ class LuaState extends AutoReleasable {
   def getCString(idx: Int): CString = getCString(idx,0)
   def getString(idx: Int): String = fromCString(getCString(idx))
 
-  def pushnil(): Unit = extern
+  def pushNil(): Unit = extern
 
   def pushCClosure(f: LuaCFunction, n: Int): Unit = extern
   @inline final def pushCFunction(f: LuaCFunction): Unit = pushCClosure(f,0)
@@ -73,6 +81,9 @@ class LuaState extends AutoReleasable {
 
   def setGlobal(name: CString): Unit = extern
   def setGlobal(name: String): Unit = Zone{ implicit z => setGlobal(toCString(name)) }
+
+  def createTable(narr: Int, nrec: Int): Unit = extern
+  def newTable(): Unit = createTable(0,0)
 
   def getTable(idx: Int): LuaType = extern
   def getField(idx: Int, key: CString): LuaType = {
@@ -129,13 +140,89 @@ class LuaState extends AutoReleasable {
 
   def readGlobalString(name: String): Option[String] = readGlobalCString(name).map(fromCString(_))
 
+
+  @name("luaL_setfuncs")
+  def setFuncs(funcs: Ptr[LuaReg]): Unit = extern
+
+  @name("luaL_checkinteger")
+  def checkInteger(arg: Int): LuaInteger = extern
+
+  @name("luaL_checknumber")
+  def checkNumber(arg: Int): LuaNumber = extern
+
+  def checkBoolean(arg: Int): Boolean = getBoolean(arg)
+
+  @name("luaL_checklstring")
+  def checkLString(arg: Int)(len: ResultPtr[CSize]): CString = extern
+  def checkString(arg: Int): String = fromCString(checkLString(arg)(null))
+
   @name("lua_close")
   override def free(): Unit = extern
+
+  /**
+   * Creates a new Lua table with the specified functions as members on the top of the stack.
+   *
+   * @param funcs name/function pairs
+   */
+  def createModule(funcs: FunctionTable): Unit = Zone{ implicit z =>
+    val seq = funcs.toSeq
+    val size = seq.size
+    val arr = alloc[LuaReg](size+1)
+    for(i <- 0 until size) {
+      val (name,f) = seq(i)
+      arr(i)._1 = toCString(name)
+      arr(i)._2 = f
+    }
+    arr(size)._1 = null
+    arr(size)._2 = null
+    newTable()
+    setFuncs(arr)
+  }
+
+  def registerScalaModule(module: ScalaModule): Unit =
+    if(registeredModules.contains(module.name))
+      throw new LuaState.Exception(s"module '${module.name}' already registered!")
+    else {
+     registeredModules += module.name -> module
+    }
+
+  def registerModule(module: LuaModule): Unit = registerScalaModule(module.__lua.module)
+
+  def loadScalaUtils(): Unit = {
+    createModule(LuaState._scalaUtils)
+    setGlobal("scala")
+  }
 }
 
 object LuaState {
+  type FunctionTable = Iterable[(String,LuaCFunction)]
+
   class Exception(msg: String) extends RuntimeException(msg)
+
+  case class ScalaModule(name: String, funcs: FunctionTable)
+
+  @inline private def getExtraSpace(l: LuaState): RawPtr = getExtraSpace(runtime.toRawPtr(l.__ptr))
+  @inline private def getExtraSpace(l: RawPtr): RawPtr = Intrinsics.elemRawPtr(l,-sizeof[Ptr[Byte]])
+  @inline def getInstance(l: RawPtr): LuaState = Intrinsics.loadObject(getExtraSpace(l)).asInstanceOf[LuaState]
+
+  private val _loadModule = new CFuncPtr1[RawPtr,Int] {
+    override def apply(l: RawPtr): Int = {
+      val state = getInstance(l)
+      val name = state.checkString(1)
+      state.registeredModules.get(name) match {
+        case Some(m) =>
+          state.createModule(m.funcs)
+          1
+        case None => 0
+      }
+    }
+  }
+
+  private val _scalaUtils = Map(
+    "load" -> _loadModule
+  )
 
   @name("luaL_newstate")
   def apply(): LuaState = extern
+
 }

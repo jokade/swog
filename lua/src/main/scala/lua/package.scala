@@ -1,3 +1,4 @@
+import scala.scalanative.runtime.RawPtr
 import scalanative.unsafe._
 
 package object lua {
@@ -33,5 +34,7 @@ package object lua {
   type LuaNumber = CDouble
   type LuaInteger = CLongLong
   type LuaUnsigned = CUnsignedLongLong
-  type LuaCFunction = CFuncPtr1[Ptr[Byte],Int]
+  type LuaCFunction = CFuncPtr1[RawPtr,Int]
+
+  type LuaReg = CStruct2[CString,LuaCFunction]
 }

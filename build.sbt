@@ -126,6 +126,7 @@ lazy val luaTests = project
   .settings(commonSettings ++ dontPublish: _*)
   .settings(
     nativeLinkStubs := true,
+    //scalacOptions += "-Xmacro-settings:smacrotools.extensions=lua.scriptbridge.LuaScriptBridge",
     nbhPkgConfigModules += "lua-5.3"
   )
 
