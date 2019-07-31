@@ -31,10 +31,9 @@ object ScriptObj {
     override def analyze: Analysis = analyzeData andThen super.analyze
 
     private def analyzeData: Analysis = {
-      case (obj: ObjectParts, data: Data) =>
-        val updData = sbAnalyzeObject(obj)(data)
-        (obj,updData)
-      case default => default
+      case (tpe: CommonParts, data: Data) =>
+        val updData = sbAnalyzeAnnottee(tpe)(data)
+        (tpe,updData)
     }
 
 

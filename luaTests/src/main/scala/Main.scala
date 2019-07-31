@@ -12,12 +12,15 @@ object Main {
     state.openLibs()
     state.loadScalaUtils()
     state.registerModule(Foo)
+//    state.doFile("hello.lua")
     state.doString(
       // language=Lua
       """
         |Foo = scala.load("Foo")
-        |print(Foo.bar(false))
-        |""".stripMargin)
+        |foo = Foo.new(1)
+        |s = Foo.getBar()
+        |Foo.print(s)
+        """.stripMargin)
     state.free()
     println("DONE")
   }
@@ -26,8 +29,14 @@ object Main {
 
 @ScriptObj
 @debug
+class Foo(var i: Int) {
+  def add(a: Int): Unit = i += a
+  def get: Int = i
+}
+
+class Bar
+
 object Foo extends LuaModule {
-  def incr(i: Int): Int = i+1
-  def add(a: Double, b: Double): Double = a+b
-  def bar(b: Boolean): String = b.toString
+  def getBar: Bar = new Bar
+  def print(bar: Bar): Unit = println(bar)
 }

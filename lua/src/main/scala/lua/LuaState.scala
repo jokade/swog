@@ -16,6 +16,8 @@ class LuaState extends AutoReleasable {
   // store the pointer to this instance in the raw C lua state so that we can retrieve it by LuaState.getInstance()
   Intrinsics.storeObject(LuaState.getExtraSpace(this),this)
 
+  def pushValue(idx: Int): Unit = extern
+
   @name("luaL_loadstring")
   def loadString(str: CString): LuaResult = extern
   def loadString(str: String): LuaResult = Zone{ implicit z => loadString(toCString(str)) }
@@ -95,6 +97,9 @@ class LuaState extends AutoReleasable {
     getTable(idx)
   }
 
+  def setField(idx: Int, key: CString): Unit = extern
+
+
   def writeGlobal(name: String, value: Any): Unit = {
     value match {
       case i: LuaInteger =>
@@ -165,6 +170,11 @@ class LuaState extends AutoReleasable {
    * @param funcs name/function pairs
    */
   def createModule(funcs: FunctionTable): Unit = Zone{ implicit z =>
+    newTable()
+    setFuncs(funcs)
+  }
+
+  def setFuncs(funcs: FunctionTable)(implicit z: Zone): Unit = {
     val seq = funcs.toSeq
     val size = seq.size
     val arr = alloc[LuaReg](size+1)
@@ -175,7 +185,6 @@ class LuaState extends AutoReleasable {
     }
     arr(size)._1 = null
     arr(size)._2 = null
-    newTable()
     setFuncs(arr)
   }
 
@@ -192,6 +201,46 @@ class LuaState extends AutoReleasable {
     createModule(LuaState._scalaUtils)
     setGlobal("scala")
   }
+
+  def pushLightUserData(ptr: RawPtr): Unit = extern
+  @inline final def pushLightUserData(obj: Object): Unit = pushLightUserData( Intrinsics.castObjectToRawPtr(obj) )
+
+  def newUserData(size: CSize): RawPtr = extern
+
+  /**
+   * Pushes the specified Scala Object as user data onto the Lua stack.
+   *
+   * @param scalaObj
+   * @return The emmory address where the user object is stored
+   */
+  def newUserData(scalaObj: Object): RawPtr = {
+    val ptr = newUserData(sizeof[RawPtr])
+    Intrinsics.storeObject(ptr,scalaObj)
+    ptr
+  }
+
+  def pushUserData(scalaObject: Object): Unit = scalaObject match {
+    case lua: LuaWrapper =>
+      lua.__luaPush(this)
+    case _ =>
+      pushLightUserData(scalaObject)
+  }
+
+  @name("luaL_checkudata")
+  def checkUserData(arg: Int, tname: CString): RawPtr = extern
+
+  def toUserData(idx: Int): RawPtr = extern
+
+  @name("luaL_newmetatable")
+  def newMetaTable(tname: CString): Boolean = extern
+
+  @name("luaL_getmetatable")
+  def getMetaTable(tname: CString): Unit = extern
+
+//  @name("luaL_setmetatable")
+//  def setMetaTable(tname: CString): Unit = extern
+
+  def setMetaTable(idx: Int): Unit = extern
 }
 
 object LuaState {
