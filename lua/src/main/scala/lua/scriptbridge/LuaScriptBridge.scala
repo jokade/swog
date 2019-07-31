@@ -176,7 +176,7 @@ class LuaScriptBridge(val c: whitebox.Context) extends ScriptBridgeHandler {
       case LuaBoolean =>
         q"val $argName = state.checkBoolean($argIdx)"
       case LuaUserObj =>
-        q"val $argName = runtime.Intrinsics.loadObject(state.toUserData($argIdx)).asInstanceOf[${v.tpt}]"
+        q"val $argName = runtime.Intrinsics.castRawPtrToObject(state.toUserData($argIdx)).asInstanceOf[${v.tpt}]"
       case LuaNil => ???
     })
   }

@@ -6,7 +6,7 @@ import scalanative._
 import unsafe._
 import cobj._
 import scala.collection.mutable
-import scala.scalanative.interop.AutoReleasable
+import scala.scalanative.interop.{AutoReleasable, RefZone}
 import scala.scalanative.runtime.{Intrinsics, RawPtr}
 
 @CObj(prefix = "lua_", namingConvention = NamingConvention.LowerCase)

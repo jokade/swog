@@ -1,6 +1,7 @@
 import de.surfice.smacrotools.debug
 import lua.{LuaModule, LuaReg, LuaState}
 
+import scala.scalanative.runtime.Intrinsics
 import scala.scalanative.scriptbridge.ScriptObj
 import scala.scalanative.unsafe.Tag.CFuncPtr1
 import scalanative._
@@ -19,6 +20,7 @@ object Main {
         |Foo = scala.load("Foo")
         |foo = Foo.new(1)
         |s = Foo.getBar()
+        |print(s)
         |Foo.print(s)
         """.stripMargin)
     state.free()
@@ -37,6 +39,8 @@ class Foo(var i: Int) {
 class Bar
 
 object Foo extends LuaModule {
-  def getBar: Bar = new Bar
+  private lazy val bar = new Bar
+  def getBar: Bar = bar
   def print(bar: Bar): Unit = println(bar)
+
 }
