@@ -1,6 +1,7 @@
 package lua.scriptbridge
 
 import de.surfice.smacrotools.MacroAnnotationHandler
+import lua.nolua
 
 import scala.reflect.macros.whitebox
 import scala.scalanative.scriptbridge.internal.ScriptBridgeHandler
@@ -16,6 +17,7 @@ class LuaScriptBridge(val c: whitebox.Context) extends ScriptBridgeHandler {
   private val tDouble = weakTypeOf[Double]
   private val tString = weakTypeOf[String]
   private val tpeLuaWrapper = tq"lua.LuaWrapper"
+  private val annotNoLua = weakTypeOf[nolua]
 
   override def language: String = "lua"
 
@@ -62,11 +64,11 @@ class LuaScriptBridge(val c: whitebox.Context) extends ScriptBridgeHandler {
   }
 
   private def genLuaFunctionWrappers()(implicit data: ScriptBridgeData): Seq[(String,TermName,Tree)] =
-    data.sbExportFunctions.map(genLuaFunctionWrapper) ++
+    data.sbExportFunctions.filter(shouldExportToLua).map(genLuaFunctionWrapper) ++
       genConstructorWrapper()
 
   private def genLuaMethodWrappers()(implicit data: ScriptBridgeData): Seq[(String,TermName,Tree)] =
-      data.sbExportMethods.map(genLuaMethodWrapper)
+      data.sbExportMethods.filter(shouldExportToLua).map(genLuaMethodWrapper)
 
   private def genLuaFunctionWrapper(scalaDef: DefDef)(implicit data: ScriptBridgeData): (String,TermName,Tree) = {
     val (luaName, termName) = genLuaFunctionWrapperName(scalaDef)
@@ -220,4 +222,7 @@ class LuaScriptBridge(val c: whitebox.Context) extends ScriptBridgeHandler {
       case t if t =:= tString  => LuaString
       case _ => LuaUserObj
     }
+
+  private def shouldExportToLua(scalaDef: DefDef): Boolean =
+    ! hasAnnotation(scalaDef.mods.annotations,annotNoLua)
 }

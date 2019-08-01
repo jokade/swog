@@ -1,5 +1,5 @@
 import de.surfice.smacrotools.debug
-import lua.{LuaModule, LuaReg, LuaState}
+import lua.{LuaModule, LuaReg, LuaState, nolua}
 
 import scala.scalanative.runtime.Intrinsics
 import scala.scalanative.scriptbridge.ScriptObj
@@ -19,9 +19,7 @@ object Main {
       """
         |Foo = scala.load("Foo")
         |foo = Foo.new(1)
-        |s = Foo.getBar()
-        |print(s)
-        |Foo.print(s)
+        |print(foo)
         """.stripMargin)
     state.free()
     println("DONE")
@@ -32,6 +30,8 @@ object Main {
 @ScriptObj
 @debug
 class Foo(var i: Int) {
+  @nolua
+  def add(): Unit = i += 1
   def add(a: Int): Unit = i += a
   def get: Int = i
 }
