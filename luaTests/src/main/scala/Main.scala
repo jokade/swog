@@ -13,14 +13,16 @@ object Main {
     state.openLibs()
     state.loadScalaUtils()
     state.registerModule(Foo)
-//    state.doFile("hello.lua")
-    state.doString(
+    state.doFile("hello.lua")
+//    state.doString(
       // language=Lua
-      """
-        |Foo = scala.load("Foo")
-        |foo = Foo.new(1)
-        |print(foo)
-        """.stripMargin)
+//      """
+//        |--- @class Foo
+//        |--- @public fun get
+//        |Foo = scala.load("Foo")
+//        |foo = Foo.new(1)
+//        |print(foo.get())
+//        """.stripMargin)
     state.free()
     println("DONE")
   }
@@ -30,6 +32,10 @@ object Main {
 @ScriptObj
 @debug
 class Foo(var i: Int) {
+//  def foo: Int = 42
+//  def foo_=(i: Int): Unit = {}
+  def foo: Int = 42
+  def foo_=(f: Int): Unit = {}
   @nolua
   def add(): Unit = i += 1
   def add(a: Int): Unit = i += a

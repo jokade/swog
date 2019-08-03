@@ -64,72 +64,89 @@ class LuaScriptBridge(val c: whitebox.Context) extends ScriptBridgeHandler {
   }
 
   private def genLuaFunctionWrappers()(implicit data: ScriptBridgeData): Seq[(String,TermName,Tree)] =
-    data.sbExportFunctions.filter(shouldExportToLua).map(genLuaFunctionWrapper) ++
+    data.sbExportFunctions.filter(shouldExportToLua).flatMap(genLuaWrappers(false)) ++
       genConstructorWrapper()
 
   private def genLuaMethodWrappers()(implicit data: ScriptBridgeData): Seq[(String,TermName,Tree)] =
-      data.sbExportMethods.filter(shouldExportToLua).map(genLuaMethodWrapper)
+      (data.sbExportMethods++data.sbExportProperties).filter(shouldExportToLua).flatMap(genLuaWrappers(true))
 
-  private def genLuaFunctionWrapper(scalaDef: DefDef)(implicit data: ScriptBridgeData): (String,TermName,Tree) = {
-    val (luaName, termName) = genLuaFunctionWrapperName(scalaDef)
-    val call = genScalaFunctionCall(scalaDef)
-    val func =
+  private def genLuaWrappers(isClassDefn: Boolean)(scalaDef: ValOrDefDef)(implicit data: ScriptBridgeData): Seq[(String,TermName,Tree)] =
+    if(scalaDef.mods.hasFlag(Flag.MUTABLE))
+      Seq(genLuaWrapper(scalaDef,isClassDefn,false), genLuaWrapper(scalaDef,isClassDefn,true))
+    else
+      Seq(genLuaWrapper(scalaDef,isClassDefn,false))
+
+  private def genLuaWrapper(scalaDef: ValOrDefDef, isClassDefn: Boolean, isSetter: Boolean)(implicit data: ScriptBridgeData): (String,TermName,Tree) = {
+    val (luaName, termName) = genLuaWrapperName(scalaDef,isClassDefn,isSetter)
+    val call = genScalaCall(scalaDef,isClassDefn,isSetter)
+    val defn =
       q"""val ${termName} = new CFuncPtr1[RawPtr,Int]{
             def apply(L: RawPtr): Int = $call
           }"""
-    (luaName, termName, func)
+    (luaName, termName, defn)
   }
 
-  private def genLuaMethodWrapper(scalaDef: DefDef)(implicit data: ScriptBridgeData): (String,TermName,Tree) = {
-    val (luaName, termName) = genLuaMethodWrapperName(scalaDef)
-    val call = genScalaMethodCall(scalaDef)
-    val method =
-      q"""val ${termName} = new CFuncPtr1[RawPtr,Int]{
-            def apply(L: RawPtr): Int = $call
-          }"""
-    (luaName, termName, method)
-  }
 
-  private def genLuaFunctionWrapperName(scalaDef: DefDef)(implicit data:ScriptBridgeData): (String,TermName) = {
-    val luaName = scalaDef.name.toString()
-    val termName = TermName("f_"+luaName)
+  private def genLuaWrapperName(scalaDef: ValOrDefDef, isClassDefn: Boolean, isSetter: Boolean): (String,TermName) = {
+    val name = scalaDef.name.toString
+    val luaName =
+      if(name.endsWith("_$eq")) {
+        val n = name.stripSuffix("_$eq")
+        "set" + n.head.toUpper + n.tail
+      }
+      else if(isSetter)
+        "set" + name.head.toUpper + name.tail
+      else
+        name
+    val termName =
+      if(isClassDefn)
+        TermName("m_"+luaName)
+      else
+       TermName("f_"+luaName)
     (luaName,termName)
   }
 
-  private def genLuaMethodWrapperName(scalaDef: DefDef)(implicit data: ScriptBridgeData): (String,TermName) = {
-    val luaName = scalaDef.name.toString()
-    val termName = TermName("m_"+luaName)
-    (luaName,termName)
-  }
-
-  private def genScalaFunctionCall(scalaDef: DefDef)(implicit data: ScriptBridgeData): Tree = {
-    val ret = genReturn(scalaDef)
-    val (args,argDefs) = genArgs(scalaDef)
+  private def genScalaCall(scalaDef: ValOrDefDef, isInstanceCall: Boolean, isSetter: Boolean)(implicit data: ScriptBridgeData): Tree = {
+    val ret = genReturn(scalaDef,isSetter)
+    val (args,argDefs) = scalaDef match {
+      case defn: DefDef => genArgs(defn)
+      case defn: ValDef if isSetter =>
+        val idx = if(isInstanceCall) 2 else 1
+        val (arg, argDef) = genArg(defn,idx)
+        (Seq(Seq(arg)),Seq(argDef))
+      case _ => (Nil,Nil)
+    }
+    val instance =
+      if(isInstanceCall)
+        q"""val obj = runtime.Intrinsics.loadObject(state.checkUserData(1,metaTableName)).asInstanceOf[${data.sbScalaType.get}]"""
+      else
+        q""
     val call = args match {
-      case Nil => q"val res = ${scalaDef.name}"
-      case List(args) => q"val res = ${scalaDef.name}(..$args)"
+      case Nil =>
+        if(isInstanceCall)
+          q"val res = obj.${scalaDef.name}"
+        else
+          q"val res = ${scalaDef.name}"
+      case List(xs) =>
+        if(isSetter) {
+          if(isInstanceCall)
+            q"obj.${scalaDef.name} = arg2"
+          else
+            q"${scalaDef.name} = arg2"
+        }
+        else {
+          if(isInstanceCall)
+            q"val res = obj.${scalaDef.name}(..$xs)"
+          else
+            q"val res = ${scalaDef.name}(..$xs)"
+        }
     }
     q"""val state = lua.LuaState.getInstance(L)
+        $instance
         ..$argDefs
         $call
         $ret
         1"""
-  }
-
-  private def genScalaMethodCall(scalaDef: DefDef)(implicit data: ScriptBridgeData): Tree = {
-    val ret = genReturn(scalaDef)
-    val (args,argDefs) = genArgs(scalaDef,offset = 1)
-    val call = args match {
-      case Nil => q"val res = obj.${scalaDef.name}"
-      case List(args) => q"val res = obj.${scalaDef.name}(..$args)"
-    }
-    q"""val state = lua.LuaState.getInstance(L)
-        val obj = runtime.Intrinsics.loadObject(state.checkUserData(1,metaTableName)).asInstanceOf[${data.sbScalaType.get}]
-        ..$argDefs
-        $call
-        $ret
-        1
-     """
   }
 
   private def genConstructorWrapper()(implicit data: ScriptBridgeData): Option[(String,TermName,Tree)] = data.sbConstructor.map{ constr =>
@@ -183,8 +200,11 @@ class LuaScriptBridge(val c: whitebox.Context) extends ScriptBridgeHandler {
     })
   }
 
-  private def genReturn(scalaDef: DefDef)(implicit data: ScriptBridgeData): Tree =
-    genReturn( getLuaType(scalaDef.tpt) )
+  private def genReturn(scalaDef: ValOrDefDef, isSetter: Boolean)(implicit data: ScriptBridgeData): Tree =
+    if(isSetter)
+      q"state.pushNil()"
+    else
+      genReturn( getLuaType(scalaDef.tpt) )
 
   private def genReturn(tpe: LuaType): Tree = tpe match {
     case LuaInt | LuaLong =>
@@ -223,6 +243,6 @@ class LuaScriptBridge(val c: whitebox.Context) extends ScriptBridgeHandler {
       case _ => LuaUserObj
     }
 
-  private def shouldExportToLua(scalaDef: DefDef): Boolean =
+  private def shouldExportToLua(scalaDef: ValOrDefDef): Boolean =
     ! hasAnnotation(scalaDef.mods.annotations,annotNoLua)
 }

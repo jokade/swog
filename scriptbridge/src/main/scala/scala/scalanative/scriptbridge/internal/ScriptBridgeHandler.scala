@@ -25,6 +25,9 @@ trait ScriptBridgeHandler extends MacroAnnotationHandler {
     def sbExportMethods: Seq[DefDef] = data.getOrElse("sbExportMethods",Nil).asInstanceOf[Seq[DefDef]]
     def withSbExportMethods(functions: Seq[DefDef]): Data = data.updated("sbExportMethods",functions)
 
+    def sbExportProperties: Seq[ValDef] = data.getOrElse("sbExportProperties",Nil).asInstanceOf[Seq[ValDef]]
+    def withSbExportProperties(props: Seq[ValDef]): Data = data.updated("sbExportProperties",props)
+
     def sbModuleName: String = data("sbModuleName").asInstanceOf[String]
     def withSbModuleName(name: String): Data = data.updated("sbModuleName",name)
 
@@ -67,15 +70,20 @@ trait ScriptBridgeHandler extends MacroAnnotationHandler {
     })
 
   private def sbAnalyzeMethods(tpe: CommonParts)(data: Data): Data =
-    data.withSbExportMethods(tpe.body.collect{
-      case m: DefDef if shouldExport(m) => m
-    })
+    data
+      .withSbExportMethods(tpe.body.collect{
+        case m: DefDef if shouldExport(m) => m
+      })
+      .withSbExportProperties(tpe.body.collect{
+        case p: ValDef if shouldExport(p) => p
+      })
+
 
   private def sbAnalyzeCommon(tpe: CommonParts)(data: Data): Data =
     data.withSbModuleName(tpe.fullName)
 
-  private def shouldExport(m: DefDef): Boolean = isPublic(m)
+  private def shouldExport(m: ValOrDefDef): Boolean = isPublic(m)
 
-  private def isPublic(m: DefDef): Boolean =
+  private def isPublic(m: ValOrDefDef): Boolean =
     ! ( m.mods.hasFlag(Flag.PROTECTED) || m.mods.hasFlag(Flag.PRIVATE) )
 }
