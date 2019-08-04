@@ -245,6 +245,44 @@ class LuaState extends Lua {
 
   def table(idx: Int): LuaTable = new LuaTable(this,idx)
 
+  def getValue(idx: Int): Any = getType(idx) match {
+    case LuaType.BOOLEAN =>
+      getBoolean(idx)
+    case LuaType.NUMBER =>
+      if(isInteger(idx))
+        getInteger(idx)
+      else
+        getNumber(idx)
+    case LuaType.STRING =>
+      getString(idx)
+    case LuaType.TABLE =>
+      getTable(idx)
+    case _ =>
+      toUserData(idx)
+  }
+
+  def pushValue(v: Any): Unit = v match {
+    case null =>
+      pushNil()
+    case i: Int =>
+      pushInteger(i)
+    case l: Long =>
+      pushInteger(l)
+    case b: Boolean =>
+      pushBoolean(b)
+    case f: Float =>
+      pushNumber(f)
+    case d: Double =>
+      pushNumber(d)
+    case s: String =>
+      pushString(s)
+    case c: CString =>
+      pushString(c)
+    case o: Object =>
+      pushUserData(o)
+    case _ => throw new RuntimeException(s"Cannot push value $v on Lua stack: type not supported")
+  }
+
   override def init(): Unit = {
     openLibs()
     loadScalaUtils()
