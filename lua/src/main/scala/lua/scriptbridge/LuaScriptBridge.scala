@@ -1,7 +1,7 @@
 package lua.scriptbridge
 
 import de.surfice.smacrotools.MacroAnnotationHandler
-import lua.nolua
+import lua.{LuaTable, nolua}
 
 import scala.reflect.macros.whitebox
 import scala.scalanative.scriptbridge.internal.ScriptBridgeHandler
@@ -16,6 +16,7 @@ class LuaScriptBridge(val c: whitebox.Context) extends ScriptBridgeHandler {
   private val tFloat = weakTypeOf[Float]
   private val tDouble = weakTypeOf[Double]
   private val tString = weakTypeOf[String]
+  private val tLuaTable = weakTypeOf[LuaTable]
   private val tpeLuaWrapper = tq"lua.LuaWrapper"
   private val annotNoLua = weakTypeOf[nolua]
 
@@ -49,7 +50,7 @@ class LuaScriptBridge(val c: whitebox.Context) extends ScriptBridgeHandler {
     val metaTableName = Literal(Constant(data.sbModuleName))
     q"""object __lua extends lua.LuaModule.Data {
           import scalanative.unsafe._
-          import scala.scalanative.runtime.RawPtr
+          import scala.scalanative.runtime.{Intrinsics,RawPtr}
           ..$defns
           val funcTable = Map( ..$funcMap )
           val methodTable = Map( ..$methodMap )
@@ -118,7 +119,7 @@ class LuaScriptBridge(val c: whitebox.Context) extends ScriptBridgeHandler {
     }
     val instance =
       if(isInstanceCall)
-        q"""val obj = runtime.Intrinsics.loadObject(state.checkUserData(1,metaTableName)).asInstanceOf[${data.sbScalaType.get}]"""
+        q"""val obj = Intrinsics.loadObject(state.checkUserData(1,metaTableName)).asInstanceOf[${data.sbScalaType.get}]"""
       else
         q""
     val call = args match {
@@ -149,14 +150,15 @@ class LuaScriptBridge(val c: whitebox.Context) extends ScriptBridgeHandler {
         1"""
   }
 
-  private def genConstructorWrapper()(implicit data: ScriptBridgeData): Option[(String,TermName,Tree)] = data.sbConstructor.map{ constr =>
-    val (args,argDefs) = genArgs(constr.params,0)
-    val call = args match {
-      case Nil => q"val res = new ${constr.name}"
-      case List(args) => q"val res = new ${constr.name}(..$args)"
-    }
-    val func =
-      q"""val f_new = new CFuncPtr1[RawPtr,Int] {
+  private def genConstructorWrapper()(implicit data: ScriptBridgeData): Option[(String,TermName,Tree)] = data.sbConstructor.flatMap{ constr =>
+    if(constr.isPublic) {
+      val (args, argDefs) = genArgs(constr.params, 0)
+      val call = args match {
+        case Nil => q"val res = new ${constr.name}"
+        case List(args) => q"val res = new ${constr.name}(..$args)"
+      }
+      val func =
+        q"""val f_new = new CFuncPtr1[RawPtr,Int] {
           def apply(L: RawPtr): Int = {
             val state = lua.LuaState.getInstance(L)
             ..$argDefs
@@ -164,8 +166,11 @@ class LuaScriptBridge(val c: whitebox.Context) extends ScriptBridgeHandler {
             state.pushUserData(res)
           1
        }}"""
-    ("new",TermName("f_new"),func)
-  }
+      Some(("new", TermName("f_new"), func))
+    }
+    else
+      None
+    }
 
   private def genArgs(scalaDef: DefDef, offset: Int = 0)(implicit data: ScriptBridgeData): (Seq[Seq[Tree]],Seq[Tree]) =
     scalaDef.vparamss match {
@@ -195,7 +200,9 @@ class LuaScriptBridge(val c: whitebox.Context) extends ScriptBridgeHandler {
       case LuaBoolean =>
         q"val $argName = state.checkBoolean($argIdx)"
       case LuaUserObj =>
-        q"val $argName = runtime.Intrinsics.castRawPtrToObject(state.toUserData($argIdx)).asInstanceOf[${v.tpt}]"
+        q"val $argName = Intrinsics.castRawPtrToObject(state.toUserData($argIdx)).asInstanceOf[${v.tpt}]"
+      case LuaTable =>
+        q"val $argName = state.table($argIdx)"
       case LuaNil => ???
     })
   }
@@ -219,6 +226,9 @@ class LuaScriptBridge(val c: whitebox.Context) extends ScriptBridgeHandler {
       q"state.pushString(res)"
     case LuaUserObj =>
       q"state.pushUserData(res)"
+    case LuaTable =>
+      c.error(c.enclosingPosition,"LuaTable is not allowed as a return value")
+      ???
   }
 
   sealed trait LuaType
@@ -230,6 +240,7 @@ class LuaScriptBridge(val c: whitebox.Context) extends ScriptBridgeHandler {
   case object LuaDouble extends LuaType
   case object LuaString extends LuaType
   case object LuaUserObj extends LuaType
+  case object LuaTable extends LuaType
 
   private def getLuaType(tpt: Tree)(implicit data: ScriptBridgeData): LuaType =
     getType(tpt,true) match {
@@ -240,6 +251,7 @@ class LuaScriptBridge(val c: whitebox.Context) extends ScriptBridgeHandler {
       case t if t =:= tBoolean => LuaBoolean
       case t if t =:= tUnit    => LuaNil
       case t if t =:= tString  => LuaString
+      case t if t =:= tLuaTable => LuaTable
       case _ => LuaUserObj
     }
 

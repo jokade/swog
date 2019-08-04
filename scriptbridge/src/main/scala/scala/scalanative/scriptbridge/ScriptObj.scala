@@ -27,6 +27,8 @@ object ScriptObj {
     override def language: String = ???
 
     override def extensionClasses: Seq[String] = Seq("lua.scriptbridge.LuaScriptBridge")
+    //setting("scriptbridge.languages","").split(";")
+    //Seq("lua.scriptbridge.LuaScriptBridge")
 
     override def analyze: Analysis = analyzeData andThen super.analyze
 

@@ -6,17 +6,18 @@ import scalanative._
 import unsafe._
 import cobj._
 import scala.collection.mutable
-import scala.scalanative.interop.{AutoReleasable, RefZone}
+//import scala.scalanative.interop.{AutoReleasable, RefZone}
 import scala.scalanative.runtime.{Intrinsics, RawPtr}
 
 @CObj(prefix = "lua_", namingConvention = NamingConvention.LowerCase)
-class LuaState extends AutoReleasable {
+class LuaState extends Lua {
   private val registeredModules = mutable.Map.empty[String,ScalaModule]
 
   // store the pointer to this instance in the raw C lua state so that we can retrieve it by LuaState.getInstance()
   Intrinsics.storeObject(LuaState.getExtraSpace(this),this)
 
   def pushValue(idx: Int): Unit = extern
+  def pop(n: Int): Unit = setTop(-n-1)
 
   @name("luaL_loadstring")
   def loadString(str: CString): LuaResult = extern
@@ -161,8 +162,8 @@ class LuaState extends AutoReleasable {
   def checkLString(arg: Int)(len: ResultPtr[CSize]): CString = extern
   def checkString(arg: Int): String = fromCString(checkLString(arg)(null))
 
-  @name("lua_close")
-  override def free(): Unit = extern
+  def close(): Unit = extern
+  override def free(): Unit = close()
 
   /**
    * Creates a new Lua table with the specified functions as members on the top of the stack.
@@ -241,6 +242,17 @@ class LuaState extends AutoReleasable {
 //  def setMetaTable(tname: CString): Unit = extern
 
   def setMetaTable(idx: Int): Unit = extern
+
+  def table(idx: Int): LuaTable = new LuaTable(this,idx)
+
+  override def init(): Unit = {
+    openLibs()
+    loadScalaUtils()
+  }
+
+  override def execString(script: String): Unit = doString(script)
+
+  override def execFile(filename: String): Unit = doFile(filename)
 }
 
 object LuaState {

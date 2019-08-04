@@ -11,7 +11,9 @@ trait ScriptBridgeHandler extends MacroAnnotationHandler {
   override def supportsObjects: Boolean = ???
   override def createCompanion: Boolean = ???
 
-  case class Constructor(name: TypeName, params: Seq[ValDef])
+  case class Constructor(name: TypeName, params: Seq[ValDef], mods: Modifiers) {
+    def isPublic: Boolean = mods.hasFlag(Flag.PRIVATE) || mods.hasFlag(Flag.PROTECTED)
+  }
 
   implicit class ScriptBridgeData(data: Map[String,Any]) {
     def sbScalaType: Option[TypeName] = data.getOrElse("sbScalaType",None).asInstanceOf[Option[TypeName]]
@@ -55,7 +57,7 @@ trait ScriptBridgeHandler extends MacroAnnotationHandler {
     data
       .withSbConstructor(Constructor(cls.name,cls.params.collect{
         case v: ValDef => v
-      }))
+      },cls.ctorMods))
       .withSbScalaType(cls.name)
 
   private def sbAnalyzeCompanion(obj: Option[ObjectParts])(data: Data): Data =
