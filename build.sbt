@@ -9,6 +9,7 @@ val Version = new {
   val utest       = "0.6.8-SNAPSHOT"
 }
 
+
 lazy val commonSettings = Seq(
   scalacOptions ++= Seq("-deprecation","-unchecked","-feature","-language:implicitConversions","-Xlint"),
   addCompilerPlugin("org.scalamacros" % "paradise" % "2.1.0" cross CrossVersion.full),

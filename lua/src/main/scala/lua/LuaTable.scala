@@ -1,5 +1,7 @@
 package lua
 
+import scala.collection.mutable
+
 
 final class LuaTable protected[lua](state: LuaState, idx: Int) {
   private var offset = idx+1
@@ -31,4 +33,35 @@ final class LuaTable protected[lua](state: LuaState, idx: Int) {
   @inline def getOrElse[T](key: String, default: => T): T =  get(key).getOrElse(default).asInstanceOf[T]
 
   def apply(key: String): Any = get(key).get
+
+  def toMap(): Map[String,Any] = {
+    def loop(idx: Int): Map[String,Any] = {
+      val map = mutable.Map.empty[String,Any]
+      // see https://www.lua.org/manual/5.3/manual.html#lua_next
+      state.pushNil()
+      while(state.next(idx) != 0) {
+        val key = state.getString(-2)
+        val value = state.getType(-1) match {
+          case LuaType.BOOLEAN =>
+            state.getBoolean(-1)
+          case LuaType.NUMBER =>
+            if(state.isInteger(-1))
+              state.getInteger(-1)
+            else
+              state.getNumber(-1)
+          case LuaType.STRING =>
+            state.getString(-1)
+          case LuaType.TABLE =>
+            loop(state.getTop)
+//          case LuaType.USERDATA =>
+//            state.toUserData(-1)
+          case x => null
+        }
+        state.pop(1)
+        map += key -> value
+      }
+      map.toMap
+    }
+    loop(idx)
+  }
 }

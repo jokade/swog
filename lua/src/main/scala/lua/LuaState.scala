@@ -100,6 +100,7 @@ class LuaState extends Lua {
 
   def setField(idx: Int, key: CString): Unit = extern
 
+  def next(idx: Int): Int = extern
 
   def writeGlobal(name: String, value: Any): Unit = {
     value match {
@@ -256,9 +257,17 @@ class LuaState extends Lua {
     case LuaType.STRING =>
       getString(idx)
     case LuaType.TABLE =>
-      getTable(idx)
-    case _ =>
-      toUserData(idx)
+      table(idx)
+    case _ => null
+//      toUserData(idx)
+  }
+
+  def getGlobalValue(name: String): Option[Any] = {
+    getGlobal(name)
+    getValue(-1) match {
+      case null => None
+      case x => Some(x)
+    }
   }
 
   def pushValue(v: Any): Unit = v match {

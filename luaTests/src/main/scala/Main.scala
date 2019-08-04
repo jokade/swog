@@ -23,8 +23,11 @@ object Main {
         |}
         |a['foo'] = 44
         |a['bar'] = 'hello world'
-        |Foo.print(a)
+        |return a
         """.stripMargin)
+    val table = lua.asInstanceOf[LuaState].table(1)
+    println(table.get("foo"))
+    println(table.toMap())
     lua.free()
 //    state.free()
     println("DONE")

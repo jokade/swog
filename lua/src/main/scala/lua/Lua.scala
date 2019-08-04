@@ -29,6 +29,21 @@ trait Lua extends AutoReleasable {
   def execString(script: String): Unit
 
   def execFile(filename: String): Unit
+
+  /**
+   * Returns the value at the given position of the Lua stack.
+   *
+   * @param idx stack index (positive values: aboslute index; nbegative values: position from the top)
+   * @return
+   */
+  def getValue(idx: Int): Any
+
+  /**
+   * Returns the value of the specified global variable, or None.
+   *
+   * @param name
+   */
+  def getGlobalValue(name: String): Option[Any]
 }
 
 object Lua {
