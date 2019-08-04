@@ -65,8 +65,14 @@ object ResultValue {
       c.Expr(tree)
     }
 
-    def wrappedThis[T: WeakTypeTag](wrapper: Tree) =
-      c.Expr(q"this")
+    def wrappedThis[T: WeakTypeTag](wrapper: Tree) = {
+      val self = c.prefix
+      val tree =
+        q"""
+           $wrapper.wrap($self.__ptr)
+         """
+      c.Expr(tree)
+    }
 
    }
 

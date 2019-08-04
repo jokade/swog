@@ -71,42 +71,49 @@ object CObjTests extends TestSuite {
       Callbacks.exec1(cb1,43) ==> 43
     }
 
-    'OutArgs-{
+    'ResultPtrs-{
       'Int- {
         implicit val out = ResultPtr.stackalloc[Int]
-        OutArgs.int()
+        ImplicitArgs.int()
         out.value ==> 42
       }
       'Long-{
         implicit val out = ResultPtr.stackalloc[Long]
-        OutArgs.long()
+        ImplicitArgs.long()
         out.value ==> Long.MaxValue
       }
       'Double-{
         implicit val out = ResultPtr.stackalloc[Double]
-        OutArgs.double()
+        ImplicitArgs.double()
         out.value ==> Double.MaxValue
       }
       'StructByValue-{
-        implicit val out = ResultPtr.stackalloc[OutArgs.OutStruct]
-        OutArgs.struct()
+        implicit val out = ResultPtr.stackalloc[ImplicitArgs.OutStruct]
+        ImplicitArgs.struct()
         out.value._1 ==> 42
       }
       'CObject-{
         implicit val out = ResultPtr.stackalloc[Number]
-        OutArgs.number()
+        ImplicitArgs.number()
         out.wrappedValue.getValue() ==> 42
       }
       'alloc-{
         Zone{ implicit z =>
           implicit val intRes = ResultPtr.alloc[Int]
           implicit val objRes = ResultPtr.alloc[Number]
-          OutArgs.int()
+          ImplicitArgs.int()
           intRes.value ==> 42
-          OutArgs.number()
+          ImplicitArgs.number()
           objRes.wrappedValue.getValue() ==> 42
         }
       }
+    }
+
+    'MultipleImplicits-{
+      implicit val num1 = Number()
+      num1.setValue(1)
+      implicit val num2 = new NumberLike(num1.__ptr)
+      ImplicitArgs.multiArgs() ==> 2
     }
 
   }

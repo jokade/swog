@@ -111,11 +111,12 @@ abstract class CommonHandler extends MacroAnnotationHandler {
 
   protected def implicitParamsFilter(param: ValDef): Boolean =
     !param.mods.hasFlag(Flag.IMPLICIT) || (getType(param.tpt) match {
-      case t if (t <:< tResultPtr || t <:< tResultValue) => true
+      case t if t <:< tCObject => true
+//      case t if (t <:< tResultPtr || t <:< tResultValue) => true
       case _ => false
     })
 
-  protected def transformExternalBindingParams(params: List[ValDef], data: Data, outParams: Boolean = false): List[ValDef] = {
+  protected def transformExternalBindingParams(params: List[ValDef], data: Data): List[ValDef] = {
     params filter(implicitParamsFilter) map {
       case ValDef(mods,name,tpt,rhs) if isExternalObject(tpt,data) =>
         ValDef(mods,name,q"$tPtrByte",rhs)
@@ -166,7 +167,6 @@ abstract class CommonHandler extends MacroAnnotationHandler {
       case List(args) => (Some(transformExternalCallArgs(args,data)),Nil)
       case List(inargs,outargs) =>
         val (wrappers,filteredOutargs) = outargs.partition(p => isCObjectWrapper(p.tpt))
-        val wrapperName = wrappers.headOption.map(_.name)
         (Some( transformExternalCallArgs(inargs,data,false,wrappers) ++ transformExternalCallArgs(filteredOutargs,data,false,wrappers) ), wrappers)
       case _ =>
         c.error(c.enclosingPosition,"extern methods with more than two parameter lists are not supported for @CObj classes")
@@ -208,7 +208,7 @@ abstract class CommonHandler extends MacroAnnotationHandler {
         case List(inparams,outparams) =>
           val filteredOutparams = outparams.filter(p => !isCObjectWrapper(p.tpt) )
           List( q"val self: $tPtrByte" +:
-            (transformExternalBindingParams(inparams,data) ++ transformExternalBindingParams(filteredOutparams,data,true)) )
+            (transformExternalBindingParams(inparams,data) ++ transformExternalBindingParams(filteredOutparams,data)) )
         case _ =>
           c.error(c.enclosingPosition,"extern methods with more than two parameter lists are not supported for @CObj classes")
           ???

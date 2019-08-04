@@ -187,6 +187,7 @@ object Callbacks {
   def exec1(f: CFuncPtr1[Int,Int], i: Int): Int = extern
 }
 
+class NumberLike(val __ptr: Ptr[Byte]) extends CObject
 
 @CObj
 @InlineSource("C",
@@ -195,15 +196,15 @@ object Callbacks {
 #include <float.h>
 #include <stdlib.h>
 
-void out_args_int(int* out) {
+void implicit_args_int(int* out) {
   *out = 42;
 }
 
-void out_args_long(long* out) {
+void implicit_args_long(long* out) {
   *out = LONG_MAX;
 }
 
-void out_args_double(double* out) {
+void implicit_args_double(double* out) {
   *out = DBL_MAX;
 }
 
@@ -212,7 +213,7 @@ typedef struct {
 } OutStruct;
 
 
-void out_args_struct(OutStruct* out) {
+void implicit_args_struct(OutStruct* out) {
   out->foo = 42;
 }
 
@@ -221,12 +222,17 @@ typedef struct {
 } OutClass;
 
 
-void out_args_number(OutClass** out) {
+void implicit_args_number(OutClass** out) {
   *out = malloc(sizeof(OutClass));
   (*out)->value = 42;
 }
+
+int implicit_args_multi_args(OutClass* num1, OutClass* num2) {
+  return num1->value + num2->value;
+}
 """)
-object OutArgs {
+@debug
+object ImplicitArgs {
   type OutStruct = CStruct1[Int]
 
   def int()(implicit out: ResultPtr[Int]): Unit = extern
@@ -234,6 +240,7 @@ object OutArgs {
   def double()(implicit out: ResultPtr[Double]): Unit = extern
   def struct()(implicit out: ResultPtr[OutStruct]): Unit = extern
   def number()(implicit out: ResultPtr[Number]): Unit = extern
+  def multiArgs()(implicit num1: Number, num2: NumberLike): Int = extern
 }
 
 
