@@ -9,6 +9,7 @@ val Version = new {
   val utest       = "0.6.8-SNAPSHOT"
 }
 
+
 lazy val commonSettings = Seq(
   scalacOptions ++= Seq("-deprecation","-unchecked","-feature","-language:implicitConversions","-Xlint"),
   addCompilerPlugin("org.scalamacros" % "paradise" % "2.1.0" cross CrossVersion.full),
@@ -21,7 +22,7 @@ lazy val commonSettings = Seq(
 
 
 lazy val root  = project.in(file("."))
-  .aggregate(common,cobj,objc,cxx)
+  .aggregate(common,cobj,objc,cxx,scriptbridge,lua)
   .settings(commonSettings ++ dontPublish:_*)
   .settings(
     name := "swog"
@@ -71,6 +72,21 @@ lazy val cxxlib = project
 //    nbhCxxCXXFlags += "-std=c++11"
   )
 
+lazy val scriptbridge = project
+  .enablePlugins(ScalaNativePlugin)
+  .settings(commonSettings ++ publishingSettings: _*)
+  .settings(
+    name := "swog-scriptbridge"
+  )
+
+lazy val lua = project
+  .enablePlugins(ScalaNativePlugin)
+  .dependsOn(scriptbridge,cobj)
+  .settings(commonSettings ++ publishingSettings: _*)
+  .settings(
+    name := "swog-lua"
+  )
+
 import scalanative.sbtplugin.ScalaNativePluginInternal._
 
 lazy val cobjTests = project
@@ -103,6 +119,16 @@ lazy val cxxTests = project
   .settings(
     nativeLinkStubs := true,
     nbhCxxCXXFlags += "-std=c++11"
+  )
+
+lazy val luaTests = project
+  .enablePlugins(ScalaNativePlugin,NBHAutoPlugin)
+  .dependsOn(lua)
+  .settings(commonSettings ++ dontPublish: _*)
+  .settings(
+    nativeLinkStubs := true,
+    //scalacOptions += "-Xmacro-settings:smacrotools.extensions=lua.scriptbridge.LuaScriptBridge",
+    nbhPkgConfigModules += "lua-5.3"
   )
 
 lazy val dontPublish = Seq(

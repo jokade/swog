@@ -20,7 +20,7 @@ object CObj {
   private[cobj] class Macro(val c: whitebox.Context) extends CommonHandler {
 
     def isMutable: Boolean = false
-    override def annotationName = "scala.scalanative.native.cobj.CObj"
+    override def annotationName = "scala.scalanative.cobj.CObj"
     override def supportsClasses: Boolean = true
     override def supportsTraits: Boolean = true
     override def supportsObjects: Boolean = true
