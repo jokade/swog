@@ -14,13 +14,13 @@ CObj
 ----
 If you want to generate object-oriented bindings for C libraries, add the following to your project settings:
 
-.. code-block:: scala
+.. parsed-literal::
 
   addCompilerPlugin("org.scalamacros" % "paradise" % "2.1.0" cross CrossVersion.full)
 
   resolvers += Resolver.sonatypeRepo("snapshots")
 
-  libraryDependencies += "de.surfice" %%% "swog-cobj" % "0.1.0-SNAPSHOT"
+  libraryDependencies += "de.surfice" %%% "swog-cobj" % "\ |release|\"
 
 C++
 ---
@@ -30,6 +30,18 @@ Objective-C
 -----------
 **TODO**
 
+Lua
+---
+
+.. parsed-literal::
+
+  addCompilerPlugin("org.scalamacros" % "paradise" % "2.1.0" cross CrossVersion.full)
+
+  resolvers += Resolver.sonatypeRepo("snapshots")
+
+  libraryDependencies += "de.surfice" %%% "swog-lua" % "\ |release|\"
+
+  scalacOptions += "-Xmacro-settings:scriptbridge.languages=lua.scriptbridge.LuaScriptBridge",
 
 Prerequisites
 =============
