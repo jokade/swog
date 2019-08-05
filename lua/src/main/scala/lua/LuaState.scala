@@ -244,7 +244,10 @@ class LuaState extends Lua {
 
   def setMetaTable(idx: Int): Unit = extern
 
-  def table(idx: Int): LuaTable = new LuaTable(this,idx)
+  def table(idx: Int): LuaTable = {
+    val i = if(idx < 0) getTop + idx + 1 else idx
+    new LuaTable(this,i)
+  }
 
   def getValue(idx: Int): Any = getType(idx) match {
     case LuaType.BOOLEAN =>

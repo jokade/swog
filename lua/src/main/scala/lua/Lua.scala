@@ -44,6 +44,9 @@ trait Lua extends AutoReleasable {
    * @param name
    */
   def getGlobalValue(name: String): Option[Any]
+
+  def table(idx: Int): LuaTable
+
 }
 
 object Lua {

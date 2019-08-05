@@ -12,7 +12,7 @@ trait ScriptBridgeHandler extends MacroAnnotationHandler {
   override def createCompanion: Boolean = ???
 
   case class Constructor(name: TypeName, params: Seq[ValDef], mods: Modifiers) {
-    def isPublic: Boolean = mods.hasFlag(Flag.PRIVATE) || mods.hasFlag(Flag.PROTECTED)
+    def isPublic: Boolean = ! (mods.hasFlag(Flag.PRIVATE) || mods.hasFlag(Flag.PROTECTED))
   }
 
   implicit class ScriptBridgeData(data: Map[String,Any]) {

@@ -31,7 +31,7 @@ object LuaStateTest extends TestSuite {
         state.isString(-1) ==> true
       }
       'nil-{
-        state.pushnil()
+        state.pushNil()
         state.isNil(-1) ==> true
       }
       'cfunction- {
