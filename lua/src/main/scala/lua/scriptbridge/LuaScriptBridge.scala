@@ -16,6 +16,8 @@ class LuaScriptBridge(val c: whitebox.Context) extends ScriptBridgeHandler {
   private val tFloat = weakTypeOf[Float]
   private val tDouble = weakTypeOf[Double]
   private val tString = weakTypeOf[String]
+  private val tMap = weakTypeOf[Map[String,Any]]
+  private val tOption = weakTypeOf[Option[_]]
   private val tAny = weakTypeOf[Any]
   private val tLuaTable = weakTypeOf[LuaTable]
   private val tpeLuaWrapper = tq"lua.LuaWrapper"
@@ -210,8 +212,12 @@ class LuaScriptBridge(val c: whitebox.Context) extends ScriptBridgeHandler {
         q"val $argName = Intrinsics.castRawPtrToObject(state.toUserData($argIdx)).asInstanceOf[${v.tpt}]"
       case LuaTable =>
         q"val $argName = state.table($argIdx)"
+      case LuaMap =>
+        q"val $argName = state.table($argIdx).toMap()"
       case LuaAny =>
         q"val $argName = state.getValue($argIdx)"
+      case LuaOption =>
+        q"val $argName = state.getValueOption($argIdx)"
       case LuaNil => ???
     })
   }
@@ -237,6 +243,10 @@ class LuaScriptBridge(val c: whitebox.Context) extends ScriptBridgeHandler {
       q"state.pushUserData(res)"
     case LuaAny =>
       q"state.pushValue(res)"
+    case LuaMap =>
+      q"state.pushMap(res)"
+    case LuaOption =>
+      q"state.pushOption(res)"
     case LuaTable =>
       c.error(c.enclosingPosition,"LuaTable is not allowed as a return value")
       ???
@@ -253,17 +263,21 @@ class LuaScriptBridge(val c: whitebox.Context) extends ScriptBridgeHandler {
   case object LuaUserObj extends LuaType
   case object LuaTable extends LuaType
   case object LuaAny extends LuaType
+  case object LuaMap extends LuaType
+  case object LuaOption extends LuaType
 
   private def getLuaType(tpt: Tree)(implicit data: ScriptBridgeData): LuaType =
     getType(tpt,true) match {
-      case t if t =:= tInt     => LuaInt
-      case t if t =:= tLong    => LuaLong
-      case t if t =:= tFloat   => LuaFloat
-      case t if t =:= tDouble  => LuaDouble
-      case t if t =:= tBoolean => LuaBoolean
-      case t if t =:= tUnit    => LuaNil
-      case t if t =:= tString  => LuaString
+      case t if t =:= tInt      => LuaInt
+      case t if t =:= tLong     => LuaLong
+      case t if t =:= tFloat    => LuaFloat
+      case t if t =:= tDouble   => LuaDouble
+      case t if t =:= tBoolean  => LuaBoolean
+      case t if t =:= tUnit     => LuaNil
+      case t if t =:= tString   => LuaString
       case t if t =:= tLuaTable => LuaTable
+      case t if t <:< tMap      => LuaMap
+      case t if t <:< tOption   => LuaOption
       case t if t =:= tAny      => LuaAny
       case _ => LuaUserObj
     }

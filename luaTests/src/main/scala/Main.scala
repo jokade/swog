@@ -32,16 +32,17 @@ object Main {
     lua.execString(
       // language=Lua
       """Foo = scala.load("Foo")
-        |-- create new instance
-        |foo = Foo.new(42)
-        |-- print current value of num
-        |print(foo:num())
-        |-- call Scala method incr()
-        |foo:incr()
-        |print(foo:num())
-        |-- set num = -1
-        |foo:setNum(-1)
-        |print(foo:num())
+        |obj = {
+        |  foo = 42
+        |}
+        |map = Foo.withMap(obj)
+        |print(map.bar)
+        |
+        |Foo.withOption(-1)
+        |
+        |print(Foo.withOption(41))
+        |print(Foo.withOption(nil))
+        |print(Foo.withOption("foo"))
         |""".stripMargin
     )
     lua.free()
@@ -55,10 +56,21 @@ object Main {
 @debug
 class Foo(_num: Int) {
   var num: Int = _num
-  @luaname()
   def incr(): Unit = num+=1
 }
 
 object Foo extends LuaModule {
+  def withTable(obj: LuaTable): Unit = {
+    obj.get("foo") match {
+      case Some(l: Long) => println(l)
+    }
+  }
+  def withMap(obj: Map[String,Any]): Map[String,Any] = {
+    obj.updated("bar",43)
+  }
 
+  def withOption(obj: Option[Any]): Option[Long] = obj match {
+    case Some(i: Long) => Some(i+1)
+    case _ => None
+  }
 }

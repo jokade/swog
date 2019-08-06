@@ -99,6 +99,7 @@ class LuaState extends Lua {
   }
 
   def setField(idx: Int, key: CString): Unit = extern
+  def setField(idx: Int, key: String): Unit = Zone{ implicit z => setField(idx,toCString(key)) }
 
   def next(idx: Int): Int = extern
 
@@ -265,6 +266,12 @@ class LuaState extends Lua {
 //      toUserData(idx)
   }
 
+  def getValueOption(idx: Int): Option[Any] =
+    if(isNil(idx))
+      None
+  else
+      Some(getValue(idx))
+
   def getGlobalValue(name: String): Option[Any] = {
     getGlobal(name)
     getValue(-1) match {
@@ -293,6 +300,19 @@ class LuaState extends Lua {
     case o: Object =>
       pushUserData(o)
     case _ => throw new RuntimeException(s"Cannot push value $v on Lua stack: type not supported")
+  }
+
+  def pushMap(map: Map[String,Any]): Unit = {
+    createTable(0,0)
+    map.foreach{ kv =>
+      pushValue(kv._2)
+      setField(-2,kv._1)
+    }
+  }
+
+  def pushOption(o: Option[Any]): Unit = o match {
+    case Some(x) => pushValue(x)
+    case None => pushNil()
   }
 
   override def init(): Unit = {
