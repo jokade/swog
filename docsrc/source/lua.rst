@@ -97,8 +97,8 @@ Three steps are required to expose a Scala ``class`` or ``object`` to a Lua inte
 
 3. Load the Scala class into the Lua interpreter.
 
-Basic Rules for Objects exposed to Lua
---------------------------------------
+Basic Rules for Exposing Objects to Lua
+---------------------------------------
 
 Here is the basic template for SN classes exposed to Lua:
 
@@ -171,7 +171,93 @@ Keep the following rules in mind when you design your Lua bridge object:
 
 Type Mapping
 ------------
-TODO
+When a Scala method is called from Lua, the following mapping rules are applied to arguments and return values:
+
+Boolean, Numbers, and Strings
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Boolean, integer, and floating point numbers and strings will be translated into the corresponding Lua/Scala type.
+
+However, keep in mind that Lua numbers will be represented as ``Long`` or ``Double`` in Scala by default. If you want to have
+an ``Int`` or ``Float`` you need to cast explicitly. This is particularly important if you access a Lua value from Scala with
+``Lua.getValue(): Any``, ``Lua.getGloablValue(): Option[Any]``, or ``LuaTable.get(): Option[Any]``,
+since a pattern match on ``Int`` or ``Float`` will fail.
+
+
+Lua Tables (Objects)
+^^^^^^^^^^^^^^^^^^^^
+If you want to pass a Lua table to a Scala method, you must define the corresponding Scala argument to be of type
+``LuaTable`` or ``immutable.Map``.
+
+However, you should prefer ``LuaTable`` unless you will convert it to a ``Map`` anyway, since this will recursively
+convert all nested tables as well.
+
+A Scala return value of type `Map[String,Any]` will ne converted into a Lua table.
+
+*Scala*:
+
+.. code-block:: scala
+
+  @ScriptObj
+  object Foo {
+    def callWithTable(obj: LuaTable): Unit = {
+      // get value of property 'foo'
+      println( obj.getOrElse("foo",0) )
+    }
+
+    def callWithMap(obj: Map[String,Any]): Map[String,Any] = {
+      // access Lua value obj.bar.string
+      obj("bar") match {
+        case m: Map[_,_] =>
+          println( m("string") )
+      }
+      obj.updated("foo",43)
+    }
+  }
+
+*Lua*:
+
+.. code-block:: lua
+
+  obj = {
+    foo = 42
+    bar = {
+      string = "hello"
+    }
+  }
+
+  Foo.callWithTable(obj)
+  upd = Foo.callWithMap(obj)
+  print( upd.foo ) -- prints 43
+
+
+Lua nil and Option
+^^^^^^^^^^^^^^^^^^
+A Scala ``Option`` will be converted to the corresponding Lua value (if it is ``Some()``),
+or to Lua ``nil`` if it is ``None``.
+
+The inverse rule is applied for arguments of type ``Option[Any]``.
+
+*Scala*:
+
+.. code-block:: scala
+
+  @ScriptObj
+  object Foo {
+    def withOption(in: Option[Any]): Option[Long] = in match {
+      case Some(l: Long) => Some( l+1 )
+      case _ => None
+    }
+  }
+
+*Lua*:
+
+.. code-block:: lua
+
+  Foo.withOption(41)    -- returns 42
+  Foo.withOption(nil)   -- returns nil
+  Foo.withOption("foo") -- also returns nil
+
 
 Advanced Topics
 ---------------

@@ -6,7 +6,7 @@
 swog - ScalaNative Wrapper Object Generator
 *******************************************
 swog provides seamless integration of `Scala Native <https://www.scala-native.org>`_ with external, object-oriented libaries
-written in **C**, **C++**, or **Objective-C**, as well as integration with embedded scripting languages (currently: Lua).
+written in **C**, **C++**, or **Objective-C**, as well as integration with embedded scripting languages (currently: **Lua**).
 To this end it takes a plain Scala class/object and transforms it into a wrapper object that handles the interop with the
 underlying external object under the hood.
 

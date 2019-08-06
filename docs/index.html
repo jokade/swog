@@ -8,7 +8,7 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>swog - ScalaNative Wrapper Object Generator &mdash; swog  documentation</title>
+  <title>swog - ScalaNative Wrapper Object Generator &mdash; swog 0.1.0-SNAPSHOT documentation</title>
   
 
   
@@ -79,12 +79,16 @@
               
             
             
-              <p class="caption"><span class="caption-text">Contents:</span></p>
+              <p class="caption"><span class="caption-text">Native Bindings:</span></p>
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="start.html">Getting Started</a></li>
 <li class="toctree-l1"><a class="reference internal" href="cobj.html">CObj Bindings</a></li>
 <li class="toctree-l1"><a class="reference internal" href="cxx.html">C++ Bindings</a></li>
 <li class="toctree-l1"><a class="reference internal" href="objc.html">Objective-C Bindings</a></li>
+</ul>
+<p class="caption"><span class="caption-text">Scripting:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="lua.html">Lua</a></li>
 </ul>
 <p class="caption"><span class="caption-text">Examples:</span></p>
 <ul>
@@ -158,8 +162,9 @@
   <div class="section" id="swog-scalanative-wrapper-object-generator">
 <h1>swog - ScalaNative Wrapper Object Generator<a class="headerlink" href="#swog-scalanative-wrapper-object-generator" title="Permalink to this headline">¶</a></h1>
 <p>swog provides seamless integration of <a class="reference external" href="https://www.scala-native.org">Scala Native</a> with external, object-oriented libaries
-written in <strong>C</strong>, <strong>C++</strong>, or <strong>Objective-C</strong>. To this end it takes a plain Scala class/object and transforms it
-into a wrapper object that handles the interop with the underlying external object under the hood.</p>
+written in <strong>C</strong>, <strong>C++</strong>, or <strong>Objective-C</strong>, as well as integration with embedded scripting languages (currently: <strong>Lua</strong>).
+To this end it takes a plain Scala class/object and transforms it into a wrapper object that handles the interop with the
+underlying external object under the hood.</p>
 <div class="admonition note">
 <p class="admonition-title">Note</p>
 <p>This guide is work in progress.</p>
@@ -221,7 +226,7 @@ into a wrapper object that handles the interop with the underlying external obje
 </pre></div>
 </div>
 <div class="toctree-wrapper compound">
-<p class="caption"><span class="caption-text">Contents:</span></p>
+<p class="caption"><span class="caption-text">Native Bindings:</span></p>
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="start.html">Getting Started</a><ul>
 <li class="toctree-l2"><a class="reference internal" href="start.html#sbt-settings">sbt Settings</a></li>
@@ -240,6 +245,17 @@ into a wrapper object that handles the interop with the underlying external obje
 </li>
 <li class="toctree-l1"><a class="reference internal" href="cxx.html">C++ Bindings</a></li>
 <li class="toctree-l1"><a class="reference internal" href="objc.html">Objective-C Bindings</a></li>
+</ul>
+</div>
+<div class="toctree-wrapper compound">
+<p class="caption"><span class="caption-text">Scripting:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="lua.html">Lua</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="lua.html#introduction">Introduction</a></li>
+<li class="toctree-l2"><a class="reference internal" href="lua.html#calling-lua-from-scala">Calling Lua from Scala</a></li>
+<li class="toctree-l2"><a class="reference internal" href="lua.html#calling-scala-from-lua">Calling Scala from Lua</a></li>
+</ul>
+</li>
 </ul>
 </div>
 <div class="toctree-wrapper compound">

@@ -8,7 +8,7 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>Getting Started &mdash; swog  documentation</title>
+  <title>Getting Started &mdash; swog 0.1.0-SNAPSHOT documentation</title>
   
 
   
@@ -80,13 +80,14 @@
               
             
             
-              <p class="caption"><span class="caption-text">Contents:</span></p>
+              <p class="caption"><span class="caption-text">Native Bindings:</span></p>
 <ul class="current">
 <li class="toctree-l1 current"><a class="current reference internal" href="#">Getting Started</a><ul>
 <li class="toctree-l2"><a class="reference internal" href="#sbt-settings">sbt Settings</a><ul>
 <li class="toctree-l3"><a class="reference internal" href="#cobj">CObj</a></li>
 <li class="toctree-l3"><a class="reference internal" href="#c">C++</a></li>
 <li class="toctree-l3"><a class="reference internal" href="#objective-c">Objective-C</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#lua">Lua</a></li>
 </ul>
 </li>
 <li class="toctree-l2"><a class="reference internal" href="#prerequisites">Prerequisites</a><ul>
@@ -99,6 +100,16 @@
 <li class="toctree-l1"><a class="reference internal" href="cobj.html">CObj Bindings</a></li>
 <li class="toctree-l1"><a class="reference internal" href="cxx.html">C++ Bindings</a></li>
 <li class="toctree-l1"><a class="reference internal" href="objc.html">Objective-C Bindings</a></li>
+</ul>
+<p class="caption"><span class="caption-text">Scripting:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="lua.html">Lua</a></li>
+</ul>
+<p class="caption"><span class="caption-text">Examples:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="example_gtk.html">Gtk+</a></li>
+<li class="toctree-l1"><a class="reference internal" href="example_qt.html">Qt5</a></li>
+<li class="toctree-l1"><a class="reference internal" href="example_cocoa.html">Cocoa</a></li>
 </ul>
 
             
@@ -175,13 +186,11 @@ It is expected to reach a more mature status (beta) after SN-0.4.0 has been fina
 <div class="section" id="cobj">
 <h3>CObj<a class="headerlink" href="#cobj" title="Permalink to this headline">¶</a></h3>
 <p>If you want to generate object-oriented bindings for C libraries, add the following to your project settings:</p>
-<div class="highlight-scala notranslate"><div class="highlight"><pre><span></span><span class="n">addCompilerPlugin</span><span class="o">(</span><span class="s">&quot;org.scalamacros&quot;</span> <span class="o">%</span> <span class="s">&quot;paradise&quot;</span> <span class="o">%</span> <span class="s">&quot;2.1.0&quot;</span> <span class="n">cross</span> <span class="nc">CrossVersion</span><span class="o">.</span><span class="n">full</span><span class="o">)</span>
+<pre class="literal-block">addCompilerPlugin(&quot;org.scalamacros&quot; % &quot;paradise&quot; % &quot;2.1.0&quot; cross CrossVersion.full)
 
-<span class="n">resolvers</span> <span class="o">+=</span> <span class="nc">Resolver</span><span class="o">.</span><span class="n">sonatypeRepo</span><span class="o">(</span><span class="s">&quot;snapshots&quot;</span><span class="o">)</span>
+resolvers += Resolver.sonatypeRepo(&quot;snapshots&quot;)
 
-<span class="n">libraryDependencies</span> <span class="o">+=</span> <span class="s">&quot;de.surfice&quot;</span> <span class="o">%%%</span> <span class="s">&quot;swog-cobj&quot;</span> <span class="o">%</span> <span class="s">&quot;0.1.0-SNAPSHOT&quot;</span>
-</pre></div>
-</div>
+libraryDependencies += &quot;de.surfice&quot; %%% &quot;swog-cobj&quot; % &quot;0.1.0-SNAPSHOT&quot;</pre>
 </div>
 <div class="section" id="c">
 <h3>C++<a class="headerlink" href="#c" title="Permalink to this headline">¶</a></h3>
@@ -190,6 +199,16 @@ It is expected to reach a more mature status (beta) after SN-0.4.0 has been fina
 <div class="section" id="objective-c">
 <h3>Objective-C<a class="headerlink" href="#objective-c" title="Permalink to this headline">¶</a></h3>
 <p><strong>TODO</strong></p>
+</div>
+<div class="section" id="lua">
+<h3>Lua<a class="headerlink" href="#lua" title="Permalink to this headline">¶</a></h3>
+<pre class="literal-block">addCompilerPlugin(&quot;org.scalamacros&quot; % &quot;paradise&quot; % &quot;2.1.0&quot; cross CrossVersion.full)
+
+resolvers += Resolver.sonatypeRepo(&quot;snapshots&quot;)
+
+libraryDependencies += &quot;de.surfice&quot; %%% &quot;swog-lua&quot; % &quot;0.1.0-SNAPSHOT&quot;
+
+scalacOptions += &quot;-Xmacro-settings:scriptbridge.languages=lua.scriptbridge.LuaScriptBridge&quot;,</pre>
 </div>
 </div>
 <div class="section" id="prerequisites">
