@@ -66,14 +66,23 @@ object LuaInteropTest extends TestSuite {
         withLua(
           """
             |obj = {
-            |  int = 1
+            |  int = 1,
+            |  bool = true,
+            |  sub = {
+            |    string = 'hello'
+            |  }
             |}
             |return EUT.testMap(obj)
             |""".stripMargin) { lua =>
           val res = lua.table(-1).toMap()
-//          res("int") ==> 42
-//          res("bool") ==> true
-//          res("sub") ==> Map("string"->"hello")
+          res ==> Map(
+            "int" -> 42,
+            "bool" -> true,
+            "sub" -> Map(
+              "string" -> "hello",
+              "obj" -> Map("bool"->false)),
+            "newSub" -> Map("double" -> 1.234)
+          )
         }
       }
     }
@@ -127,7 +136,10 @@ object InteropTestMockup extends LuaModule {
   }
 
   def testMap(m: Map[String,Any]): Map[String,Any] = {
-    m.updated("int",42)
+    m
+      .updated("int",42)
+      .updated("sub",m("sub").asInstanceOf[Map[String,Any]].updated("obj",Map("bool"->false)))
+      .updated("newSub",Map("double"->1.234))
   }
 }
 

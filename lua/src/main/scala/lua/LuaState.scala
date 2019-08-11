@@ -316,6 +316,8 @@ class LuaState extends Lua {
         pushValue(o.get)
       else
         pushNil()
+    case m: Map[String,Any] =>
+      pushMap(m)
     case o: Object =>
       pushUserData(o)
     case _ => throw new RuntimeException(s"Cannot push value $v on Lua stack: type not supported")
