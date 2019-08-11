@@ -1,7 +1,7 @@
 import de.surfice.smacrotools.debug
 import lua._
 
-import scala.scalanative.runtime.Intrinsics
+import scala.scalanative.runtime.{Intrinsics, RawPtr}
 import scala.scalanative.scriptbridge.ScriptObj
 import scala.scalanative.unsafe.Tag.CFuncPtr1
 import scalanative._
@@ -11,8 +11,9 @@ object Main {
   def main(args: Array[String]): Unit = {
     val lua = Lua()
     lua.init()
-//    lua.registerModule(Foo)
-//    lua.execFile("hello.lua")
+    lua.registerModule(Foo)
+    lua.execFile("hello.lua")
+    /*
     lua.execString(
       // language=Lua
       """config = {
@@ -45,8 +46,9 @@ object Main {
         |print(Foo.withOption("foo"))
         |""".stripMargin
     )
+
+     */
     lua.free()
-//    state.free()
     println("DONE")
   }
 
@@ -55,8 +57,10 @@ object Main {
 @ScriptObj
 @debug
 class Foo(_num: Int) {
+  val i: Int = _num
   var num: Int = _num
   def incr(): Unit = num+=1
+  def add(other: Foo): Unit = num += other.num
 }
 
 object Foo extends LuaModule {
@@ -65,6 +69,7 @@ object Foo extends LuaModule {
       case Some(l: Long) => println(l)
     }
   }
+
   def withMap(obj: Map[String,Any]): Map[String,Any] = {
     obj.updated("bar",43)
   }

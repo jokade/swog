@@ -231,6 +231,8 @@ class LuaState extends Lua {
 
   @name("luaL_checkudata")
   def checkUserData(arg: Int, tname: CString): RawPtr = extern
+  @name("luaL_testudata")
+  def testUserData(arg: Int, tname: CString): RawPtr = extern
 
   def toUserData(idx: Int): RawPtr = extern
 
@@ -249,6 +251,18 @@ class LuaState extends Lua {
     val i = if(idx < 0) getTop + idx + 1 else idx
     new LuaTable(this,i)
   }
+
+  @inline final def boolean(idx: Int): Boolean = getBoolean(idx)
+
+  @inline final def int(idx: Int): Int = getInteger(idx).toInt
+
+  @inline final def long(idx: Int): Long = getInteger(idx)
+
+  @inline final def float(idx: Int): Float = getNumber(idx).toFloat
+
+  @inline final def double(idx: Int): Double = getNumber(idx)
+
+  @inline final def string(idx: Int): String = getString(idx)
 
   def getValue(idx: Int): Any = getType(idx) match {
     case LuaType.BOOLEAN =>
@@ -297,6 +311,11 @@ class LuaState extends Lua {
       pushString(s)
     case c: CString =>
       pushString(c)
+    case o: Option[_] =>
+      if(o.isDefined)
+        pushValue(o.get)
+      else
+        pushNil()
     case o: Object =>
       pushUserData(o)
     case _ => throw new RuntimeException(s"Cannot push value $v on Lua stack: type not supported")

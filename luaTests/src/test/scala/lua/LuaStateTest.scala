@@ -59,5 +59,6 @@ object LuaStateTest extends TestSuite {
       state.readGlobalString("int") ==> Some("42")
       state.readGlobalString("foo") ==> None
     }
+
   }
 }
