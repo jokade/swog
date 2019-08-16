@@ -24,6 +24,7 @@ trait CxxWrapperGen extends CommonHandler {
   private val tDouble = weakTypeOf[CDouble]
   private val tCString = weakTypeOf[CString]
   private val tPtrCString = weakTypeOf[Ptr[CString]]
+  private val tPtrBoolean = weakTypeOf[Ptr[Boolean]]
   private val tPtrInt = weakTypeOf[Ptr[Int]]
   private val tPtrLong = weakTypeOf[Ptr[Long]]
   private val tPtrDouble = weakTypeOf[Ptr[Double]]
@@ -52,6 +53,7 @@ trait CxxWrapperGen extends CommonHandler {
   case object LongPtrType    extends PrimitiveType { val name = "long*" }
   case object FloatPtrType   extends PrimitiveType { val name = "float*" }
   case object DoublePtrType  extends PrimitiveType { val name = "double*" }
+  case object BoolPtrType    extends PrimitiveType { val name = "bool*" }
   case object VoidPtr        extends PrimitiveType { val name = "void*" }
   case class EnumType(name: String) extends CxxType { def default = "int" }
   case class ClassType(name: String) extends CxxType { def default = ptr }
@@ -272,6 +274,7 @@ trait CxxWrapperGen extends CommonHandler {
     case t if t =:= tUnit       => UnitType
     case t if t =:= tCString    => CStringType
     case t if t =:= tPtrCString => CStringPtrType
+    case t if t =:= tPtrBoolean => BoolPtrType
     case t if t =:= tPtrInt     => IntPtrType
     case t if t =:= tPtrLong    => LongPtrType
     case t if t =:= tPtrFloat   => FloatPtrType
@@ -281,6 +284,15 @@ trait CxxWrapperGen extends CommonHandler {
     case t if t <:< tCxxObject  => ClassType(genCxxExternalType(t))
     case t if t <:< tCEnum      => EnumType(genCxxEnumType(t))
     case t if t <:< tResultValue     => ClassType(genCxxExternalType(t.typeArgs.head))
+    case t if t <:< tResultPtr  => t.typeArgs.head match {
+      case arg if arg <:< tBoolean => BoolPtrType
+      case arg if arg <:< tInt     => IntPtrType
+      case arg if arg <:< tLong    => LongPtrType
+      case arg if arg <:< tFloat   => FloatPtrType
+      case arg if arg <:< tDouble  => DoublePtrType
+      case arg if arg <:< tCString => CStringPtrType
+      case arg => ClassType(genCxxExternalType(arg))
+    }
 //    case t if t <:< tCObject => "void*"
     case t => ClassType(genCxxExternalType(t))
   }

@@ -1,5 +1,6 @@
 package scala.scalanative.cobj
 
+import scala.scalanative.runtime.Intrinsics
 import scala.scalanative.unsafe._
 
 trait CObjectWrapper[T] {
@@ -47,6 +48,11 @@ object CObjectWrapper {
   implicit object CStringWrapper extends CObjectWrapper[CString] {
     override def wrap(ptr: Ptr[CSignedChar]): CString = ptr
     override def unwrap(value: CString): Ptr[Byte] = value.asInstanceOf[Ptr[Byte]]
+  }
+
+  implicit object IntWrapper extends CObjectWrapper[Int] {
+    override def wrap(ptr: Ptr[Byte]): Int = ptr.toInt
+    override def unwrap(value: Int): Ptr[Byte] = ???
   }
 
   implicit object NullWrapper extends CObjectWrapper[Null] {
