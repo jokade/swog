@@ -40,6 +40,9 @@ trait CxxWrapperGen extends CommonHandler {
   private val tRawPtr = weakTypeOf[RawPtr]
   protected val tCxxObject = weakTypeOf[CxxObject]
 
+  protected val tpeCxxObject = tq"$tCxxObject"
+  override protected def tpeDefaultParent = tpeCxxObject
+
   sealed trait CxxType {
     def name: String
     def default: String

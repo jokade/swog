@@ -4,34 +4,30 @@ import scalanative._
 import unsafe._
 import scala.scalanative.annotation.InlineSource
 import scala.scalanative.cobj.CObj
-import scala.scalanative.cxx.{Cxx, constructor}
+import scala.scalanative.cxx.{Cxx, ScalaCxx, constructor, cxxName, delete}
+import scala.scalanative.runtime.{Intrinsics, RawPtr}
+import scala.scalanative.unsafe.Tag.CFuncPtr1
 
 
 object Main {
   def main(args: Array[String]): Unit = {
-//    val foo = Foo()
-//    foo.bar()
+    val foo = SimpleScalaCxx()
+    println(foo.test_getInt(1))
   }
 }
-/*
-@Cxx
+
+@ScalaCxx
 @debug
-class Bar {
+class SimpleScalaCxx {
+  @delete
+  def free(): Unit = extern
 
+  def getInt(i: Int): Int = i
+  @cxxName("getInt")
+  def test_getInt(i: Int): Int = extern
 }
-
-
-@Cxx
-@debug
-class Foo {
-  def bar(): Bar = extern
-}
-
-object Foo {
+object SimpleScalaCxx {
   @constructor
-  def apply(): Foo = extern
-
-  def doSomethind(f: Boolean): Int = extern
-
+  def apply(): SimpleScalaCxx = extern
 }
-*/
+

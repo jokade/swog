@@ -10,7 +10,10 @@ abstract class CommonHandler extends MacroAnnotationHandler {
 
   import c.universe._
 
-  protected val tPtrByte = weakTypeOf[scala.scalanative.unsafe.Ptr[Byte]]
+  protected val tRawPtr = weakTypeOf[scalanative.runtime.RawPtr]
+  protected val tpeRawPtr = tq"$tRawPtr"
+  protected val tPtrByte = weakTypeOf[scalanative.unsafe.Ptr[Byte]]
+  protected val tpePtrByte = tq"$tPtrByte"
   protected val tAnyRef = weakTypeOf[AnyRef]
   protected val tCObject = weakTypeOf[CObject]
   protected val tpeCObject = tq"$tCObject"
@@ -439,7 +442,7 @@ abstract class CommonHandler extends MacroAnnotationHandler {
   private val _nameAnnotationArgs = Seq("name")
   protected def nameAnnotation(m: DefDef): Option[String] =
     findAnnotation(m.mods.annotations,"scala.scalanative.unsafe.name")
-      .map{ p => 
+      .map{ p =>
         extractAnnotationParameters(p,_nameAnnotationArgs).apply("name").flatMap(extractStringConstant).get
       }
 

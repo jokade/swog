@@ -1,5 +1,8 @@
 target/
+target
 .idea/
+.ramdevice
+ramdisk/
 *.swp
 *.o
 /docsrc/build/
