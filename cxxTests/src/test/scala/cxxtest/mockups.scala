@@ -32,7 +32,6 @@ object FooEnum extends CEnum {
 }
 
 @Cxx
-@debug
 class Date {
   def day: Int = extern
   def month: Int = extern

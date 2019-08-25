@@ -10,7 +10,10 @@ abstract class CommonHandler extends MacroAnnotationHandler {
 
   import c.universe._
 
+  protected val tRawPtr = weakTypeOf[scalanative.runtime.RawPtr]
+  protected val tpeRawPtr = tq"$tRawPtr"
   protected val tPtrByte = weakTypeOf[scalanative.unsafe.Ptr[Byte]]
+  protected val tpePtrByte = tq"$tPtrByte"
   protected val tAnyRef = weakTypeOf[AnyRef]
   protected val tCObject = weakTypeOf[CObject]
   protected val tpeCObject = tq"$tCObject"

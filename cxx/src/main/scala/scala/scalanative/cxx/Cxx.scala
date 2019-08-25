@@ -25,8 +25,6 @@ object Cxx {
 
     import c.universe._
 
-    private val tpeCxxObject = tq"$tCxxObject"
-    override protected def tpeDefaultParent = tpeCxxObject
 
 
     override def analyze: Analysis = super.analyze andThen {
@@ -104,22 +102,9 @@ object Cxx {
       analyzeCxxAnnotation(tpe)(updData)
     }
 
-    private def analyzeConstructor(cls: ClassParts)(data: Data): Data = {
-      val companionStmts =
-        if (cls.isClass && !cls.modifiers.hasFlag(Flag.ABSTRACT))
-          List(genWrapperImplicit(cls.name, cls.tparams, cls.params))
-        else
-          Nil
-      data
-        .withAdditionalCompanionStmts(data.additionalCompanionStmts ++ companionStmts)
-    }
 
     private def genPrefixName(tpe: CommonParts): String =
       tpe.fullName.replaceAll("\\.","_") + "_"
-
-
-    override def analyzeBody(tpe: CommonParts)(data: Data): Data =
-      ( super.analyzeBody(tpe) _ andThen analyzeCxxBody(tpe) _ )(data)
 
 
   }

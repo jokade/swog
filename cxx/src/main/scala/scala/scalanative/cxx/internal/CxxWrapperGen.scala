@@ -30,8 +30,10 @@ trait CxxWrapperGen extends CommonHandler {
   private val tPtrDouble = weakTypeOf[Ptr[Double]]
   private val tPtrFloat = weakTypeOf[Ptr[Float]]
   private val tPtr = weakTypeOf[Ptr[_]]
-  private val tRawPtr = weakTypeOf[RawPtr]
   protected val tCxxObject = weakTypeOf[CxxObject]
+
+  protected val tpeCxxObject = tq"$tCxxObject"
+  override protected def tpeDefaultParent = tpeCxxObject
 
   sealed trait CxxType {
     def name: String
@@ -91,6 +93,19 @@ trait CxxWrapperGen extends CommonHandler {
     val name = TermName(data.externalPrefix+"__sizeof")
     q"lazy val __sizeof: Int = __ext.$name()"
   }
+
+  protected def analyzeConstructor(cls: ClassParts)(data: Data): Data = {
+    val companionStmts =
+      if (cls.isClass && !cls.modifiers.hasFlag(Flag.ABSTRACT))
+        List(genWrapperImplicit(cls.name, cls.tparams, cls.params))
+      else
+        Nil
+    data
+      .withAdditionalCompanionStmts(data.additionalCompanionStmts ++ companionStmts)
+  }
+
+  override def analyzeBody(tpe: CommonParts)(data: Data): Data =
+    ( super.analyzeBody(tpe) _ andThen analyzeCxxBody(tpe) )(data)
 
   def analyzeCxxAnnotation(tpe: CommonParts)(data: Data): Data = {
     val includes = findAnnotations(tpe.modifiers.annotations)
