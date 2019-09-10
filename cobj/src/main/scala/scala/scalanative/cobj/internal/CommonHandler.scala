@@ -92,11 +92,14 @@ abstract class CommonHandler extends MacroAnnotationHandler {
   protected def genTransformedParents(cls: TypeTransformData[TypeParts]): Seq[Tree] = {
     cls.modParts.parents map (p => (p,getType(p,true))) map {
       case (tree,tpe) if tpe =:= tAnyRef => tpeDefaultParent
-      case (tree,tpe) if tpe =:= tCObject || tpe.typeSymbol.isAbstract => tree
+      //case (tree,tpe) if tpe =:= tCObject || tpe.typeSymbol.isAbstract => tree
+      case (tree,tpe) if tpe =:= tCObject || isTrait(tpe) => tree
       case (tree,tpe) if tpe <:< tCObject => q"$tree(__ptr)"
       case (tree,_) => tree
     }
   }
+
+  private def isTrait(tpe: Type): Boolean = tpe.typeSymbol.asClass.isTrait
 
   protected def genTransformedTypeBody(t: TypeTransformData[TypeParts]): Seq[Tree] = {
     val companion = t.modParts.companion.get.name

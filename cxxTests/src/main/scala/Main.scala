@@ -13,8 +13,16 @@ object Main {
   def main(args: Array[String]): Unit = {
     val foo = SimpleScalaCxx()
     println(foo.test_getInt(1))
+//    println(foo.test_getBool())
     foo.free()
   }
+}
+
+@ScalaCxx
+@debug
+abstract class AbstractClass {
+  def getBool(): Boolean
+
 }
 
 @ScalaCxx
@@ -23,7 +31,11 @@ class SimpleScalaCxx {
   @delete
   def free(): Unit = extern
 
-  def getInt(i: Int): Int = i-1
+//  override def getBool(): CBool = true
+//  @cxxName("getBool")
+//  def test_getBool(): Boolean = extern
+
+  def getInt(i: Int): Int = i+1
   @cxxName("getInt")
   def test_getInt(i: Int): Int = extern
 
@@ -32,4 +44,3 @@ object SimpleScalaCxx {
   @constructor
   def apply(): SimpleScalaCxx = extern
 }
-

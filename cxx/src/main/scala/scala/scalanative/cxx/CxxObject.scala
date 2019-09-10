@@ -6,5 +6,5 @@ import scala.scalanative.interop.Releasable
 /**
  * Base class for all external objects represented by a Scala class annotated with @Cxx
  */
-abstract class CxxObject extends CObject {
+trait CxxObject extends CObject {
 }
