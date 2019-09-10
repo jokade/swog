@@ -6,7 +6,7 @@ import utest._
 import scalanative._
 import unsafe._
 import cxx._
-import scala.scalanative.runtime.Intrinsics
+import scala.scalanative.runtime.{Boxes, CFuncRawPtr, Intrinsics}
 
 object ScalaCxxTest extends TestSuite {
   val tests = Tests {

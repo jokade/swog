@@ -13,6 +13,7 @@ object Main {
   def main(args: Array[String]): Unit = {
     val foo = SimpleScalaCxx()
     println(foo.test_getInt(1))
+    foo.free()
   }
 }
 
@@ -22,9 +23,10 @@ class SimpleScalaCxx {
   @delete
   def free(): Unit = extern
 
-  def getInt(i: Int): Int = i
+  def getInt(i: Int): Int = i-1
   @cxxName("getInt")
   def test_getInt(i: Int): Int = extern
+
 }
 object SimpleScalaCxx {
   @constructor
