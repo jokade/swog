@@ -27,11 +27,15 @@ object ScalaCxx {
 
     import c.universe._
 
-    private val registerFunc = q"""@scalanative.cxx.cxxBody("___register((void**)callbacks);") def ___register(callbacks: scalanative.unsafe.Ptr[scalanative.runtime.RawPtr]): Unit = scalanative.unsafe.extern"""
+    private val registerFunc = q"""@scalanative.cxx.cxxBody("___register((void**)callbacks);") def ___register(callbacks: scalanative.unsafe.Ptr[$tpeRawPtr]): Unit = scalanative.unsafe.extern"""
 
-    private val setWrapperFunc = q"""def ___setWrapper(w: RawPtr): Unit = scalanative.unsafe.extern"""
+    private val setWrapperFunc = q"""override def ___setWrapper(w: $tpeRawPtr): Unit = scalanative.unsafe.extern"""
 
     private val setWrapperStmt = q"""___setWrapper(scalanative.runtime.Intrinsics.castObjectToRawPtr(this))"""
+
+    private val tScalaCxxObject = weakTypeOf[ScalaCxxObject]
+    private val tpeScalaCxxObject = tq"$tScalaCxxObject"
+    override protected def tpeDefaultParent = tpeScalaCxxObject
 
     case class CxxMember(instanceMember: String, callbackDecl: String, callbackDefn: String, callbackReg: String, term: TermName)
 
@@ -39,28 +43,29 @@ object ScalaCxx {
 
       def scalaCxxInstancePublicMembers: Seq[CxxMember] = data.getOrElse("scalaCxxInstancePublicMembers",Nil).asInstanceOf[Seq[CxxMember]]
       def withScalaCxxInstancePublicMembers(members: Seq[CxxMember]): Data = data.updated("scalaCxxInstancePublicMembers",members)
+
+      def scalaCxxParentClass: Option[String] = data.getOrElse("scalaCxxParentClass",None).asInstanceOf[Option[String]]
+      def withScalaCxxParentClass(parent: Option[String]): Data = data.updated("scalaCxxParentClass",parent)
 //      def cxxName: String = data.getOrElse("scalaCxxName","").asInstanceOf[String]
 //      def withCxxName(name: String): Data = data.updated("scalaCxxName",name)
     }
 
     override def analyze: Analysis = super.analyze andThen {
       case (cls: ClassParts, data) =>
-        val companion = cls.companion.get
         val updCls = cls.copy(
-          companion = Some(companion.copy(body = companion.body :+ registerFunc)),
           body = cls.body :+ setWrapperFunc)
         val updData = (
           analyzeMainAnnotation(updCls) _
-            andThen analyzeTypes(updCls) _
-            andThen analyzeConstructor(updCls) _
-            andThen analyzeBody(updCls) _
+            andThen analyzeTypes(updCls)
+            andThen analyzeConstructor(updCls)
+            andThen analyzeBody(updCls)
           )(data)
         (updCls,updData)
       case (obj: ObjectParts, data) =>
         val updObj = obj.copy(body = obj.body :+ registerFunc)
         val updData = (
           analyzeMainAnnotation(updObj) _
-            andThen analyzeBody(updObj) _
+            andThen analyzeBody(updObj)
           )(data)
         (updObj,updData)
       case default => default
@@ -72,7 +77,7 @@ object ScalaCxx {
         val updCls =
           cls
             .addStatements(setWrapperFunc)
-            .addStatements(setWrapperStmt)
+//            .addStatements(setWrapperStmt)
         updCls
           .updBody(genTransformedTypeBody(updCls))
           .addAnnotations(genCxxWrapperAnnot(updCls.data))
@@ -117,7 +122,30 @@ object ScalaCxx {
     }
 
     override def analyzeBody(tpe: CommonParts)(data: Data): Data =
-      ( super.analyzeBody(tpe) _ andThen analyzeScalaCxxBody(tpe) )(data)
+      ( super.analyzeBody(tpe) _
+        andThen genRegisterExternal(tpe)
+        andThen analyzeScalaCxxBody(tpe) )(data)
+
+    override def analyzeTypes(tpe: TypeParts)(data: Data): Data =
+      (super.analyzeTypes(tpe) _ andThen genScalaCxxParentClass(tpe))(data)
+
+    private def genRegisterExternal(tpe: CommonParts)(data: Data): Data =
+      if(tpe.isObject)
+        data
+      else {
+        val prefix = data.externalPrefix
+        val registerExternal = genExternalBinding(prefix,registerFunc.asInstanceOf[DefDef],false)(data)
+        data.addExternals(Seq(registerExternal))
+      }
+
+    private def genScalaCxxParentClass(tpe: TypeParts)(data: Data): Data = {
+      val parent = tpe.parents.headOption.map(p => getType(p,true)) match {
+        case Some(t) if t =:= tAnyRef || t =:= tCxxObject => None
+        case _ => None
+      }
+      data
+        .withScalaCxxParentClass(parent)
+    }
 
     private def analyzeScalaCxxBody(tpe: CommonParts)(data: Data): Data = tpe match {
       case t: TypeParts =>
@@ -214,6 +242,8 @@ object ScalaCxx {
     private def genScalaCxxClass(implicit data: ScalaCxxData): String = {
       val namespace = genNamespace
       val classname = genClassname
+      val parentClass = data.scalaCxxParentClass.map(cls => " : "+cls).getOrElse("")
+      val includes = data.cxxIncludes.map(i => s"#include $i").mkString("\n")
       val instanceMembers = data.scalaCxxInstancePublicMembers.map(_.instanceMember)
       val callbackDecls = data.scalaCxxInstancePublicMembers.map(_.callbackDecl)
       val callbackDefns = data.scalaCxxInstancePublicMembers.map(_.callbackDefn)
@@ -227,7 +257,7 @@ object ScalaCxx {
            |  }""".stripMargin
 
       val classdef =
-        s"""class $classname {
+        s"""class $classname $parentClass {
            |  void* ___wrapper;
            |public:
            |  void ___setWrapper(void* w) { this->___wrapper = w; }
@@ -236,15 +266,20 @@ object ScalaCxx {
            |           |  ${instanceMembers.mkString("\n  ")}
            |};""".stripMargin
 
-      if(namespace.isDefined)
-        s"""namespace ${namespace.get} {
-           |$classdef
-           |}
-           |${callbackDefns.mkString("\n")}
-           |$register
-           |""".stripMargin
-      else
-        classdef
+      val ns =
+        if(namespace.isDefined)
+          s"""namespace ${namespace.get} {
+             |$classdef
+             |}
+             |""".stripMargin
+        else
+          classdef
+
+      s"""$includes
+         |$ns
+         |${callbackDefns.mkString("\n")}
+         |$register
+         |""".stripMargin
     }
 
     private def genRegistration(implicit data: ScalaCxxData): Tree = {

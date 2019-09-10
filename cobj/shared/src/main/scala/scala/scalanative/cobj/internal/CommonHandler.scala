@@ -100,6 +100,8 @@ abstract class CommonHandler extends MacroAnnotationHandler {
     }
   }
 
+  private def isTrait(tpe: Type): Boolean = tpe.typeSymbol.asClass.isTrait
+
   protected def genTransformedTypeBody(t: TypeTransformData[TypeParts]): Seq[Tree] = {
     val companion = t.modParts.companion.get.name
     val imports = Seq(q"import $companion.__ext")
