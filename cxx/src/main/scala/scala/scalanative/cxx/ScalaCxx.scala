@@ -7,6 +7,8 @@ import scala.reflect.macros.whitebox
 import scala.language.experimental.macros
 import scala.scalanative.cobj.internal.CommonHandler
 import scala.scalanative.cxx.internal.CxxWrapperGen
+import scala.scalanative.runtime.RawPtr
+import scala.scalanative.unsafe.extern
 
 @compileTimeOnly("enable macro paradise to expand macro annotations")
 class ScalaCxx(namespace: String = null, classname: String = null, prefix: String = null) extends StaticAnnotation {
@@ -25,7 +27,11 @@ object ScalaCxx {
 
     import c.universe._
 
-    private val registerFunc = q"""@scalanative.cxx.cxxBody("___register((void**)callbacks);") def ___register(callbacks: scalanative.unsafe.Ptr[Ptr[Byte]]): Unit = extern"""
+    private val registerFunc = q"""@scalanative.cxx.cxxBody("___register((void**)callbacks);") def ___register(callbacks: scalanative.unsafe.Ptr[scalanative.runtime.RawPtr]): Unit = scalanative.unsafe.extern"""
+
+    private val setWrapperFunc = q"""def ___setWrapper(w: RawPtr): Unit = scalanative.unsafe.extern"""
+
+    private val setWrapperStmt = q"""___setWrapper(scalanative.runtime.Intrinsics.castObjectToRawPtr(this))"""
 
     case class CxxMember(instanceMember: String, callbackDecl: String, callbackDefn: String, callbackReg: String, term: TermName)
 
@@ -40,7 +46,9 @@ object ScalaCxx {
     override def analyze: Analysis = super.analyze andThen {
       case (cls: ClassParts, data) =>
         val companion = cls.companion.get
-        val updCls = cls.copy(companion = Some(companion.copy(body = companion.body :+ registerFunc)))
+        val updCls = cls.copy(
+          companion = Some(companion.copy(body = companion.body :+ registerFunc)),
+          body = cls.body :+ setWrapperFunc)
         val updData = (
           analyzeMainAnnotation(updCls) _
             andThen analyzeTypes(updCls) _
@@ -61,11 +69,15 @@ object ScalaCxx {
 
     override def transform: Transformation = super.transform andThen {
       case cls: ClassTransformData =>
-        cls
-          .updBody(genTransformedTypeBody(cls))
-          .addAnnotations(genCxxWrapperAnnot(cls.data))
-          .updCtorParams(genTransformedCtorParams(cls))
-          .updParents(genTransformedParents(cls))
+        val updCls =
+          cls
+            .addStatements(setWrapperFunc)
+            .addStatements(setWrapperStmt)
+        updCls
+          .updBody(genTransformedTypeBody(updCls))
+          .addAnnotations(genCxxWrapperAnnot(updCls.data))
+          .updCtorParams(genTransformedCtorParams(updCls))
+          .updParents(genTransformedParents(updCls))
       case obj: ObjectTransformData =>
         val updObj = obj.updBody(obj.modParts.body:+registerFunc)
         val externalSource = genCxxWrapper(genScalaCxxClass(obj.data))
@@ -143,6 +155,7 @@ object ScalaCxx {
           transformExternalCallArgs(args,data),
         args.map(tranformScalaCallbackType))
       }
+//      val call = q"42"
       val call =
         if(scalaDef.vparamss.isEmpty)
           q"o.${scalaDef.name}"
@@ -150,6 +163,7 @@ object ScalaCxx {
           q"o.${scalaDef.name}(..$args)"
 
       val instance = q"val o = Intrinsics.castRawPtrToObject(ptr).asInstanceOf[$classType]"
+//      val instance = q""
 
       val scalaCallbackReturnType = tranformScalaCallbackType(scalaDef)
 
@@ -188,7 +202,7 @@ object ScalaCxx {
       val rettype = genCxxReturnType(scalaDef,false)
       val (params,args) = genCxxParams(scalaDef)
       val paramString = params.mkString(", ")
-      val argString = ("(void*)this" +: args).mkString(", ")
+      val argString = ("this->___wrapper" +: args).mkString(", ")
       val method = s"""$rettype $name($paramString) { return __$name($argString); }"""
       val callbackParams = ("void* __p" +: params).mkString(", ")
       val callbackDecl = s"""static $rettype (*__$name)($callbackParams);"""
@@ -214,7 +228,9 @@ object ScalaCxx {
 
       val classdef =
         s"""class $classname {
+           |  void* ___wrapper;
            |public:
+           |  void ___setWrapper(void* w) { this->___wrapper = w; }
            |  $register
            |  ${callbackDecls.mkString("\n  ")}
            |           |  ${instanceMembers.mkString("\n  ")}
@@ -239,12 +255,12 @@ object ScalaCxx {
         .zipWithIndex
         .map{ p =>
           val i = Literal(Constant(p._2))
-          q"array($i) = __callbacks.${p._1}.asInstanceOf[Ptr[Byte]]"
+          q"array($i) = Boxes.unboxToCFuncRawPtr(__callbacks.${p._1})"
         }
       q"""{
             import scalanative.unsafe._
             import scalanative.runtime._
-            val array = stackalloc[Ptr[Byte]]($size)
+            val array = stackalloc[RawPtr]($size)
               ..$assignments
             ___register(array)
           }"""
