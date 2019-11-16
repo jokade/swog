@@ -24,6 +24,7 @@ lazy val commonSettings = Seq(
 
 lazy val root  = project.in(file("."))
   .aggregate(
+    platformJVM, platformNative,
     commonJVM, commonNative,
     cobjJVM, cobjNative )
   .settings(commonSettings ++ dontPublish:_*)
@@ -39,7 +40,13 @@ lazy val platform = crossProject(JVMPlatform,NativePlatform).crossType(CrossType
   .jvmSettings(
     libraryDependencies ++= Seq(
       "net.java.dev.jna" % "jna" % Version.jna
-    )
+    ),
+    test in Test := {
+      val log = streams.value.log
+      // compile native test mock-up
+      Process("make" :: Nil, baseDirectory.value / "src/test/resources") ! log
+      (test in Test).value
+    }
   )
 lazy val platformJVM = platform.jvm
 lazy val platformNative = platform.native
@@ -113,12 +120,12 @@ lazy val cobjTests = crossProject(JVMPlatform,NativePlatform)
   //.enablePlugins(ScalaNativePlugin,NBHAutoPlugin,NBHCxxPlugin)
   .dependsOn(cobj)
   .settings(commonSettings ++ dontPublish:_*)
+  .settings(
+    fork := false
+  )
   .nativeSettings(
     nativeLinkStubs := true,
     nativeLinkingOptions ++= Seq(
-      //"-lglib-2.0",
-      //"-lgobject-2.0",
-      //"-lgtk-3.0"
     )
   )
 lazy val cobjTestsJVM = cobjTests.jvm

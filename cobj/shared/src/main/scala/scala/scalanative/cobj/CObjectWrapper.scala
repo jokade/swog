@@ -1,6 +1,6 @@
 package scala.scalanative.cobj
 
-import scalanative.interop.Platform
+import scalanative.interop.jvm
 import scala.scalanative.unsafe._
 
 trait CObjectWrapper[T] {
@@ -46,7 +46,7 @@ object CObjectWrapper {
   }
 
   implicit object CStringWrapper extends CObjectWrapper[CString] {
-    override def wrap(ptr: Ptr[Byte]): CString = Platform.ptrToCString(ptr)
+    override def wrap(ptr: Ptr[Byte]): CString = jvm.ptrToCString(ptr)
     override def unwrap(value: CString): Ptr[Byte] = value.asInstanceOf[Ptr[Byte]]
   }
 
@@ -57,7 +57,7 @@ object CObjectWrapper {
 
   object Implicits {
     implicit object StringWrapper extends CObjectWrapper[String] {
-      override def wrap(ptr: Ptr[Byte]): String = fromCString(Platform.ptrToCString(ptr))
+      override def wrap(ptr: Ptr[Byte]): String = fromCString(jvm.ptrToCString(ptr))
       override def unwrap(value: String): Ptr[Byte] = throw new RuntimeException("CObjWrapper.StringWrapper: unwrapping a Scala String to a CString is not supported")
     }
   }

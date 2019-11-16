@@ -427,6 +427,12 @@ abstract class CommonHandler extends MacroAnnotationHandler {
       case ex: TypecheckException => false // if the type check fails we assume that the type isn't an enum
     }
 
+  private val _nameAnnotationArgs = Seq("name")
+  protected def nameAnnotation(m: DefDef): Option[String] =
+    findAnnotation(m.mods.annotations,"scala.scalanative.unsafe.name")
+      .map{ p => 
+        extractAnnotationParameters(p,_nameAnnotationArgs).apply("name").flatMap(extractStringConstant).get
+      }
 
   protected def nullable(m: DefDef): Boolean =
     findAnnotation(m.mods.annotations,"scala.scalanative.cobj.nullable").isDefined
@@ -436,4 +442,7 @@ abstract class CommonHandler extends MacroAnnotationHandler {
 
   protected def returnsValue(m: DefDef): Boolean =
     findAnnotation(m.mods.annotations,"scala.scalanative.cobj.returnsValue").isDefined
+
+  protected def executeSyncOnMainThread(m: DefDef): Boolean =
+    findAnnotation(m.mods.annotations,"scala.scalanative.cobj.syncOnMainThread").isDefined
 }
