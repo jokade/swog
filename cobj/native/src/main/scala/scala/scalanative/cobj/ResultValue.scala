@@ -4,7 +4,7 @@ import de.surfice.smacrotools.BlackboxMacroTools
 
 import scala.language.experimental.macros
 import scala.reflect.macros.blackbox
-import scala.scalanative.unsafe._
+import scala.scalanative.unsafe.{Ptr, _}
 
 trait ResultValue[T<:CObject] extends CObject {
   def __ptr: Ptr[Byte]

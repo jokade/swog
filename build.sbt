@@ -5,6 +5,7 @@ version in ThisBuild := "0.1.0-SNAPSHOT"
 scalaVersion in ThisBuild := "2.11.12"
 
 val Version = new {
+  val jna         = "5.5.0"
   val smacrotools = "0.0.9-SNAPSHOT"
   val utest       = "0.6.8-SNAPSHOT"
 }
@@ -30,7 +31,21 @@ lazy val root  = project.in(file("."))
     name := "swog"
   )
 
+lazy val platform = crossProject(JVMPlatform,NativePlatform).crossType(CrossType.Full)
+  .settings(commonSettings ++ publishingSettings: _*)
+  .settings(
+    name := "swog-platform"
+  )
+  .jvmSettings(
+    libraryDependencies ++= Seq(
+      "net.java.dev.jna" % "jna" % Version.jna
+    )
+  )
+lazy val platformJVM = platform.jvm
+lazy val platformNative = platform.native
+
 lazy val common = crossProject(JVMPlatform,NativePlatform).crossType(CrossType.Full)
+  .dependsOn(platform)
   .settings(commonSettings ++ publishingSettings:_*)
   .settings(
     name := "swog-common",
