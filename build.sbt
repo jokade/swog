@@ -24,6 +24,7 @@ lazy val commonSettings = Seq(
 
 lazy val root  = project.in(file("."))
   .aggregate(
+    platformJVM, platformNative,
     commonJVM, commonNative,
     cobjJVM, cobjNative )
   .settings(commonSettings ++ dontPublish:_*)
@@ -113,6 +114,9 @@ lazy val cobjTests = crossProject(JVMPlatform,NativePlatform)
   //.enablePlugins(ScalaNativePlugin,NBHAutoPlugin,NBHCxxPlugin)
   .dependsOn(cobj)
   .settings(commonSettings ++ dontPublish:_*)
+  .settings(
+    fork := true
+  )
   .nativeSettings(
     nativeLinkStubs := true,
     nativeLinkingOptions ++= Seq(

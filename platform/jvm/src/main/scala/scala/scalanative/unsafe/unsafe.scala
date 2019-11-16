@@ -2,6 +2,8 @@ package scala.scalanative
 
 import com.sun.jna.Pointer
 
+import scala.annotation.StaticAnnotation
+
 package object unsafe {
   // TODO: check type mappings and correct
   type CBool             = Boolean
@@ -27,6 +29,8 @@ package object unsafe {
   type CDouble           = Double
   type CString           = String
   
+  def extern: Nothing = ???
+  
   type Ptr[T] = Pointer
   implicit final class RichPointer[T](val p: Ptr[T]) extends AnyVal {
     def unary_!(): T = ??? 
@@ -34,4 +38,6 @@ package object unsafe {
   
   def fromCString(cstr: CString): String = ???
   def toCString(s: String)(implicit zone: Zone): CString = ???
+
+  final class name(name : String) extends StaticAnnotation
 }
