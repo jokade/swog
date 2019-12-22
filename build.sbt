@@ -126,6 +126,9 @@ lazy val cobjTests = crossProject(JVMPlatform,NativePlatform)
   .nativeSettings(
     nativeLinkStubs := true,
     nativeLinkingOptions ++= Seq(
+      //"-lglib-2.0",
+      //"-lgobject-2.0",
+      //"-lgtk-3.0"
     )
   )
 lazy val cobjTestsJVM = cobjTests.jvm
