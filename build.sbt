@@ -35,18 +35,21 @@ lazy val root  = project.in(file("."))
 lazy val platform = crossProject(JVMPlatform,NativePlatform).crossType(CrossType.Full)
   .settings(commonSettings ++ publishingSettings: _*)
   .settings(
-    name := "swog-platform"
+    name := "swog-platform",
+    test in Test := {
+      val log = streams.value.log
+      // compile native test mock-up
+      Process("make" :: Nil, baseDirectory.value / "../shared/src/test/resources") ! log
+      (test in Test).value
+    }
+  )
+  .nativeSettings(
+    nativeLinkStubs := true
   )
   .jvmSettings(
     libraryDependencies ++= Seq(
       "net.java.dev.jna" % "jna" % Version.jna
-    ),
-    test in Test := {
-      val log = streams.value.log
-      // compile native test mock-up
-      Process("make" :: Nil, baseDirectory.value / "src/test/resources") ! log
-      (test in Test).value
-    }
+    )
   )
 lazy val platformJVM = platform.jvm
 lazy val platformNative = platform.native
@@ -116,6 +119,23 @@ lazy val lua = project
 
 import scalanative.sbtplugin.ScalaNativePluginInternal._
 */
+
+lazy val platformTests = crossProject(JVMPlatform,NativePlatform)
+  .dependsOn(platform)
+  .settings(commonSettings ++ dontPublish: _*)
+  .settings(
+    unmanagedResourceDirectories in Test += baseDirectory.value / "../shared/src/test/resources"
+  )
+  .nativeSettings(
+    nativeLinkStubs := true,
+    nativeLinkingOptions ++= Seq(
+      "-v"
+      //s"""${(baseDirectory.value / "../shared/src/test/resources/platformtest.o").getCanonicalPath}"""
+    )
+  )
+lazy val platformTestsJVM = platformTests.jvm
+lazy val platformTestsNative = platformTests.native
+
 lazy val cobjTests = crossProject(JVMPlatform,NativePlatform)
   //.enablePlugins(ScalaNativePlugin,NBHAutoPlugin,NBHCxxPlugin)
   .dependsOn(cobj)
@@ -126,9 +146,6 @@ lazy val cobjTests = crossProject(JVMPlatform,NativePlatform)
   .nativeSettings(
     nativeLinkStubs := true,
     nativeLinkingOptions ++= Seq(
-      //"-lglib-2.0",
-      //"-lgobject-2.0",
-      //"-lgtk-3.0"
     )
   )
 lazy val cobjTestsJVM = cobjTests.jvm

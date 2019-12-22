@@ -1,6 +1,6 @@
 package scala.scalanative
 
-import com.sun.jna.{Callback, Pointer, SWOGHelper}
+import com.sun.jna.{Callback, NativeLong, Pointer, SWOGHelper}
 
 import scala.annotation.StaticAnnotation
 import scala.scalanative.unsigned.{UInt, ULong}
@@ -17,7 +17,7 @@ package object unsafe {
   type CLongInt          = Int
   type CUnsignedInt      = UInt
   type CUnsignedLongInt  = UInt
-  type CLong             = Long
+  type CLong             = NativeLong
   type CUnsignedLong     = ULong
   type CLongLong         = Long
   type CUnsignedLongLong = ULong
@@ -37,7 +37,7 @@ package object unsafe {
   type CFuncPtr3[T1,T2,T3,R]      = Callback
 
 
-  final def extern: Nothing = throw new UnsupportedOperationException("A call to 'extern' was not properly transformed.")
+  def extern: Nothing = throw new UnsupportedOperationException("A call to 'extern' was not properly transformed.")
 
   /** Stack allocate a value of given type.
    *
@@ -54,6 +54,9 @@ package object unsafe {
   def fromCString(cstr: CString): String = new Pointer(cstr.peer).getString(0)
   @inline final def toCString(s: String)(implicit zone: Zone): CString = zone.makeNativeString(s)
 
+  implicit def longToCLong(l: Long): CLong = new NativeLong(l)
+  implicit def intToCLong(i: Int): CLong = new NativeLong(i)
+  
   implicit final class CQuote(val ctx: StringContext) extends AnyVal {
     def c(): CString = SWOGHelper.nativeString(ctx.parts.mkString)
   }

@@ -1,7 +1,7 @@
 package scala.scalanative
 
 
-import com.sun.jna.{Library, Native, Pointer}
+import com.sun.jna.{Library, Native}
 
 import scala.scalanative.unsafe.{CSize, CString}
 
