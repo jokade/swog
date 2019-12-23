@@ -1,3 +1,3 @@
 <component name="DependencyValidationManager">
-  <scope name="cobj" pattern="src[cobj-sources]:*..*||src[native.swog-cobj]:*..*||src[jvm.swog-cobj]:*..*" />
+  <scope name="cobj" pattern="src[cobj-sources]:*..*||src[native.swog-cobj]:*..*||src[jvm.swog-cobj]:*..*||file[cobjJVM]:*/||file[cobjNative]:*/" />
 </component>

@@ -1,16 +1,9 @@
-package tests.cobj
-
-import de.surfice.smacrotools.debug
-
-import scala.scalanative.annotation.InlineSource
-import scalanative.cobj.{ResultPtr, _}
-import scalanative.unsafe._
-
-@CObj
-@InlineSource("C",
-"""
+/* Provides functions used to test the CObj interop features */
 #include <stdlib.h>
+#include <limits.h>
+#include <float.h>
 
+/* Number */
 typedef struct {
   int value;
 } Number;
@@ -36,26 +29,9 @@ void number_set_value(Number* c, int value) {
 Number* number_self(Number* c) {
   return c;
 }
-""")
-class Number {
-  def getValue(): CInt = extern
-  def setValue(value: CInt): Unit = extern
-  def free(): Unit = extern
-  @returnsThis
-  def self(): this.type = extern
-}
-
-object Number {
-  @name("number_new")
-  def apply(): Number = extern
-}
 
 
-@CObj
-@InlineSource("C",
-"""
-#include <stdlib.h>
-
+/* Counter */
 typedef struct {
   int value;
   int stepSize;
@@ -78,22 +54,9 @@ int counter_increment(Counter* c) {
   c->value += c->stepSize;
   return c->value;
 }
-""")
-class Counter extends Number {
-  def increment(): CInt = extern
-}
 
-object Counter {
-  @name("counter_new")
-  def apply(): Counter = extern
-  def withStepSize(stepSize: CInt): Counter = extern
-}
 
-@CObj(prefix = "slist_")
-@InlineSource("C",
-"""
-#include <stdlib.h>
-
+/* Singly Linked List */
 typedef struct _SListEntry {
   void* data;
   struct _SListEntry *next;
@@ -150,27 +113,8 @@ void* slist_item_at(SList *l, int index) {
   }
   return p->data;
 }
-""")
-class SList[T] {
-  def isEmpty: Boolean = extern
-  def size: Int = extern
-  def prepend(value: T)(implicit wrapper: CObjectWrapper[T]): SList[T] = extern
 
-  // returns null if the specified index does not exist
-  @nullable
-  def itemAt(index: Int)(implicit wrapper:CObjectWrapper[T]): T = extern
-
-}
-
-object SList {
-  @name("slist_new")
-  def apply[T<:CObject](): SList[T] = extern
-}
-
-
-@CObj
-@InlineSource("C",
-"""
+/* Callbacks */
 typedef int (*Callback0) (void);
 typedef int (*Callback1) (int);
 
@@ -181,20 +125,8 @@ int callbacks_exec0(Callback0 f) {
 int callbacks_exec1(Callback1 f, int i) {
   return f(i);
 }
-""")
-object Callbacks {
-  def exec0(f: CFuncPtr0[Int]): Int = extern
-  def exec1(f: CFuncPtr1[Int,Int], i: Int): Int = extern
-}
 
-class NumberLike(val __ptr: Ptr[Byte]) extends CObject
-
-@CObj
-@InlineSource("C",
-"""
-#include <limits.h>
-#include <float.h>
-#include <stdlib.h>
+/* implicit args */
 
 void implicit_args_int(int* out) {
   *out = 42;
@@ -230,17 +162,12 @@ void implicit_args_number(OutClass** out) {
 int implicit_args_multi_args(OutClass* num1, OutClass* num2) {
   return num1->value + num2->value;
 }
-""")
-@debug
-object ImplicitArgs {
-  type OutStruct = CStruct1[Int]
 
-  def int()(implicit out: ResultPtr[Int]): Unit = extern
-  def long()(implicit out: ResultPtr[Long]): Unit = extern
-  def double()(implicit out: ResultPtr[Double]): Unit = extern
-  def struct()(implicit out: ResultPtr[OutStruct]): Unit = extern
-  def number()(implicit out: ResultPtr[Number]): Unit = extern
-  def multiArgs()(implicit num1: Number, num2: NumberLike): Int = extern
+/* OutArgs */
+void out_args_int(int* out) {
+  *out = 42;
 }
 
-
+//void out_args_long(long* out) {
+//  *out = LONG_MAX;
+//}

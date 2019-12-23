@@ -14,7 +14,7 @@ final class extern extends StaticAnnotation
 // since this symbol is already used as 'def', and thus would result in a conflicht,
 // if we have a class with the same name that has a *body*.
 // See https://github.com/scala-native/scala-native/issues/1719
-final class external extends StaticAnnotation 
+final class external(libname: String = null) extends StaticAnnotation 
 {
   def macroTransform(annottees: Any*): Any = macro external.Macro.impl
 }
@@ -65,13 +65,16 @@ object external {
     }
     
     protected def analyzeMainAnnotation(tpe: CommonParts)(data: Data): Data = {
-      val libname = findAnnotation(tpe.modifiers.annotations,"scala.scalanative.unsafe.link") match {
+      val externalLibname =
+        extractAnnotationParameters(c.prefix.tree,Seq("libname")).apply("libname").flatMap(extractStringConstant)
+      val linkName = findAnnotation(tpe.modifiers.annotations,"scala.scalanative.unsafe.link") match {
         case Some(annot) =>
           extractAnnotationParameters(annot,Seq("name")).apply("name").map(extractStringConstant).get.get
         case None =>
           tpe.fullName
-      } 
-      data.withJnaLibraryName(libname)
+      }
+  
+      data.withJnaLibraryName(externalLibname.getOrElse(linkName))
     }
     
     protected def analyzeBody(tpe: CommonParts)(data: Data): Data = {

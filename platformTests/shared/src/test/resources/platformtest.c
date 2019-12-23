@@ -14,6 +14,18 @@ long ptest_return_long(long l) {
   return l;
 }
 
+long ptest_return_long_long(long long l) {
+  return l;
+}
+
+float ptest_return_float(float f) {
+  return f;
+}
+
+double ptest_return_double(double d) {
+  return d;
+}
+
 const char* ptest_return_string(const char *s) {
   return s;
 }

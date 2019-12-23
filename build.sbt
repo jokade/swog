@@ -129,8 +129,7 @@ lazy val platformTests = crossProject(JVMPlatform,NativePlatform)
   .nativeSettings(
     nativeLinkStubs := true,
     nativeLinkingOptions ++= Seq(
-      "-v"
-      //s"""${(baseDirectory.value / "../shared/src/test/resources/platformtest.o").getCanonicalPath}"""
+      s"""${(baseDirectory.value / "../shared/src/test/resources/platformtest.o").getCanonicalPath}"""
     )
   )
 lazy val platformTestsJVM = platformTests.jvm
@@ -146,6 +145,7 @@ lazy val cobjTests = crossProject(JVMPlatform,NativePlatform)
   .nativeSettings(
     nativeLinkStubs := true,
     nativeLinkingOptions ++= Seq(
+      s"""${(baseDirectory.value / "../shared/src/test/resources/mockups.o").getCanonicalPath}"""
     )
   )
 lazy val cobjTestsJVM = cobjTests.jvm

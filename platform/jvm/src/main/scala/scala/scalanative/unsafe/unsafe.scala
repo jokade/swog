@@ -8,7 +8,7 @@ import scala.scalanative.unsigned.{UInt, ULong}
 package object unsafe {
   // TODO: check type mappings and correct
   type CBool             = Boolean
-  type CChar             = Char
+  type CChar             = Byte
   type CSignedChar       = Char
   type CUnsignedChar     = Char
   type CShort            = Short
@@ -56,6 +56,8 @@ package object unsafe {
 
   implicit def longToCLong(l: Long): CLong = new NativeLong(l)
   implicit def intToCLong(i: Int): CLong = new NativeLong(i)
+  implicit def clongToLong(l: CLong): Long = l.longValue()
+  implicit def clongToInt(l: CLong): Int = l.intValue()
   
   implicit final class CQuote(val ctx: StringContext) extends AnyVal {
     def c(): CString = SWOGHelper.nativeString(ctx.parts.mkString)
