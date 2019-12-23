@@ -51,7 +51,7 @@ package object unsafe {
    */
   def stackalloc[T](n: CSize): Ptr[T] = ???
 
-  def fromCString(cstr: CString): String = new Pointer(cstr.peer).getString(0)
+  def fromCString(cstr: CString): String = cstr.rawptr.getString(0) //new Pointer(cstr.rawptr).getString(0)
   @inline final def toCString(s: String)(implicit zone: Zone): CString = zone.makeNativeString(s)
 
   implicit def longToCLong(l: Long): CLong = new NativeLong(l)
@@ -63,8 +63,5 @@ package object unsafe {
     def c(): CString = SWOGHelper.nativeString(ctx.parts.mkString)
   }
 
-  implicit final class UnsafeRichInt(val i: Int) extends AnyVal {
-    @inline
-    def unary_!(): Int = i
-  }
+
 }

@@ -22,5 +22,14 @@ object Mockups {
   /// returns the passed-in CString unmodified
   def ptest_return_string(s: CString): CString = extern
 
+  def ptest_struct1_new(): Ptr[CStruct1[CInt]] = extern
+  
+  def ptest_struct2_new(): Ptr[CStruct2[CChar,CLong]] = extern
+  
+  def ptest_struct3_new(): Ptr[CStruct3[CShort,CString,CInt]] = extern
+  
+  def ptest_struct4_new(): Ptr[CStruct4[CChar,CShort,CStruct1[CChar],CLongLong]] = extern
+  
+  def ptest_incr_int_ptr(i: Ptr[CInt]): Unit = extern
 //  def ptest_get_struct(): Ptr[CStruct1[Int]] = _inst.ptest_struct_get()
 }

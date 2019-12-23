@@ -1,0 +1,39 @@
+package scala.scalanative.unsafe
+
+import com.sun.jna.{FromNativeContext, NativeMapped, Pointer}
+
+import scala.reflect.runtime.universe._
+import scala.language.experimental.macros
+import scala.scalanative.runtime.RawPtr
+
+final class Ptr[T] (protected[scalanative] var rawptr: RawPtr) extends NativeMapped {
+  def this() = this(null)
+  override def fromNative(nativeValue: Any, context: FromNativeContext): AnyRef = {
+    rawptr = nativeValue.asInstanceOf[RawPtr]
+    this
+  }
+  override def toNative: AnyRef = rawptr.asInstanceOf[AnyRef]
+  override def nativeType(): Class[_] = classOf[RawPtr]
+
+}
+object Ptr {
+  implicit def ptrToCStruct[T <: CStruct](ptr: Ptr[T]): T = macro MacroImpl.ptrToCStruct[T]
+  
+  private object MacroImpl {
+    import scala.reflect.macros.blackbox.Context
+    
+    def ptrToCStruct[T: c.WeakTypeTag](c: Context)(ptr: c.Tree): c.Tree = {
+      import c.universe._
+      val tpe = c.weakTypeOf[T]
+      tpe.typeArgs match {
+        % for N in range(1,22):
+        %    Ts = ", ".join("t" + str(i) for i in range(1, N+1))
+        %    args = ", ".join("$t" + str(i) for i in range(1, N+1))
+        case List(${Ts}) => q"new scalanative.unsafe.CStruct${N}[${args}]($ptr.rawptr)"
+        % end
+      }
+    }
+  }
+  
+}
+

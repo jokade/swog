@@ -1,6 +1,7 @@
 package scala.scalanative.unsafe
 
 import utest._
+import scalanative.unsafe._
 
 /**
  * Interop tests for 'extern' objects.
@@ -41,6 +42,61 @@ object ExternTest extends TestSuite {
         val s2 = Mockups.ptest_return_string(s1)
         fromCString(s2)  ==> "hello world"
       }
+      'CStruct-{
+        'CInt-{
+          val s = Mockups.ptest_struct1_new()
+          s._1 ==> 42
+          s._1 = Int.MaxValue
+          s._1 ==> Int.MaxValue
+        }
+        'CChar_CLong-{
+          val s = Mockups.ptest_struct2_new() 
+          s._1 ==> 'a'
+          s._1 = 'X'.toByte
+          s._1 ==> 'X'
+          
+          val l: Long = s._2
+          l ==> 123456789
+          s._2 = Long.MinValue
+          val l2: Long = s._2
+          l2 ==> Long.MinValue
+        }
+        'CShort_CString_CInt-{
+          val s = Mockups.ptest_struct3_new()
+          
+          s._1 ==> -4321
+          s._1 = Short.MaxValue
+          s._1 ==> Short.MaxValue
+          
+          fromCString(s._2) ==> "Hello, world!"
+          s._2 = c"another string"
+          fromCString(s._2) ==> "another string"
+          
+          s._3 ==> -1234567
+          s._3 = Int.MinValue
+          s._3 ==> Int.MinValue
+        }
+        'CChar_CShort_CStruct1_CLongLong-{
+          val s = Mockups.ptest_struct4_new()
+          
+          s._1 ==> 'c'
+          s._2 ==> 99
+          s._3._1 ==> 'x'
+        }
+      }
     } 
+    
+    'alloc-{
+      'stackalloc-{
+        'CInt-{
+          val p = stackalloc[CInt]
+
+          !p = 42
+//          Mockups.ptest_incr_int_ptr(p)
+//          !p ==> 43
+        }
+      }
+    }
   }
 }
+

@@ -32,6 +32,7 @@ lazy val root  = project.in(file("."))
     name := "swog"
   )
 
+
 lazy val platform = crossProject(JVMPlatform,NativePlatform).crossType(CrossType.Full)
   .settings(commonSettings ++ publishingSettings: _*)
   .settings(
