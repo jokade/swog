@@ -1,6 +1,6 @@
 package scala.scalanative.interop
 
-import com.sun.jna.{Library, Native}
+import com.sun.jna.{Library, Native, NativeLibrary}
 
 import scala.scalanative.unsafe.{CString, Ptr}
 
@@ -21,4 +21,14 @@ package object jvm {
         Native.load(libName,iface)
       case x => throw new RuntimeException(s"cannot resolve JNA library name for interface type '$x'")
     }
+
+  def loadNativeLibrary(fullName: String): NativeLibrary =
+    _jnaNameResolver(fullName) match {
+      case Some(libName) =>
+        NativeLibrary.getInstance(libName)
+      case x => throw new RuntimeException(s"cannot resolve JNA library name for interface type '$x'")
+    }
+
+  def loadGlobalPtr[T](libName: String, symbol: String): Ptr[T] =
+    new Ptr(loadNativeLibrary(libName).getGlobalVariableAddress(symbol))
 }

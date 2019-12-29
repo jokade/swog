@@ -101,3 +101,5 @@ void ptest_incr_num_struct(ptest_num_struct* p) {
   p->ll += 1;
   p->i += 1;
 }
+
+int ptest_global_int = 12345678;

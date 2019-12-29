@@ -53,6 +53,10 @@ package object unsafe {
    */
   def stackalloc[T](n: CSize): Ptr[T] = ???
 
+  /** Heap allocate and zero-initialize a value.
+   */
+  def alloc[T]: Ptr[T] = macro MacroImpl.alloc[T]
+
   def fromCString(cstr: CString): String = cstr.rawptr.getString(0) //new Pointer(cstr.rawptr).getString(0)
   @inline final def toCString(s: String)(implicit zone: Zone): CString = zone.makeNativeString(s)
 
@@ -65,14 +69,5 @@ package object unsafe {
     def c(): CString = SWOGHelper.nativeString(ctx.parts.mkString)
   }
 
-  protected[this] class MacroImpl(val c: blackbox.Context) extends MacroTools {
-    import c.universe._
-
-    // TODO: provide real stack allocation instead of malloc-based Memory()!
-    def stackalloc[T: c.WeakTypeTag]: c.Tree = {
-      val size = computeFieldSize(weakTypeOf[T])
-      q"""new scalanative.unsafe.Ptr(new com.sun.jna.Memory($size))"""
-    }
-  }
 
 }

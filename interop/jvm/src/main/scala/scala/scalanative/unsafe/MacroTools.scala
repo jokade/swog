@@ -24,7 +24,8 @@ protected[unsafe] trait MacroTools {
     case t if t =:= tCLong     => 8
     case t if t =:= tCLongLong => 8
     case t if t =:= tPtrByte   => 8
-    case t if t <:< tCStruct   => 8
+    case t if t <:< tCStruct   =>
+      t.dealias.typeArgs.foldLeft(0)((size,tpe)=> size + computeFieldSize(tpe))
   }
 
   def computeFieldOffset(typeArgs: List[c.Type], index: Int): Int = {
@@ -43,49 +44,49 @@ protected[unsafe] trait MacroTools {
   }
 
   def genStructInstantiation(typeArgs: List[c.Type],rawptr: c.Tree): c.Tree = typeArgs match {
-// ###sourceLocation(file: "/Volumes/JKDATA/dev/scala-native/swog/interop/jvm/src/main/scala/scala/scalanative/unsafe/MacroTools.scala.gyb", line: 48)
+// ###sourceLocation(file: "/Volumes/JKDATA/dev/scala-native/swog/interop/jvm/src/main/scala/scala/scalanative/unsafe/MacroTools.scala.gyb", line: 49)
     case List(t1) => q"new scalanative.unsafe.CStruct1[$t1]($rawptr)"
-// ###sourceLocation(file: "/Volumes/JKDATA/dev/scala-native/swog/interop/jvm/src/main/scala/scala/scalanative/unsafe/MacroTools.scala.gyb", line: 48)
+// ###sourceLocation(file: "/Volumes/JKDATA/dev/scala-native/swog/interop/jvm/src/main/scala/scala/scalanative/unsafe/MacroTools.scala.gyb", line: 49)
     case List(t1, t2) => q"new scalanative.unsafe.CStruct2[$t1, $t2]($rawptr)"
-// ###sourceLocation(file: "/Volumes/JKDATA/dev/scala-native/swog/interop/jvm/src/main/scala/scala/scalanative/unsafe/MacroTools.scala.gyb", line: 48)
+// ###sourceLocation(file: "/Volumes/JKDATA/dev/scala-native/swog/interop/jvm/src/main/scala/scala/scalanative/unsafe/MacroTools.scala.gyb", line: 49)
     case List(t1, t2, t3) => q"new scalanative.unsafe.CStruct3[$t1, $t2, $t3]($rawptr)"
-// ###sourceLocation(file: "/Volumes/JKDATA/dev/scala-native/swog/interop/jvm/src/main/scala/scala/scalanative/unsafe/MacroTools.scala.gyb", line: 48)
+// ###sourceLocation(file: "/Volumes/JKDATA/dev/scala-native/swog/interop/jvm/src/main/scala/scala/scalanative/unsafe/MacroTools.scala.gyb", line: 49)
     case List(t1, t2, t3, t4) => q"new scalanative.unsafe.CStruct4[$t1, $t2, $t3, $t4]($rawptr)"
-// ###sourceLocation(file: "/Volumes/JKDATA/dev/scala-native/swog/interop/jvm/src/main/scala/scala/scalanative/unsafe/MacroTools.scala.gyb", line: 48)
+// ###sourceLocation(file: "/Volumes/JKDATA/dev/scala-native/swog/interop/jvm/src/main/scala/scala/scalanative/unsafe/MacroTools.scala.gyb", line: 49)
     case List(t1, t2, t3, t4, t5) => q"new scalanative.unsafe.CStruct5[$t1, $t2, $t3, $t4, $t5]($rawptr)"
-// ###sourceLocation(file: "/Volumes/JKDATA/dev/scala-native/swog/interop/jvm/src/main/scala/scala/scalanative/unsafe/MacroTools.scala.gyb", line: 48)
+// ###sourceLocation(file: "/Volumes/JKDATA/dev/scala-native/swog/interop/jvm/src/main/scala/scala/scalanative/unsafe/MacroTools.scala.gyb", line: 49)
     case List(t1, t2, t3, t4, t5, t6) => q"new scalanative.unsafe.CStruct6[$t1, $t2, $t3, $t4, $t5, $t6]($rawptr)"
-// ###sourceLocation(file: "/Volumes/JKDATA/dev/scala-native/swog/interop/jvm/src/main/scala/scala/scalanative/unsafe/MacroTools.scala.gyb", line: 48)
+// ###sourceLocation(file: "/Volumes/JKDATA/dev/scala-native/swog/interop/jvm/src/main/scala/scala/scalanative/unsafe/MacroTools.scala.gyb", line: 49)
     case List(t1, t2, t3, t4, t5, t6, t7) => q"new scalanative.unsafe.CStruct7[$t1, $t2, $t3, $t4, $t5, $t6, $t7]($rawptr)"
-// ###sourceLocation(file: "/Volumes/JKDATA/dev/scala-native/swog/interop/jvm/src/main/scala/scala/scalanative/unsafe/MacroTools.scala.gyb", line: 48)
+// ###sourceLocation(file: "/Volumes/JKDATA/dev/scala-native/swog/interop/jvm/src/main/scala/scala/scalanative/unsafe/MacroTools.scala.gyb", line: 49)
     case List(t1, t2, t3, t4, t5, t6, t7, t8) => q"new scalanative.unsafe.CStruct8[$t1, $t2, $t3, $t4, $t5, $t6, $t7, $t8]($rawptr)"
-// ###sourceLocation(file: "/Volumes/JKDATA/dev/scala-native/swog/interop/jvm/src/main/scala/scala/scalanative/unsafe/MacroTools.scala.gyb", line: 48)
+// ###sourceLocation(file: "/Volumes/JKDATA/dev/scala-native/swog/interop/jvm/src/main/scala/scala/scalanative/unsafe/MacroTools.scala.gyb", line: 49)
     case List(t1, t2, t3, t4, t5, t6, t7, t8, t9) => q"new scalanative.unsafe.CStruct9[$t1, $t2, $t3, $t4, $t5, $t6, $t7, $t8, $t9]($rawptr)"
-// ###sourceLocation(file: "/Volumes/JKDATA/dev/scala-native/swog/interop/jvm/src/main/scala/scala/scalanative/unsafe/MacroTools.scala.gyb", line: 48)
+// ###sourceLocation(file: "/Volumes/JKDATA/dev/scala-native/swog/interop/jvm/src/main/scala/scala/scalanative/unsafe/MacroTools.scala.gyb", line: 49)
     case List(t1, t2, t3, t4, t5, t6, t7, t8, t9, t10) => q"new scalanative.unsafe.CStruct10[$t1, $t2, $t3, $t4, $t5, $t6, $t7, $t8, $t9, $t10]($rawptr)"
-// ###sourceLocation(file: "/Volumes/JKDATA/dev/scala-native/swog/interop/jvm/src/main/scala/scala/scalanative/unsafe/MacroTools.scala.gyb", line: 48)
+// ###sourceLocation(file: "/Volumes/JKDATA/dev/scala-native/swog/interop/jvm/src/main/scala/scala/scalanative/unsafe/MacroTools.scala.gyb", line: 49)
     case List(t1, t2, t3, t4, t5, t6, t7, t8, t9, t10, t11) => q"new scalanative.unsafe.CStruct11[$t1, $t2, $t3, $t4, $t5, $t6, $t7, $t8, $t9, $t10, $t11]($rawptr)"
-// ###sourceLocation(file: "/Volumes/JKDATA/dev/scala-native/swog/interop/jvm/src/main/scala/scala/scalanative/unsafe/MacroTools.scala.gyb", line: 48)
+// ###sourceLocation(file: "/Volumes/JKDATA/dev/scala-native/swog/interop/jvm/src/main/scala/scala/scalanative/unsafe/MacroTools.scala.gyb", line: 49)
     case List(t1, t2, t3, t4, t5, t6, t7, t8, t9, t10, t11, t12) => q"new scalanative.unsafe.CStruct12[$t1, $t2, $t3, $t4, $t5, $t6, $t7, $t8, $t9, $t10, $t11, $t12]($rawptr)"
-// ###sourceLocation(file: "/Volumes/JKDATA/dev/scala-native/swog/interop/jvm/src/main/scala/scala/scalanative/unsafe/MacroTools.scala.gyb", line: 48)
+// ###sourceLocation(file: "/Volumes/JKDATA/dev/scala-native/swog/interop/jvm/src/main/scala/scala/scalanative/unsafe/MacroTools.scala.gyb", line: 49)
     case List(t1, t2, t3, t4, t5, t6, t7, t8, t9, t10, t11, t12, t13) => q"new scalanative.unsafe.CStruct13[$t1, $t2, $t3, $t4, $t5, $t6, $t7, $t8, $t9, $t10, $t11, $t12, $t13]($rawptr)"
-// ###sourceLocation(file: "/Volumes/JKDATA/dev/scala-native/swog/interop/jvm/src/main/scala/scala/scalanative/unsafe/MacroTools.scala.gyb", line: 48)
+// ###sourceLocation(file: "/Volumes/JKDATA/dev/scala-native/swog/interop/jvm/src/main/scala/scala/scalanative/unsafe/MacroTools.scala.gyb", line: 49)
     case List(t1, t2, t3, t4, t5, t6, t7, t8, t9, t10, t11, t12, t13, t14) => q"new scalanative.unsafe.CStruct14[$t1, $t2, $t3, $t4, $t5, $t6, $t7, $t8, $t9, $t10, $t11, $t12, $t13, $t14]($rawptr)"
-// ###sourceLocation(file: "/Volumes/JKDATA/dev/scala-native/swog/interop/jvm/src/main/scala/scala/scalanative/unsafe/MacroTools.scala.gyb", line: 48)
+// ###sourceLocation(file: "/Volumes/JKDATA/dev/scala-native/swog/interop/jvm/src/main/scala/scala/scalanative/unsafe/MacroTools.scala.gyb", line: 49)
     case List(t1, t2, t3, t4, t5, t6, t7, t8, t9, t10, t11, t12, t13, t14, t15) => q"new scalanative.unsafe.CStruct15[$t1, $t2, $t3, $t4, $t5, $t6, $t7, $t8, $t9, $t10, $t11, $t12, $t13, $t14, $t15]($rawptr)"
-// ###sourceLocation(file: "/Volumes/JKDATA/dev/scala-native/swog/interop/jvm/src/main/scala/scala/scalanative/unsafe/MacroTools.scala.gyb", line: 48)
+// ###sourceLocation(file: "/Volumes/JKDATA/dev/scala-native/swog/interop/jvm/src/main/scala/scala/scalanative/unsafe/MacroTools.scala.gyb", line: 49)
     case List(t1, t2, t3, t4, t5, t6, t7, t8, t9, t10, t11, t12, t13, t14, t15, t16) => q"new scalanative.unsafe.CStruct16[$t1, $t2, $t3, $t4, $t5, $t6, $t7, $t8, $t9, $t10, $t11, $t12, $t13, $t14, $t15, $t16]($rawptr)"
-// ###sourceLocation(file: "/Volumes/JKDATA/dev/scala-native/swog/interop/jvm/src/main/scala/scala/scalanative/unsafe/MacroTools.scala.gyb", line: 48)
+// ###sourceLocation(file: "/Volumes/JKDATA/dev/scala-native/swog/interop/jvm/src/main/scala/scala/scalanative/unsafe/MacroTools.scala.gyb", line: 49)
     case List(t1, t2, t3, t4, t5, t6, t7, t8, t9, t10, t11, t12, t13, t14, t15, t16, t17) => q"new scalanative.unsafe.CStruct17[$t1, $t2, $t3, $t4, $t5, $t6, $t7, $t8, $t9, $t10, $t11, $t12, $t13, $t14, $t15, $t16, $t17]($rawptr)"
-// ###sourceLocation(file: "/Volumes/JKDATA/dev/scala-native/swog/interop/jvm/src/main/scala/scala/scalanative/unsafe/MacroTools.scala.gyb", line: 48)
+// ###sourceLocation(file: "/Volumes/JKDATA/dev/scala-native/swog/interop/jvm/src/main/scala/scala/scalanative/unsafe/MacroTools.scala.gyb", line: 49)
     case List(t1, t2, t3, t4, t5, t6, t7, t8, t9, t10, t11, t12, t13, t14, t15, t16, t17, t18) => q"new scalanative.unsafe.CStruct18[$t1, $t2, $t3, $t4, $t5, $t6, $t7, $t8, $t9, $t10, $t11, $t12, $t13, $t14, $t15, $t16, $t17, $t18]($rawptr)"
-// ###sourceLocation(file: "/Volumes/JKDATA/dev/scala-native/swog/interop/jvm/src/main/scala/scala/scalanative/unsafe/MacroTools.scala.gyb", line: 48)
+// ###sourceLocation(file: "/Volumes/JKDATA/dev/scala-native/swog/interop/jvm/src/main/scala/scala/scalanative/unsafe/MacroTools.scala.gyb", line: 49)
     case List(t1, t2, t3, t4, t5, t6, t7, t8, t9, t10, t11, t12, t13, t14, t15, t16, t17, t18, t19) => q"new scalanative.unsafe.CStruct19[$t1, $t2, $t3, $t4, $t5, $t6, $t7, $t8, $t9, $t10, $t11, $t12, $t13, $t14, $t15, $t16, $t17, $t18, $t19]($rawptr)"
-// ###sourceLocation(file: "/Volumes/JKDATA/dev/scala-native/swog/interop/jvm/src/main/scala/scala/scalanative/unsafe/MacroTools.scala.gyb", line: 48)
+// ###sourceLocation(file: "/Volumes/JKDATA/dev/scala-native/swog/interop/jvm/src/main/scala/scala/scalanative/unsafe/MacroTools.scala.gyb", line: 49)
     case List(t1, t2, t3, t4, t5, t6, t7, t8, t9, t10, t11, t12, t13, t14, t15, t16, t17, t18, t19, t20) => q"new scalanative.unsafe.CStruct20[$t1, $t2, $t3, $t4, $t5, $t6, $t7, $t8, $t9, $t10, $t11, $t12, $t13, $t14, $t15, $t16, $t17, $t18, $t19, $t20]($rawptr)"
-// ###sourceLocation(file: "/Volumes/JKDATA/dev/scala-native/swog/interop/jvm/src/main/scala/scala/scalanative/unsafe/MacroTools.scala.gyb", line: 48)
+// ###sourceLocation(file: "/Volumes/JKDATA/dev/scala-native/swog/interop/jvm/src/main/scala/scala/scalanative/unsafe/MacroTools.scala.gyb", line: 49)
     case List(t1, t2, t3, t4, t5, t6, t7, t8, t9, t10, t11, t12, t13, t14, t15, t16, t17, t18, t19, t20, t21) => q"new scalanative.unsafe.CStruct21[$t1, $t2, $t3, $t4, $t5, $t6, $t7, $t8, $t9, $t10, $t11, $t12, $t13, $t14, $t15, $t16, $t17, $t18, $t19, $t20, $t21]($rawptr)"
-// ###sourceLocation(file: "/Volumes/JKDATA/dev/scala-native/swog/interop/jvm/src/main/scala/scala/scalanative/unsafe/MacroTools.scala.gyb", line: 50)
+// ###sourceLocation(file: "/Volumes/JKDATA/dev/scala-native/swog/interop/jvm/src/main/scala/scala/scalanative/unsafe/MacroTools.scala.gyb", line: 51)
   }
 
   def genGetValue(prefix: c.Expr[c.PrefixType], tpe: Type, offset: Int): Tree = {
@@ -125,49 +126,49 @@ protected[unsafe] trait MacroTools {
   def ptrToCStruct[T: c.WeakTypeTag](ptr: c.Tree): c.Tree = {
     val tpe = c.weakTypeOf[T].dealias
     tpe.typeArgs match {
-// ###sourceLocation(file: "/Volumes/JKDATA/dev/scala-native/swog/interop/jvm/src/main/scala/scala/scalanative/unsafe/MacroTools.scala.gyb", line: 92)
+// ###sourceLocation(file: "/Volumes/JKDATA/dev/scala-native/swog/interop/jvm/src/main/scala/scala/scalanative/unsafe/MacroTools.scala.gyb", line: 93)
       case List(t1) => q"new scalanative.unsafe.CStruct1[$t1]($ptr.rawptr)"
-// ###sourceLocation(file: "/Volumes/JKDATA/dev/scala-native/swog/interop/jvm/src/main/scala/scala/scalanative/unsafe/MacroTools.scala.gyb", line: 92)
+// ###sourceLocation(file: "/Volumes/JKDATA/dev/scala-native/swog/interop/jvm/src/main/scala/scala/scalanative/unsafe/MacroTools.scala.gyb", line: 93)
       case List(t1, t2) => q"new scalanative.unsafe.CStruct2[$t1, $t2]($ptr.rawptr)"
-// ###sourceLocation(file: "/Volumes/JKDATA/dev/scala-native/swog/interop/jvm/src/main/scala/scala/scalanative/unsafe/MacroTools.scala.gyb", line: 92)
+// ###sourceLocation(file: "/Volumes/JKDATA/dev/scala-native/swog/interop/jvm/src/main/scala/scala/scalanative/unsafe/MacroTools.scala.gyb", line: 93)
       case List(t1, t2, t3) => q"new scalanative.unsafe.CStruct3[$t1, $t2, $t3]($ptr.rawptr)"
-// ###sourceLocation(file: "/Volumes/JKDATA/dev/scala-native/swog/interop/jvm/src/main/scala/scala/scalanative/unsafe/MacroTools.scala.gyb", line: 92)
+// ###sourceLocation(file: "/Volumes/JKDATA/dev/scala-native/swog/interop/jvm/src/main/scala/scala/scalanative/unsafe/MacroTools.scala.gyb", line: 93)
       case List(t1, t2, t3, t4) => q"new scalanative.unsafe.CStruct4[$t1, $t2, $t3, $t4]($ptr.rawptr)"
-// ###sourceLocation(file: "/Volumes/JKDATA/dev/scala-native/swog/interop/jvm/src/main/scala/scala/scalanative/unsafe/MacroTools.scala.gyb", line: 92)
+// ###sourceLocation(file: "/Volumes/JKDATA/dev/scala-native/swog/interop/jvm/src/main/scala/scala/scalanative/unsafe/MacroTools.scala.gyb", line: 93)
       case List(t1, t2, t3, t4, t5) => q"new scalanative.unsafe.CStruct5[$t1, $t2, $t3, $t4, $t5]($ptr.rawptr)"
-// ###sourceLocation(file: "/Volumes/JKDATA/dev/scala-native/swog/interop/jvm/src/main/scala/scala/scalanative/unsafe/MacroTools.scala.gyb", line: 92)
+// ###sourceLocation(file: "/Volumes/JKDATA/dev/scala-native/swog/interop/jvm/src/main/scala/scala/scalanative/unsafe/MacroTools.scala.gyb", line: 93)
       case List(t1, t2, t3, t4, t5, t6) => q"new scalanative.unsafe.CStruct6[$t1, $t2, $t3, $t4, $t5, $t6]($ptr.rawptr)"
-// ###sourceLocation(file: "/Volumes/JKDATA/dev/scala-native/swog/interop/jvm/src/main/scala/scala/scalanative/unsafe/MacroTools.scala.gyb", line: 92)
+// ###sourceLocation(file: "/Volumes/JKDATA/dev/scala-native/swog/interop/jvm/src/main/scala/scala/scalanative/unsafe/MacroTools.scala.gyb", line: 93)
       case List(t1, t2, t3, t4, t5, t6, t7) => q"new scalanative.unsafe.CStruct7[$t1, $t2, $t3, $t4, $t5, $t6, $t7]($ptr.rawptr)"
-// ###sourceLocation(file: "/Volumes/JKDATA/dev/scala-native/swog/interop/jvm/src/main/scala/scala/scalanative/unsafe/MacroTools.scala.gyb", line: 92)
+// ###sourceLocation(file: "/Volumes/JKDATA/dev/scala-native/swog/interop/jvm/src/main/scala/scala/scalanative/unsafe/MacroTools.scala.gyb", line: 93)
       case List(t1, t2, t3, t4, t5, t6, t7, t8) => q"new scalanative.unsafe.CStruct8[$t1, $t2, $t3, $t4, $t5, $t6, $t7, $t8]($ptr.rawptr)"
-// ###sourceLocation(file: "/Volumes/JKDATA/dev/scala-native/swog/interop/jvm/src/main/scala/scala/scalanative/unsafe/MacroTools.scala.gyb", line: 92)
+// ###sourceLocation(file: "/Volumes/JKDATA/dev/scala-native/swog/interop/jvm/src/main/scala/scala/scalanative/unsafe/MacroTools.scala.gyb", line: 93)
       case List(t1, t2, t3, t4, t5, t6, t7, t8, t9) => q"new scalanative.unsafe.CStruct9[$t1, $t2, $t3, $t4, $t5, $t6, $t7, $t8, $t9]($ptr.rawptr)"
-// ###sourceLocation(file: "/Volumes/JKDATA/dev/scala-native/swog/interop/jvm/src/main/scala/scala/scalanative/unsafe/MacroTools.scala.gyb", line: 92)
+// ###sourceLocation(file: "/Volumes/JKDATA/dev/scala-native/swog/interop/jvm/src/main/scala/scala/scalanative/unsafe/MacroTools.scala.gyb", line: 93)
       case List(t1, t2, t3, t4, t5, t6, t7, t8, t9, t10) => q"new scalanative.unsafe.CStruct10[$t1, $t2, $t3, $t4, $t5, $t6, $t7, $t8, $t9, $t10]($ptr.rawptr)"
-// ###sourceLocation(file: "/Volumes/JKDATA/dev/scala-native/swog/interop/jvm/src/main/scala/scala/scalanative/unsafe/MacroTools.scala.gyb", line: 92)
+// ###sourceLocation(file: "/Volumes/JKDATA/dev/scala-native/swog/interop/jvm/src/main/scala/scala/scalanative/unsafe/MacroTools.scala.gyb", line: 93)
       case List(t1, t2, t3, t4, t5, t6, t7, t8, t9, t10, t11) => q"new scalanative.unsafe.CStruct11[$t1, $t2, $t3, $t4, $t5, $t6, $t7, $t8, $t9, $t10, $t11]($ptr.rawptr)"
-// ###sourceLocation(file: "/Volumes/JKDATA/dev/scala-native/swog/interop/jvm/src/main/scala/scala/scalanative/unsafe/MacroTools.scala.gyb", line: 92)
+// ###sourceLocation(file: "/Volumes/JKDATA/dev/scala-native/swog/interop/jvm/src/main/scala/scala/scalanative/unsafe/MacroTools.scala.gyb", line: 93)
       case List(t1, t2, t3, t4, t5, t6, t7, t8, t9, t10, t11, t12) => q"new scalanative.unsafe.CStruct12[$t1, $t2, $t3, $t4, $t5, $t6, $t7, $t8, $t9, $t10, $t11, $t12]($ptr.rawptr)"
-// ###sourceLocation(file: "/Volumes/JKDATA/dev/scala-native/swog/interop/jvm/src/main/scala/scala/scalanative/unsafe/MacroTools.scala.gyb", line: 92)
+// ###sourceLocation(file: "/Volumes/JKDATA/dev/scala-native/swog/interop/jvm/src/main/scala/scala/scalanative/unsafe/MacroTools.scala.gyb", line: 93)
       case List(t1, t2, t3, t4, t5, t6, t7, t8, t9, t10, t11, t12, t13) => q"new scalanative.unsafe.CStruct13[$t1, $t2, $t3, $t4, $t5, $t6, $t7, $t8, $t9, $t10, $t11, $t12, $t13]($ptr.rawptr)"
-// ###sourceLocation(file: "/Volumes/JKDATA/dev/scala-native/swog/interop/jvm/src/main/scala/scala/scalanative/unsafe/MacroTools.scala.gyb", line: 92)
+// ###sourceLocation(file: "/Volumes/JKDATA/dev/scala-native/swog/interop/jvm/src/main/scala/scala/scalanative/unsafe/MacroTools.scala.gyb", line: 93)
       case List(t1, t2, t3, t4, t5, t6, t7, t8, t9, t10, t11, t12, t13, t14) => q"new scalanative.unsafe.CStruct14[$t1, $t2, $t3, $t4, $t5, $t6, $t7, $t8, $t9, $t10, $t11, $t12, $t13, $t14]($ptr.rawptr)"
-// ###sourceLocation(file: "/Volumes/JKDATA/dev/scala-native/swog/interop/jvm/src/main/scala/scala/scalanative/unsafe/MacroTools.scala.gyb", line: 92)
+// ###sourceLocation(file: "/Volumes/JKDATA/dev/scala-native/swog/interop/jvm/src/main/scala/scala/scalanative/unsafe/MacroTools.scala.gyb", line: 93)
       case List(t1, t2, t3, t4, t5, t6, t7, t8, t9, t10, t11, t12, t13, t14, t15) => q"new scalanative.unsafe.CStruct15[$t1, $t2, $t3, $t4, $t5, $t6, $t7, $t8, $t9, $t10, $t11, $t12, $t13, $t14, $t15]($ptr.rawptr)"
-// ###sourceLocation(file: "/Volumes/JKDATA/dev/scala-native/swog/interop/jvm/src/main/scala/scala/scalanative/unsafe/MacroTools.scala.gyb", line: 92)
+// ###sourceLocation(file: "/Volumes/JKDATA/dev/scala-native/swog/interop/jvm/src/main/scala/scala/scalanative/unsafe/MacroTools.scala.gyb", line: 93)
       case List(t1, t2, t3, t4, t5, t6, t7, t8, t9, t10, t11, t12, t13, t14, t15, t16) => q"new scalanative.unsafe.CStruct16[$t1, $t2, $t3, $t4, $t5, $t6, $t7, $t8, $t9, $t10, $t11, $t12, $t13, $t14, $t15, $t16]($ptr.rawptr)"
-// ###sourceLocation(file: "/Volumes/JKDATA/dev/scala-native/swog/interop/jvm/src/main/scala/scala/scalanative/unsafe/MacroTools.scala.gyb", line: 92)
+// ###sourceLocation(file: "/Volumes/JKDATA/dev/scala-native/swog/interop/jvm/src/main/scala/scala/scalanative/unsafe/MacroTools.scala.gyb", line: 93)
       case List(t1, t2, t3, t4, t5, t6, t7, t8, t9, t10, t11, t12, t13, t14, t15, t16, t17) => q"new scalanative.unsafe.CStruct17[$t1, $t2, $t3, $t4, $t5, $t6, $t7, $t8, $t9, $t10, $t11, $t12, $t13, $t14, $t15, $t16, $t17]($ptr.rawptr)"
-// ###sourceLocation(file: "/Volumes/JKDATA/dev/scala-native/swog/interop/jvm/src/main/scala/scala/scalanative/unsafe/MacroTools.scala.gyb", line: 92)
+// ###sourceLocation(file: "/Volumes/JKDATA/dev/scala-native/swog/interop/jvm/src/main/scala/scala/scalanative/unsafe/MacroTools.scala.gyb", line: 93)
       case List(t1, t2, t3, t4, t5, t6, t7, t8, t9, t10, t11, t12, t13, t14, t15, t16, t17, t18) => q"new scalanative.unsafe.CStruct18[$t1, $t2, $t3, $t4, $t5, $t6, $t7, $t8, $t9, $t10, $t11, $t12, $t13, $t14, $t15, $t16, $t17, $t18]($ptr.rawptr)"
-// ###sourceLocation(file: "/Volumes/JKDATA/dev/scala-native/swog/interop/jvm/src/main/scala/scala/scalanative/unsafe/MacroTools.scala.gyb", line: 92)
+// ###sourceLocation(file: "/Volumes/JKDATA/dev/scala-native/swog/interop/jvm/src/main/scala/scala/scalanative/unsafe/MacroTools.scala.gyb", line: 93)
       case List(t1, t2, t3, t4, t5, t6, t7, t8, t9, t10, t11, t12, t13, t14, t15, t16, t17, t18, t19) => q"new scalanative.unsafe.CStruct19[$t1, $t2, $t3, $t4, $t5, $t6, $t7, $t8, $t9, $t10, $t11, $t12, $t13, $t14, $t15, $t16, $t17, $t18, $t19]($ptr.rawptr)"
-// ###sourceLocation(file: "/Volumes/JKDATA/dev/scala-native/swog/interop/jvm/src/main/scala/scala/scalanative/unsafe/MacroTools.scala.gyb", line: 92)
+// ###sourceLocation(file: "/Volumes/JKDATA/dev/scala-native/swog/interop/jvm/src/main/scala/scala/scalanative/unsafe/MacroTools.scala.gyb", line: 93)
       case List(t1, t2, t3, t4, t5, t6, t7, t8, t9, t10, t11, t12, t13, t14, t15, t16, t17, t18, t19, t20) => q"new scalanative.unsafe.CStruct20[$t1, $t2, $t3, $t4, $t5, $t6, $t7, $t8, $t9, $t10, $t11, $t12, $t13, $t14, $t15, $t16, $t17, $t18, $t19, $t20]($ptr.rawptr)"
-// ###sourceLocation(file: "/Volumes/JKDATA/dev/scala-native/swog/interop/jvm/src/main/scala/scala/scalanative/unsafe/MacroTools.scala.gyb", line: 92)
+// ###sourceLocation(file: "/Volumes/JKDATA/dev/scala-native/swog/interop/jvm/src/main/scala/scala/scalanative/unsafe/MacroTools.scala.gyb", line: 93)
       case List(t1, t2, t3, t4, t5, t6, t7, t8, t9, t10, t11, t12, t13, t14, t15, t16, t17, t18, t19, t20, t21) => q"new scalanative.unsafe.CStruct21[$t1, $t2, $t3, $t4, $t5, $t6, $t7, $t8, $t9, $t10, $t11, $t12, $t13, $t14, $t15, $t16, $t17, $t18, $t19, $t20, $t21]($ptr.rawptr)"
-// ###sourceLocation(file: "/Volumes/JKDATA/dev/scala-native/swog/interop/jvm/src/main/scala/scala/scalanative/unsafe/MacroTools.scala.gyb", line: 94)
+// ###sourceLocation(file: "/Volumes/JKDATA/dev/scala-native/swog/interop/jvm/src/main/scala/scala/scalanative/unsafe/MacroTools.scala.gyb", line: 95)
     }
   }
 }

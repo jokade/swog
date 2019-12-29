@@ -23,7 +23,8 @@ protected[unsafe] trait MacroTools {
     case t if t =:= tCLong     => 8
     case t if t =:= tCLongLong => 8
     case t if t =:= tPtrByte   => 8
-    case t if t <:< tCStruct   => 8
+    case t if t <:< tCStruct   =>
+      t.dealias.typeArgs.foldLeft(0)((size,tpe)=> size + computeFieldSize(tpe))
   }
 
   def computeFieldOffset(typeArgs: List[c.Type], index: Int): Int = {

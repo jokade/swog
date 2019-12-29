@@ -6,7 +6,8 @@ import de.surfice.smacrotools.debug
 @external("platformtest")
 @debug
 object Mockups {
-  
+  val ptest_global_int: Int = extern
+
   /// returns the passed-in CChar unmodified
   def ptest_return_char(c: CChar): CChar = extern
   /// returns the passed-in CInt unmodified

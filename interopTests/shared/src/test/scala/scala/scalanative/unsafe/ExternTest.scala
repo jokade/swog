@@ -87,7 +87,13 @@ object ExternTest extends TestSuite {
         }
       }
     } 
-    
+
+    'global-{
+      'int-{
+        Mockups.ptest_global_int ==> 12345678
+      }
+    }
+
     'alloc-{
       'stackalloc-{
         'CInt-{

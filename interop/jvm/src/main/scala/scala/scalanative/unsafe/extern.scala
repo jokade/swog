@@ -23,19 +23,33 @@ object external {
   protected[scalanative] class Macro(val c: whitebox.Context) extends MacroAnnotationHandler with InteropMacroTools {
     import c.universe._
 
-    case class JnaExternal(name: String, jnaDef: Tree, scalaDef: Tree)
+    sealed trait JnaExternal {
+      def name: String
+      def jnaDef: Tree
+      def scalaDef: Tree
+    }
+    case class JnaCall(name: String, jnaDef: Tree, scalaDef: Tree) extends JnaExternal
+    case class JnaGlobal(name: String, jnaDef: Tree, scalaDef: Tree) extends JnaExternal
     type JnaExternals = Map[String,JnaExternal]
     implicit class JnaMacroData(data: Map[String,Any]) {
       type Data = Map[String, Any]
 
       def jnaExternals: JnaExternals = data.getOrElse("jnaExternals", Map()).asInstanceOf[JnaExternals]
       def addJnaExternals(externals: Iterable[JnaExternal]): Data = data.updated("jnaExternals",data.jnaExternals ++ externals.map(p => (p.name,p)))
-      
+
+      def jnaCalls: Iterable[JnaCall] = jnaExternals.collect{
+        case (_,x: JnaCall) => x
+      }
+
+      def jnaGlobals: Iterable[JnaGlobal] = jnaExternals.collect{
+        case (_,x: JnaGlobal) => x
+      }
+
       def jnaLibraryName: String = data.getOrElse("jnaLibraryName","").asInstanceOf[String]
       def withJnaLibraryName(name: String): Data = data.updated("jnaLibraryName",name)
-      
+
     }
-    
+
     override def annotationName: String = "external"
 
     override def supportsClasses: CBool = false
@@ -50,7 +64,7 @@ object external {
     override def analyze: Analysis = super.analyze andThen {
       case (obj: ObjectParts, data) =>
         val updData = (
-          analyzeMainAnnotation(obj) _ 
+          analyzeMainAnnotation(obj) _
             andThen analyzeBody(obj) _
           )(data)
         (obj, updData)
@@ -63,7 +77,7 @@ object external {
         obj.updBody(genJnaTransformedBody(obj.modParts.body)(obj.data) ++ jnaIFace)
       case default => default
     }
-    
+
     protected def analyzeMainAnnotation(tpe: CommonParts)(data: Data): Data = {
       val externalLibname =
         extractAnnotationParameters(c.prefix.tree,Seq("libname")).apply("libname").flatMap(extractStringConstant)
@@ -73,28 +87,34 @@ object external {
         case None =>
           tpe.fullName
       }
-  
+
       data.withJnaLibraryName(externalLibname.getOrElse(linkName))
     }
-    
+
     protected def analyzeBody(tpe: CommonParts)(data: Data): Data = {
       val externals = tpe.body.collect {
         case t@DefDef(mods, name, types, args, rettype, rhs) if isExtern(rhs) =>
           val jnaDef = genJnaDef(t)(data)
-          val scalaDef = genJnaCall(t)(data) 
-          JnaExternal(name.toString,jnaDef,scalaDef)
+          val scalaDef = genJnaCall(t)(data)
+          JnaCall(name.toString,jnaDef,scalaDef)
+        case t@ValDef(mods,name,rettype,rhs) if isExtern(rhs) =>
+          val jnaDef = genJnaGlobalDef(t)(data)
+          val scalaDef = genJnaGlobal(t)(data)
+          JnaGlobal(name.toString,jnaDef,scalaDef)
       }
       data.addJnaExternals(externals)
     }
-    
+
     protected def genJnaTransformedBody(body: Seq[Tree])(implicit data: Data): Seq[Tree] = body.map{
-      case t@DefDef(_,_,_,_,_,rhs) if isExtern(rhs) =>
-        data.jnaExternals(t.name.toString).scalaDef
+      case scalaDef: DefDef if isExtern(scalaDef.rhs) =>
+        data.jnaExternals(scalaDef.name.toString).scalaDef
+      case scalaDef: ValDef if isExtern(scalaDef.rhs) =>
+        data.jnaExternals(scalaDef.name.toString).scalaDef
       case x => x
-    }
-    
+    } ++ data.jnaGlobals.map(_.jnaDef)
+
     protected def genJnaInterface()(implicit data: Data): Seq[Tree] = {
-      val jnaDefs = data.jnaExternals.map(_._2.jnaDef)
+      val jnaDefs = data.jnaCalls.map(_.jnaDef)
       Seq(q"""
           trait __IFace extends com.sun.jna.Library {
               ..$jnaDefs
@@ -116,11 +136,34 @@ object external {
       val call = q"__inst.$name(..$params)"
       DefDef(mods,name,types,args,rettype,call)
     }
-    
+
     protected def genJnaDef(scalaDef: DefDef)(implicit data: Data): DefDef = {
       val DefDef(mods, name, types, args, rettype, rhs) = scalaDef
       DefDef(Modifiers(Flag.DEFERRED),name,types,args,rettype,q"")
     }
+
+    protected def genJnaGlobalDef(scalaDef: ValDef)(implicit data: Data): Tree = {
+      val name = genJnaPtrName(scalaDef)
+      val tpt = tq"scalanative.unsafe.Ptr[${scalaDef.tpt}]"
+      val libname = Literal(Constant(data.jnaLibraryName))
+      val symbol = Literal(Constant(genExternalName(scalaDef)))
+      val rhs = q"scalanative.interop.jvm.loadGlobalPtr[${scalaDef.tpt}]($libname,$symbol)"
+      ValDef(Modifiers(Flag.LAZY),name,tpt,rhs)
+    }
+
+    protected def genJnaGlobal(valDef: ValDef)(implicit data: Data): DefDef = {
+      val name = genJnaPtrName(valDef)
+      DefDef(Modifiers(),valDef.name,Nil,Nil,valDef.tpt,q"!$name")
+    }
+
+    protected def genJnaPtrName(valDef: ValDef)(implicit data: Data): TermName =
+      TermName("__g_"+valDef.name)
+
+    protected def genExternalName(scalaDef: ValOrDefDef): String =
+      findAnnotation(scalaDef.mods.annotations,"scala.scalanative.unsafe.name")
+        .map{ annot =>
+          extractAnnotationParameters(annot,Seq("name")).apply("name").flatMap(extractStringConstant).get
+        }.getOrElse( scalaDef.name.toString )
   }
 
 }
