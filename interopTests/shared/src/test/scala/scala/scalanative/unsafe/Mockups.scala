@@ -31,5 +31,9 @@ object Mockups {
   def ptest_struct4_new(): Ptr[CStruct4[CChar,CShort,CStruct1[CChar],CLongLong]] = extern
   
   def ptest_incr_int_ptr(i: Ptr[CInt]): Unit = extern
+
+  type PTestNumStruct = CStruct2[CLongLong,CInt]
+
+  def ptest_incr_num_struct(p: Ptr[PTestNumStruct]): Unit = extern
 //  def ptest_get_struct(): Ptr[CStruct1[Int]] = _inst.ptest_struct_get()
 }

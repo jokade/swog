@@ -2,6 +2,9 @@ package scala.scalanative.unsafe
 
 import utest._
 
+import scala.scalanative.unsafe.Mockups.PTestNumStruct
+import scalanative.interop._
+
 /**
  * Interop tests for 'extern' objects.
  */
@@ -90,9 +93,23 @@ object ExternTest extends TestSuite {
         'CInt-{
           val p = stackalloc[CInt]
 
-          !p = 42
-//          Mockups.ptest_incr_int_ptr(p)
-//          !p ==> 43
+          p := 42
+          Mockups.ptest_incr_int_ptr(p)
+          !p ==> 43
+        }
+        'CStruct-{
+          val p = stackalloc[PTestNumStruct]
+
+          p._1 = -1
+          p._2 = 42
+
+          p._1 ==> -1
+          p._2 ==> 42
+
+          Mockups.ptest_incr_num_struct(p)
+
+          p._1 ==> 0
+          p._2 ==> 43
         }
       }
     }

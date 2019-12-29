@@ -1,0 +1,96 @@
+package scala.scalanative.unsafe
+
+import scala.annotation.tailrec
+import scala.reflect.macros.blackbox
+
+protected[unsafe] trait MacroTools {
+  val c: blackbox.Context
+
+  import c.universe._
+
+  val tCChar     = c.weakTypeOf[CChar]
+  val tCShort    = c.weakTypeOf[CShort]
+  val tCInt      = c.weakTypeOf[CInt]
+  val tCLong     = c.weakTypeOf[CLong]
+  val tCLongLong = c.weakTypeOf[CLongLong]
+  val tPtrByte   = c.weakTypeOf[Ptr[Byte]]
+  val tCStruct   = c.weakTypeOf[CStruct]
+
+  def computeFieldSize(tpe: c.Type): Int = tpe match {
+    case t if t =:= tCChar     => 1
+    case t if t =:= tCShort    => 2
+    case t if t =:= tCInt      => 4
+    case t if t =:= tCLong     => 8
+    case t if t =:= tCLongLong => 8
+    case t if t =:= tPtrByte   => 8
+    case t if t <:< tCStruct   => 8
+  }
+
+  def computeFieldOffset(typeArgs: List[c.Type], index: Int): Int = {
+    @tailrec
+    def loop(lastOffset: Int, fields: List[c.Type]): Int = fields match {
+      case Nil => lastOffset
+      case x :: Nil => lastOffset
+      case x :: y :: xs =>
+        val newOffset = lastOffset + computeFieldSize(x)
+        val nextFieldSize = computeFieldSize(y)
+        val padding = (nextFieldSize - (newOffset % nextFieldSize)) % nextFieldSize
+        //        println(s"newOffset: $newOffset    nextFieldSize: $nextFieldSize    padding: $padding")
+        loop(newOffset + padding, y::xs)
+    }
+    loop(0,typeArgs.take(index+1))
+  }
+
+  def genStructInstantiation(typeArgs: List[c.Type],rawptr: c.Tree): c.Tree = typeArgs match {
+  % for N in range(1,22):
+  %    Ts = ", ".join("t" + str(i) for i in range(1, N+1))
+  %    args = ", ".join("$t" + str(i) for i in range(1, N+1))
+    case List(${Ts}) => q"new scalanative.unsafe.CStruct${N}[${args}]($rawptr)"
+  % end
+  }
+
+  def genGetValue(prefix: c.Expr[c.PrefixType], tpe: Type, offset: Int): Tree = {
+    tpe match {
+      case t if t =:= tCChar     => q"$prefix.rawptr.getByte($offset)"
+      case t if t =:= tCShort    => q"$prefix.rawptr.getShort($offset)"
+      case t if t =:= tCInt      => q"$prefix.rawptr.getInt($offset)"
+      case t if t =:= tCLong     => q"$prefix.rawptr.getNativeLong($offset)"
+      case t if t =:= tCLongLong => q"$prefix.rawptr.getLong($offset)"
+      case t if t =:= tPtrByte   => q"new scalanative.unsafe.Ptr[Byte]($prefix.rawptr.getPointer($offset))"
+      case t if t <:< tCStruct   => genStructInstantiation(t.typeArgs,q"$prefix.rawptr")
+    }
+  }
+
+  def genSetValue(prefix: c.Expr[c.PrefixType], tpe: Type, offset: Int, value: c.Tree): Tree =
+    tpe match {
+      case t if t =:= tCChar     => q"$prefix.rawptr.setByte($offset,$value)"
+      case t if t =:= tCShort    => q"$prefix.rawptr.setShort($offset,$value)"
+      case t if t =:= tCInt      => q"$prefix.rawptr.setInt($offset,$value)"
+      case t if t =:= tCLong     => q"$prefix.rawptr.setNativeLong($offset,$value)"
+      case t if t =:= tCLongLong => q"$prefix.rawptr.setLong($offset,$value)"
+      case t if t =:= tPtrByte   => q"$prefix.rawptr.setPointer($offset,$value.rawptr)"
+    }
+
+  def genFieldGetter(prefix: c.Expr[c.PrefixType], index: Int): Tree = {
+    val typeArgs = prefix.actualType.dealias.typeArgs
+    val offset = computeFieldOffset(typeArgs,index)
+    genGetValue(prefix,typeArgs(index),offset)
+  }
+
+  def genFieldSetter(prefix: c.Expr[c.PrefixType], index: Int, value: Tree): Tree = {
+    val typeArgs = prefix.actualType.dealias.typeArgs
+    val offset = computeFieldOffset(typeArgs,index)
+    genSetValue(prefix,typeArgs(index),offset,value)
+  }
+
+  def ptrToCStruct[T: c.WeakTypeTag](ptr: c.Tree): c.Tree = {
+    val tpe = c.weakTypeOf[T].dealias
+    tpe.typeArgs match {
+      % for N in range(1,22):
+      %    Ts = ", ".join("t" + str(i) for i in range(1, N+1))
+      %    args = ", ".join("$t" + str(i) for i in range(1, N+1))
+      case List(${Ts}) => q"new scalanative.unsafe.CStruct${N}[${args}]($ptr.rawptr)"
+      % end
+    }
+  }
+}

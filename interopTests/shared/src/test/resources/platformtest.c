@@ -91,3 +91,13 @@ ptest_struct4* ptest_struct4_new() {
 void ptest_incr_int_ptr(int* i) {
   *i += 1;
 }
+
+typedef struct _ptest_num_struct {
+  long long ll;
+  int i;
+} ptest_num_struct;
+
+void ptest_incr_num_struct(ptest_num_struct* p) {
+  p->ll += 1;
+  p->i += 1;
+}

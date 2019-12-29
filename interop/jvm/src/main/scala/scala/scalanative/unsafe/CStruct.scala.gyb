@@ -7,15 +7,9 @@ import scala.reflect.macros.blackbox
 
 sealed abstract class CStruct
 
-protected[unsafe] class CStructMacroImpl(val c: blackbox.Context) {
+protected[unsafe] class CStructMacroImpl(val c: blackbox.Context) extends MacroTools {
   import c.universe._
 
-  val tCChar  = c.weakTypeOf[CChar]
-  val tCShort = c.weakTypeOf[CShort]
-  val tCInt   = c.weakTypeOf[CInt]
-  val tCLong  = c.weakTypeOf[CLong]
-  val tPtrByte = c.weakTypeOf[Ptr[Byte]]
-  val tCStruct = c.weakTypeOf[CStruct]
 
   % for N in range(1,24):
   def _${N}[T: c.WeakTypeTag]: c.Tree = genFieldGetter(c.prefix,${N-1})
@@ -47,13 +41,6 @@ protected[unsafe] class CStructMacroImpl(val c: blackbox.Context) {
     loop(0,typeArgs.take(index+1))
   }
   
-  def genStructInstantiation(typeArgs: List[c.Type],rawptr: c.Tree): c.Tree = typeArgs match {
-    % for N in range(1,22):
-    %    Ts = ", ".join("t" + str(i) for i in range(1, N+1))
-    %    args = ", ".join("$t" + str(i) for i in range(1, N+1))
-    case List(${Ts}) => q"new scalanative.unsafe.CStruct${N}[${args}]($rawptr)"
-    % end
-  }
 
   def genFieldGetter(prefix: c.Expr[c.PrefixType], index: Int): Tree = {
     val typeArgs = prefix.actualType.typeArgs

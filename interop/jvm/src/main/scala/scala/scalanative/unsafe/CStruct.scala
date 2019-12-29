@@ -8,15 +8,8 @@ import scala.reflect.macros.blackbox
 
 sealed abstract class CStruct
 
-protected[unsafe] class CStructMacroImpl(val c: blackbox.Context) {
+protected[unsafe] class CStructMacroImpl(val c: blackbox.Context) extends MacroTools {
   import c.universe._
-
-  val tCChar  = c.weakTypeOf[CChar]
-  val tCShort = c.weakTypeOf[CShort]
-  val tCInt   = c.weakTypeOf[CInt]
-  val tCLong  = c.weakTypeOf[CLong]
-  val tPtrByte = c.weakTypeOf[Ptr[Byte]]
-  val tCStruct = c.weakTypeOf[CStruct]
 
 // ###sourceLocation(file: "/Users/kastner/dev/sn/swog/platform/jvm/src/main/scala/scala/scalanative/unsafe/CStruct.scala.gyb", line: 21)
   def _1[T: c.WeakTypeTag]: c.Tree = genFieldGetter(c.prefix,0)
@@ -90,100 +83,9 @@ protected[unsafe] class CStructMacroImpl(val c: blackbox.Context) {
 // ###sourceLocation(file: "/Users/kastner/dev/sn/swog/platform/jvm/src/main/scala/scala/scalanative/unsafe/CStruct.scala.gyb", line: 24)
   
  
-  def computeFieldSize(tpe: c.Type): Int = tpe match {
-    case t if t =:= tCChar   => 1
-    case t if t =:= tCShort  => 2
-    case t if t =:= tCInt    => 4
-    case t if t =:= tCLong   => 8
-    case t if t =:= tPtrByte => 8
-    case t if t <:< tCStruct => 8
-  }
-  
-  def computeFieldOffset(typeArgs: List[c.Type], index: Int): Long = {
-    @tailrec
-    def loop(lastOffset: Int, fields: List[c.Type]): Int = fields match {
-      case Nil => lastOffset
-      case x :: Nil => lastOffset
-      case x :: y :: xs =>
-        val newOffset = lastOffset + computeFieldSize(x)
-        val nextFieldSize = computeFieldSize(y)
-        val padding = (nextFieldSize - (newOffset % nextFieldSize)) % nextFieldSize
-//        println(s"newOffset: $newOffset    nextFieldSize: $nextFieldSize    padding: $padding")
-        loop(newOffset + padding, y::xs)
-    }
-    loop(0,typeArgs.take(index+1))
-  }
-  
-  def genStructInstantiation(typeArgs: List[c.Type],rawptr: c.Tree): c.Tree = typeArgs match {
-// ###sourceLocation(file: "/Users/kastner/dev/sn/swog/platform/jvm/src/main/scala/scala/scalanative/unsafe/CStruct.scala.gyb", line: 54)
-    case List(t1) => q"new scalanative.unsafe.CStruct1[$t1]($rawptr)"
-// ###sourceLocation(file: "/Users/kastner/dev/sn/swog/platform/jvm/src/main/scala/scala/scalanative/unsafe/CStruct.scala.gyb", line: 54)
-    case List(t1, t2) => q"new scalanative.unsafe.CStruct2[$t1, $t2]($rawptr)"
-// ###sourceLocation(file: "/Users/kastner/dev/sn/swog/platform/jvm/src/main/scala/scala/scalanative/unsafe/CStruct.scala.gyb", line: 54)
-    case List(t1, t2, t3) => q"new scalanative.unsafe.CStruct3[$t1, $t2, $t3]($rawptr)"
-// ###sourceLocation(file: "/Users/kastner/dev/sn/swog/platform/jvm/src/main/scala/scala/scalanative/unsafe/CStruct.scala.gyb", line: 54)
-    case List(t1, t2, t3, t4) => q"new scalanative.unsafe.CStruct4[$t1, $t2, $t3, $t4]($rawptr)"
-// ###sourceLocation(file: "/Users/kastner/dev/sn/swog/platform/jvm/src/main/scala/scala/scalanative/unsafe/CStruct.scala.gyb", line: 54)
-    case List(t1, t2, t3, t4, t5) => q"new scalanative.unsafe.CStruct5[$t1, $t2, $t3, $t4, $t5]($rawptr)"
-// ###sourceLocation(file: "/Users/kastner/dev/sn/swog/platform/jvm/src/main/scala/scala/scalanative/unsafe/CStruct.scala.gyb", line: 54)
-    case List(t1, t2, t3, t4, t5, t6) => q"new scalanative.unsafe.CStruct6[$t1, $t2, $t3, $t4, $t5, $t6]($rawptr)"
-// ###sourceLocation(file: "/Users/kastner/dev/sn/swog/platform/jvm/src/main/scala/scala/scalanative/unsafe/CStruct.scala.gyb", line: 54)
-    case List(t1, t2, t3, t4, t5, t6, t7) => q"new scalanative.unsafe.CStruct7[$t1, $t2, $t3, $t4, $t5, $t6, $t7]($rawptr)"
-// ###sourceLocation(file: "/Users/kastner/dev/sn/swog/platform/jvm/src/main/scala/scala/scalanative/unsafe/CStruct.scala.gyb", line: 54)
-    case List(t1, t2, t3, t4, t5, t6, t7, t8) => q"new scalanative.unsafe.CStruct8[$t1, $t2, $t3, $t4, $t5, $t6, $t7, $t8]($rawptr)"
-// ###sourceLocation(file: "/Users/kastner/dev/sn/swog/platform/jvm/src/main/scala/scala/scalanative/unsafe/CStruct.scala.gyb", line: 54)
-    case List(t1, t2, t3, t4, t5, t6, t7, t8, t9) => q"new scalanative.unsafe.CStruct9[$t1, $t2, $t3, $t4, $t5, $t6, $t7, $t8, $t9]($rawptr)"
-// ###sourceLocation(file: "/Users/kastner/dev/sn/swog/platform/jvm/src/main/scala/scala/scalanative/unsafe/CStruct.scala.gyb", line: 54)
-    case List(t1, t2, t3, t4, t5, t6, t7, t8, t9, t10) => q"new scalanative.unsafe.CStruct10[$t1, $t2, $t3, $t4, $t5, $t6, $t7, $t8, $t9, $t10]($rawptr)"
-// ###sourceLocation(file: "/Users/kastner/dev/sn/swog/platform/jvm/src/main/scala/scala/scalanative/unsafe/CStruct.scala.gyb", line: 54)
-    case List(t1, t2, t3, t4, t5, t6, t7, t8, t9, t10, t11) => q"new scalanative.unsafe.CStruct11[$t1, $t2, $t3, $t4, $t5, $t6, $t7, $t8, $t9, $t10, $t11]($rawptr)"
-// ###sourceLocation(file: "/Users/kastner/dev/sn/swog/platform/jvm/src/main/scala/scala/scalanative/unsafe/CStruct.scala.gyb", line: 54)
-    case List(t1, t2, t3, t4, t5, t6, t7, t8, t9, t10, t11, t12) => q"new scalanative.unsafe.CStruct12[$t1, $t2, $t3, $t4, $t5, $t6, $t7, $t8, $t9, $t10, $t11, $t12]($rawptr)"
-// ###sourceLocation(file: "/Users/kastner/dev/sn/swog/platform/jvm/src/main/scala/scala/scalanative/unsafe/CStruct.scala.gyb", line: 54)
-    case List(t1, t2, t3, t4, t5, t6, t7, t8, t9, t10, t11, t12, t13) => q"new scalanative.unsafe.CStruct13[$t1, $t2, $t3, $t4, $t5, $t6, $t7, $t8, $t9, $t10, $t11, $t12, $t13]($rawptr)"
-// ###sourceLocation(file: "/Users/kastner/dev/sn/swog/platform/jvm/src/main/scala/scala/scalanative/unsafe/CStruct.scala.gyb", line: 54)
-    case List(t1, t2, t3, t4, t5, t6, t7, t8, t9, t10, t11, t12, t13, t14) => q"new scalanative.unsafe.CStruct14[$t1, $t2, $t3, $t4, $t5, $t6, $t7, $t8, $t9, $t10, $t11, $t12, $t13, $t14]($rawptr)"
-// ###sourceLocation(file: "/Users/kastner/dev/sn/swog/platform/jvm/src/main/scala/scala/scalanative/unsafe/CStruct.scala.gyb", line: 54)
-    case List(t1, t2, t3, t4, t5, t6, t7, t8, t9, t10, t11, t12, t13, t14, t15) => q"new scalanative.unsafe.CStruct15[$t1, $t2, $t3, $t4, $t5, $t6, $t7, $t8, $t9, $t10, $t11, $t12, $t13, $t14, $t15]($rawptr)"
-// ###sourceLocation(file: "/Users/kastner/dev/sn/swog/platform/jvm/src/main/scala/scala/scalanative/unsafe/CStruct.scala.gyb", line: 54)
-    case List(t1, t2, t3, t4, t5, t6, t7, t8, t9, t10, t11, t12, t13, t14, t15, t16) => q"new scalanative.unsafe.CStruct16[$t1, $t2, $t3, $t4, $t5, $t6, $t7, $t8, $t9, $t10, $t11, $t12, $t13, $t14, $t15, $t16]($rawptr)"
-// ###sourceLocation(file: "/Users/kastner/dev/sn/swog/platform/jvm/src/main/scala/scala/scalanative/unsafe/CStruct.scala.gyb", line: 54)
-    case List(t1, t2, t3, t4, t5, t6, t7, t8, t9, t10, t11, t12, t13, t14, t15, t16, t17) => q"new scalanative.unsafe.CStruct17[$t1, $t2, $t3, $t4, $t5, $t6, $t7, $t8, $t9, $t10, $t11, $t12, $t13, $t14, $t15, $t16, $t17]($rawptr)"
-// ###sourceLocation(file: "/Users/kastner/dev/sn/swog/platform/jvm/src/main/scala/scala/scalanative/unsafe/CStruct.scala.gyb", line: 54)
-    case List(t1, t2, t3, t4, t5, t6, t7, t8, t9, t10, t11, t12, t13, t14, t15, t16, t17, t18) => q"new scalanative.unsafe.CStruct18[$t1, $t2, $t3, $t4, $t5, $t6, $t7, $t8, $t9, $t10, $t11, $t12, $t13, $t14, $t15, $t16, $t17, $t18]($rawptr)"
-// ###sourceLocation(file: "/Users/kastner/dev/sn/swog/platform/jvm/src/main/scala/scala/scalanative/unsafe/CStruct.scala.gyb", line: 54)
-    case List(t1, t2, t3, t4, t5, t6, t7, t8, t9, t10, t11, t12, t13, t14, t15, t16, t17, t18, t19) => q"new scalanative.unsafe.CStruct19[$t1, $t2, $t3, $t4, $t5, $t6, $t7, $t8, $t9, $t10, $t11, $t12, $t13, $t14, $t15, $t16, $t17, $t18, $t19]($rawptr)"
-// ###sourceLocation(file: "/Users/kastner/dev/sn/swog/platform/jvm/src/main/scala/scala/scalanative/unsafe/CStruct.scala.gyb", line: 54)
-    case List(t1, t2, t3, t4, t5, t6, t7, t8, t9, t10, t11, t12, t13, t14, t15, t16, t17, t18, t19, t20) => q"new scalanative.unsafe.CStruct20[$t1, $t2, $t3, $t4, $t5, $t6, $t7, $t8, $t9, $t10, $t11, $t12, $t13, $t14, $t15, $t16, $t17, $t18, $t19, $t20]($rawptr)"
-// ###sourceLocation(file: "/Users/kastner/dev/sn/swog/platform/jvm/src/main/scala/scala/scalanative/unsafe/CStruct.scala.gyb", line: 54)
-    case List(t1, t2, t3, t4, t5, t6, t7, t8, t9, t10, t11, t12, t13, t14, t15, t16, t17, t18, t19, t20, t21) => q"new scalanative.unsafe.CStruct21[$t1, $t2, $t3, $t4, $t5, $t6, $t7, $t8, $t9, $t10, $t11, $t12, $t13, $t14, $t15, $t16, $t17, $t18, $t19, $t20, $t21]($rawptr)"
-// ###sourceLocation(file: "/Users/kastner/dev/sn/swog/platform/jvm/src/main/scala/scala/scalanative/unsafe/CStruct.scala.gyb", line: 56)
-  }
 
-  def genFieldGetter(prefix: c.Expr[c.PrefixType], index: Int): Tree = {
-    val typeArgs = prefix.actualType.typeArgs
-    val offset = computeFieldOffset(typeArgs,index)
-    typeArgs(index) match {
-      case t if t =:= tCChar  => q"$prefix.rawptr.getByte($offset)"
-      case t if t =:= tCShort => q"$prefix.rawptr.getShort($offset)"
-      case t if t =:= tCInt   => q"$prefix.rawptr.getInt($offset)"
-      case t if t =:= tCLong  => q"$prefix.rawptr.getNativeLong($offset)"
-      case t if t =:= tPtrByte => q"new scalanative.unsafe.Ptr[Byte]($prefix.rawptr.getPointer($offset))"
-      case t if t <:< tCStruct => genStructInstantiation(t.typeArgs,q"$prefix.rawptr")
-    }
-  }
-  
-  def genFieldSetter(prefix: c.Expr[c.PrefixType], index: Int, value: Tree): Tree = {
-    val typeArgs = prefix.actualType.typeArgs
-    val offset = computeFieldOffset(typeArgs,index)
-    typeArgs(index) match {
-      case t if t =:= tCChar  => q"$prefix.rawptr.setByte($offset,$value)"
-      case t if t =:= tCShort => q"$prefix.rawptr.setShort($offset,$value)"
-      case t if t =:= tCInt   => q"$prefix.rawptr.setInt($offset,$value)"
-      case t if t =:= tCLong  => q"$prefix.rawptr.setNativeLong($offset,$value)"
-      case t if t =:= tPtrByte  => q"$prefix.rawptr.setPointer($offset,$value.rawptr)"     
-    }
-  }
+
+
 }
 
 // ###sourceLocation(file: "/Users/kastner/dev/sn/swog/platform/jvm/src/main/scala/scala/scalanative/unsafe/CStruct.scala.gyb", line: 87)

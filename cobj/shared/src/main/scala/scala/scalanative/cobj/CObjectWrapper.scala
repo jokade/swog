@@ -1,6 +1,5 @@
 package scala.scalanative.cobj
 
-import scala.scalanative.interop.jvm
 import scala.scalanative.unsafe._
 
 trait CObjectWrapper[T] {
@@ -9,25 +8,25 @@ trait CObjectWrapper[T] {
 }
 
 trait CObjectWrapper1[T,I1] extends CObjectWrapper[T] {
-  final override def wrap(ptr: Ptr[CSignedChar]): T = ???
+  final override def wrap(ptr: Ptr[Byte]): T = ???
   def wrap(ptr: Ptr[Byte])(implicit arg1: I1): T
   def unwrap(value: T): Ptr[Byte]
 }
 
 trait CObjectWrapper2[T,I1,I2] extends CObjectWrapper[T] {
-  final override def wrap(ptr: Ptr[CSignedChar]): T = ???
+  final override def wrap(ptr: Ptr[Byte]): T = ???
   def wrap(ptr: Ptr[Byte])(implicit arg1: I1, arg2: I2): T
   def unwrap(value: T): Ptr[Byte]
 }
 
 trait CObjectWrapper3[T,I1,I2,I3] extends CObjectWrapper[T] {
-  final override def wrap(ptr: Ptr[CSignedChar]): T = ???
+  final override def wrap(ptr: Ptr[Byte]): T = ???
   def wrap(ptr: Ptr[Byte])(implicit arg1: I1, arg2: I2, arg3: I3): T
   def unwrap(value: T): Ptr[Byte]
 }
 
 trait CObjectWrapper4[T,I1,I2,I3,I4] extends CObjectWrapper[T] {
-  final override def wrap(ptr: Ptr[CSignedChar]): T = ???
+  final override def wrap(ptr: Ptr[Byte]): T = ???
   def wrap(ptr: Ptr[Byte])(implicit arg1: I1, arg2: I2, arg3: I3, arg4: I4): T
   def unwrap(value: T): Ptr[Byte]
 }
@@ -46,7 +45,7 @@ object CObjectWrapper {
   }
 
   implicit object CStringWrapper extends CObjectWrapper[CString] {
-    override def wrap(ptr: Ptr[Byte]): CString = jvm.ptrToCString(ptr)
+    override def wrap(ptr: Ptr[Byte]): CString = ptr //ptrToCString(ptr)
     override def unwrap(value: CString): Ptr[Byte] = value.asInstanceOf[Ptr[Byte]]
   }
 
@@ -57,7 +56,7 @@ object CObjectWrapper {
 
   object Implicits {
     implicit object StringWrapper extends CObjectWrapper[String] {
-      override def wrap(ptr: Ptr[Byte]): String = fromCString(jvm.ptrToCString(ptr))
+      override def wrap(ptr: Ptr[Byte]): String = fromCString(ptr)
       override def unwrap(value: String): Ptr[Byte] = throw new RuntimeException("CObjWrapper.StringWrapper: unwrapping a Scala String to a CString is not supported")
     }
   }

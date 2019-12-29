@@ -2,8 +2,10 @@ package scala.scalanative
 
 import com.sun.jna.{Callback, NativeLong, Pointer, SWOGHelper}
 
-import scala.annotation.StaticAnnotation
+import scala.reflect.macros.blackbox
 import scala.scalanative.unsigned.{UInt, ULong}
+
+import scala.language.experimental.macros
 
 package object unsafe {
   // TODO: check type mappings and correct
@@ -43,7 +45,7 @@ package object unsafe {
    *
    *  Note: unlike alloc, the memory is not zero-initialized.
    */
-  def stackalloc[T]: Ptr[T] = ???
+  def stackalloc[T]: Ptr[T] = macro MacroImpl.stackalloc[T]
 
   /** Stack allocate n values of given type.
    *
@@ -63,5 +65,14 @@ package object unsafe {
     def c(): CString = SWOGHelper.nativeString(ctx.parts.mkString)
   }
 
+  protected[this] class MacroImpl(val c: blackbox.Context) extends MacroTools {
+    import c.universe._
+
+    // TODO: provide real stack allocation instead of malloc-based Memory()!
+    def stackalloc[T: c.WeakTypeTag]: c.Tree = {
+      val size = computeFieldSize(weakTypeOf[T])
+      q"""new scalanative.unsafe.Ptr(new com.sun.jna.Memory($size))"""
+    }
+  }
 
 }
