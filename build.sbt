@@ -24,51 +24,39 @@ lazy val commonSettings = Seq(
 
 lazy val root  = project.in(file("."))
   .aggregate(
-    platformJVM, platformNative,
-    commonJVM, commonNative,
+    interopJVM, interopNative,
     cobjJVM, cobjNative )
   .settings(commonSettings ++ dontPublish:_*)
   .settings(
     name := "swog"
   )
 
-
-lazy val platform = crossProject(JVMPlatform,NativePlatform).crossType(CrossType.Full)
-  .settings(commonSettings ++ publishingSettings: _*)
+lazy val interop = crossProject(JVMPlatform,NativePlatform).crossType(CrossType.Full)
+  .settings(commonSettings ++ publishingSettings:_*)
   .settings(
-    name := "swog-platform",
+    name := "swog-interop",
+    libraryDependencies ++= Seq(
+      //"org.scala-native" %%% "posixlib" % "0.3.9-SNAPSHOT"
+    ),
     test in Test := {
       val log = streams.value.log
       // compile native test mock-up
       Process("make" :: Nil, baseDirectory.value / "../shared/src/test/resources") ! log
       (test in Test).value
     }
-  )
-  .nativeSettings(
-    nativeLinkStubs := true
+
   )
   .jvmSettings(
     libraryDependencies ++= Seq(
       "net.java.dev.jna" % "jna" % Version.jna
     )
   )
-lazy val platformJVM = platform.jvm
-lazy val platformNative = platform.native
 
-lazy val common = crossProject(JVMPlatform,NativePlatform).crossType(CrossType.Full)
-  .dependsOn(platform)
-  .settings(commonSettings ++ publishingSettings:_*)
-  .settings(
-    name := "swog-common",
-    libraryDependencies ++= Seq(
-      //"org.scala-native" %%% "posixlib" % "0.3.9-SNAPSHOT"
-    )
-  )
-lazy val commonJVM = common.jvm
-lazy val commonNative = common.native
+lazy val interopJVM = interop.jvm
+lazy val interopNative = interop.native
 
 lazy val cobj = crossProject(JVMPlatform,NativePlatform)
-  .dependsOn(common)
+  .dependsOn(interop)
   .settings(commonSettings ++ publishingSettings:_*)
   .settings(
     name := "swog-cobj"
@@ -121,8 +109,8 @@ lazy val lua = project
 import scalanative.sbtplugin.ScalaNativePluginInternal._
 */
 
-lazy val platformTests = crossProject(JVMPlatform,NativePlatform)
-  .dependsOn(platform)
+lazy val interopTests = crossProject(JVMPlatform,NativePlatform)
+  .dependsOn(interop)
   .settings(commonSettings ++ dontPublish: _*)
   .settings(
     unmanagedResourceDirectories in Test += baseDirectory.value / "../shared/src/test/resources"
@@ -133,8 +121,8 @@ lazy val platformTests = crossProject(JVMPlatform,NativePlatform)
       s"""${(baseDirectory.value / "../shared/src/test/resources/platformtest.o").getCanonicalPath}"""
     )
   )
-lazy val platformTestsJVM = platformTests.jvm
-lazy val platformTestsNative = platformTests.native
+lazy val interopTestsJVM = interopTests.jvm
+lazy val interopTestsNative = interopTests.native
 
 lazy val cobjTests = crossProject(JVMPlatform,NativePlatform)
   //.enablePlugins(ScalaNativePlugin,NBHAutoPlugin,NBHCxxPlugin)

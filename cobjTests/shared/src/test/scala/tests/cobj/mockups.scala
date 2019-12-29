@@ -3,8 +3,8 @@ package tests.cobj
 import de.surfice.smacrotools.debug
 
 import scala.scalanative.annotation.InlineSource
-import scalanative.cobj.{ResultPtr, _}
-import scalanative.unsafe._
+import scala.scalanative.cobj.{ResultPtr, _}
+import scala.scalanative.unsafe._
 
 @CObj
 class Number {

@@ -4,7 +4,7 @@ import utest._
 
 import scala.scalanative.runtime.Intrinsics
 import scala.scalanative.unsafe._
-import scalanative.cobj._
+import scala.scalanative.cobj._
 
 object CObjTests extends TestSuite {
   val tests = Tests {

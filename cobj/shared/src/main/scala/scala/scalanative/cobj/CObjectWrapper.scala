@@ -1,6 +1,6 @@
 package scala.scalanative.cobj
 
-import scalanative.interop.jvm
+import scala.scalanative.interop.jvm
 import scala.scalanative.unsafe._
 
 trait CObjectWrapper[T] {
