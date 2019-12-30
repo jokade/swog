@@ -56,7 +56,10 @@ package object unsafe {
    */
   def alloc[T]: Ptr[T] = macro MacroImpl.alloc[T]
 
-  def fromCString(cstr: CString): String = cstr.rawptr.getString(0) //new Pointer(cstr.rawptr).getString(0)
+  def fromCString(cstr: CString): String = {
+    val s = cstr.getString(0)
+    s
+  } //new Pointer(cstr.rawptr).getString(0)
   @inline final def toCString(s: String)(implicit zone: Zone): CString = zone.makeNativeString(s)
 
   implicit def longToCLong(l: Long): CLong = new NativeLong(l)

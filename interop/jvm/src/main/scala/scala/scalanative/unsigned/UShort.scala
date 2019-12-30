@@ -1,6 +1,6 @@
 // Copied from ScalaNative: https://github.com/scala-native/scala-native/blob/master/nativelib/src/main/scala/scala/scalanative/unsigned/UShort.scala
 // Modifications:
-//  - implement JNA NativeMapped interface + equals
+//  - implement JNA NativeMapped interface
 package scala.scalanative
 package unsigned
 
@@ -20,10 +20,6 @@ final class UShort private[scalanative] (private[scalanative] var underlying: Sh
   override def toNative: AnyRef = underlying.asInstanceOf[AnyRef]
   override def nativeType(): Class[_] = classOf[Short]
 
-  override def equals(obj: Any): Boolean = obj match {
-    case other: UShort => underlying == other.underlying
-    case x => false
-  }
 
   @inline final def toByte: Byte     = underlying.toByte
   @inline final def toShort: Short   = underlying

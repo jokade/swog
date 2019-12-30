@@ -119,7 +119,7 @@ object external {
           trait __IFace extends com.sun.jna.Library {
               ..$jnaDefs
           }""",
-        q"""lazy val __inst: __IFace = scalanative.interop.jvm.loadJNALibrary(${data.jnaLibraryName},classOf[__IFace])""")
+        q"""lazy val __inst: __IFace = scalanative.interop.JNA.loadJNALibrary(${data.jnaLibraryName},classOf[__IFace])""")
     }
 
     protected def genJnaCall(scalaDef: DefDef)(implicit data: Data): DefDef = {
@@ -147,7 +147,7 @@ object external {
       val tpt = tq"scalanative.unsafe.Ptr[${scalaDef.tpt}]"
       val libname = Literal(Constant(data.jnaLibraryName))
       val symbol = Literal(Constant(genExternalName(scalaDef)))
-      val rhs = q"scalanative.interop.jvm.loadGlobalPtr[${scalaDef.tpt}]($libname,$symbol)"
+      val rhs = q"scalanative.interop.JNA.loadGlobalPtr[${scalaDef.tpt}]($libname,$symbol)"
       ValDef(Modifiers(Flag.LAZY),name,tpt,rhs)
     }
 

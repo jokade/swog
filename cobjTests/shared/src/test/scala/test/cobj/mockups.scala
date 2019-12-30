@@ -32,14 +32,16 @@ object Counter {
 }
 
 @CObj(prefix = "slist_")
+@debug
 class SList[T] {
+
   def isEmpty: Boolean = extern
   def size: Int = extern
   def prepend(value: T)(implicit wrapper: CObjectWrapper[T]): SList[T] = extern
 
   // returns null if the specified index does not exist
   @nullable
-  def itemAt(index: Int)(implicit wrapper:CObjectWrapper[T]): T = extern
+  def itemAt(index: Int)(implicit wrapper: CObjectWrapper[T]): T = extern
 
 }
 
@@ -58,7 +60,6 @@ object Callbacks {
 class NumberLike(val __ptr: Ptr[Byte]) extends CObject
 
 @CObj
-@debug
 object ImplicitArgs {
   type OutStruct = CStruct1[Int]
 

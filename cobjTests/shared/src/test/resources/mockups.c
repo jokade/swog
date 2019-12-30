@@ -80,6 +80,7 @@ int slist_size(SList *l) {
   SListEntry *p = l;
   int size = 1;
   while((NULL != p->next)) {
+    printf("  p->next: 0x%x    p->data: 0x%x    p->next->data: 0x%x\n",p->next,p->data,p->next->data);
     p = p->next;
     if(NULL != p->data) {
       size += 1;
@@ -92,9 +93,12 @@ int slist_size(SList *l) {
 }
 
 SList* slist_prepend(SList *l, void* value) {
+  Number *n = (Number*)value;
+  printf("slist_prepend: l=0x%x    value=0x%x\n",l,value);
   SListEntry *entry = slist_new();
   entry->data = value;
   entry->next = l;
+  printf("  entry: 0x%x    data: 0x%x    next: 0x%x\n",entry,entry->data,entry->next);
   return entry;
 }
 

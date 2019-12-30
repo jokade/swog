@@ -1,6 +1,6 @@
 // Copied from ScalaNative: https://raw.githubusercontent.com/scala-native/scala-native/master/nativelib/src/main/scala/scala/scalanative/unsigned/UInt.scala
 // Modifications:
-//  - implement JNA NativeMapped interface + equals
+//  - implement JNA NativeMapped interface
 package scala.scalanative
 package unsigned
 
@@ -28,10 +28,6 @@ final class UInt private[scalanative] (private[scalanative] var underlying: Int)
   override def toNative: AnyRef = underlying.asInstanceOf[AnyRef]
   override def nativeType(): Class[_] = classOf[Int]
 
-  override def equals(obj: Any): Boolean = obj match {
-    case other: UInt => underlying == other.underlying
-    case x => false
-  }
 
   override def hashCode(): Int = underlying
 

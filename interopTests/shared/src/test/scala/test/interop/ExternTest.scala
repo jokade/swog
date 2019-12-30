@@ -1,11 +1,11 @@
 package test.interop
 
-import test.interop.Mockups.PTestNumStruct
 import utest._
 
 import scala.scalanative._
-import scala.scalanative.unsafe._
-import scala.scalanative.unsigned._
+import interop._
+import unsafe._
+import unsigned._
 
 /**
  * Interop tests for 'extern' objects.
@@ -17,6 +17,7 @@ object ExternTest extends TestSuite {
         Mockups.ptest_return_char(Byte.MinValue) ==> Byte.MinValue
         Mockups.ptest_return_char(Byte.MaxValue) ==> Byte.MaxValue
       }
+
       'CInt-{
         Mockups.ptest_return_int(Int.MinValue) ==> Int.MinValue
         Mockups.ptest_return_int(Int.MaxValue) ==> Int.MaxValue
@@ -32,24 +33,24 @@ object ExternTest extends TestSuite {
         Mockups.ptest_return_long_long(Long.MaxValue) ==> Long.MaxValue
       }
       'CUnsignedChar-{
-        Mockups.ptest_return_uchar(UByte.MinValue) ==> UByte.MinValue
-        Mockups.ptest_return_uchar(UByte.MaxValue) ==> UByte.MaxValue
-        Mockups.ptest_return_uchar(34.toUByte) ==> 34.toUByte
+        assert( Mockups.ptest_return_uchar(UByte.MinValue) == UByte.MinValue )
+        assert( Mockups.ptest_return_uchar(UByte.MaxValue) == UByte.MaxValue )
+        assert( Mockups.ptest_return_uchar(34.toUByte) == 34.toUByte )
       }
       'CUnsignedShort-{
-        Mockups.ptest_return_ushort(UShort.MinValue) ==> UShort.MinValue
-        Mockups.ptest_return_ushort(UShort.MaxValue) ==> UShort.MaxValue
-        Mockups.ptest_return_ushort(1234.toUShort) ==> 1234.toUShort
+        assert( Mockups.ptest_return_ushort(UShort.MinValue) == UShort.MinValue )
+        assert( Mockups.ptest_return_ushort(UShort.MaxValue) == UShort.MaxValue )
+        assert( Mockups.ptest_return_ushort(1234.toUShort) == 1234.toUShort )
       }
       'CUnsigedInt-{
-        Mockups.ptest_return_uint(UInt.MinValue) ==> UInt.MinValue
-        Mockups.ptest_return_uint(UInt.MaxValue) ==> UInt.MaxValue
-        Mockups.ptest_return_uint(12345678.toUInt) ==> 12345678.toUInt
+        assert( Mockups.ptest_return_uint(UInt.MinValue) == UInt.MinValue )
+        assert( Mockups.ptest_return_uint(UInt.MaxValue) == UInt.MaxValue )
+        assert( Mockups.ptest_return_uint(12345678.toUInt) == 12345678.toUInt )
       }
       'CUnsignedLong-{
-        Mockups.ptest_return_ulong(ULong.MinValue) ==> ULong.MinValue
-        Mockups.ptest_return_ulong(ULong.MaxValue) ==> ULong.MaxValue
-        Mockups.ptest_return_ulong(12345678.toULong) ==> 12345678.toULong
+        assert( Mockups.ptest_return_ulong(ULong.MinValue) == ULong.MinValue )
+        assert( Mockups.ptest_return_ulong(ULong.MaxValue) == ULong.MaxValue )
+        assert( Mockups.ptest_return_ulong(12345678.toULong) == 12345678.toULong )
       }
       'CFloat-{
         Mockups.ptest_return_float(Float.MinPositiveValue) ==> Float.MinPositiveValue
@@ -61,11 +62,13 @@ object ExternTest extends TestSuite {
         Mockups.ptest_return_double(Double.MinValue) ==> Double.MinValue
         Mockups.ptest_return_double(Double.MaxValue) ==> Double.MaxValue
       }
+
       'CString-{
         val s1 = c"hello world"
         val s2 = Mockups.ptest_return_string(s1)
         fromCString(s2)  ==> "hello world"
       }
+
       'CStruct-{
         'CInt-{
           val s = Mockups.ptest_struct1_new()
@@ -91,7 +94,7 @@ object ExternTest extends TestSuite {
           s._1 ==> -4321
           s._1 = Short.MaxValue
           s._1 ==> Short.MaxValue
-          
+
           fromCString(s._2) ==> "Hello, world!"
           s._2 = c"another string"
           fromCString(s._2) ==> "another string"
@@ -115,7 +118,7 @@ object ExternTest extends TestSuite {
         Mockups.ptest_global_int ==> 12345678
       }
     }
-
+/*
     'alloc-{
       'stackalloc-{
         'CInt-{
@@ -141,6 +144,7 @@ object ExternTest extends TestSuite {
         }
       }
     }
+    */
   }
 }
 

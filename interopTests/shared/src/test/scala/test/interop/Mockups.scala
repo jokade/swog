@@ -7,7 +7,6 @@ import scala.scalanative.unsafe._
 
 @extern
 @external("platformtest")
-@debug
 object Mockups {
   val ptest_global_int: Int = extern
 

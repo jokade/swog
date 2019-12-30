@@ -1,28 +1,33 @@
-// ###sourceLocation(file: "/Users/kastner/dev/sn/swog/platform/jvm/src/main/scala/scala/scalanative/unsafe/Ptr.scala.gyb", line: 1)
 package scala.scalanative.unsafe
 
-import com.sun.jna.{FromNativeContext, NativeMapped, Pointer}
+import com.sun.jna.{FromNativeContext, Native, NativeLong, NativeMapped, Pointer, ToNativeContext, TypeConverter}
 
-import scala.reflect.runtime.universe._
 import scala.language.experimental.macros
 import scala.reflect.macros.blackbox
-import scala.scalanative.runtime.RawPtr
 
-final class Ptr[T] (protected[scalanative] var rawptr: RawPtr) extends NativeMapped {
-  def this() = this(null)
-  override def fromNative(nativeValue: Any, context: FromNativeContext): AnyRef = {
-    rawptr = nativeValue.asInstanceOf[RawPtr]
-    this
-  }
-  override def toNative: AnyRef = rawptr.asInstanceOf[AnyRef]
-  override def nativeType(): Class[_] = classOf[RawPtr]
+class Ptr[T](_peer: Long) extends Pointer(_peer) {
+  def this() = this(0)
 
-  @inline def raw: RawPtr = rawptr
+//  override def nativeType(): Class[_] = classOf[Long]
+//  override def fromNative(nativeValue: Any, context: FromNativeContext): AnyRef = {
+//    peer = nativeValue.asInstanceOf[Long]
+//    this
+//  }
+//  override def toNative: AnyRef = peer.asInstanceOf[AnyRef]
+
+  def raw: Long = peer
+
+//  @inline def raw: RawPtr = this
 
   def :=(value: T): Unit =  macro Ptr.MacroImpl.setPtrValue[T]
   def unary_!(): T = macro Ptr.MacroImpl.getPtrValue[T]
+
 }
+
+
 object Ptr {
+  @inline final def apply[T](peer: Long): Ptr[T] = new Ptr(peer)
+
   implicit def ptrToCStruct[T <: CStruct](ptr: Ptr[T]): T = macro MacroImpl.ptrToCStruct[T]
   
   private class MacroImpl(val c: blackbox.Context) extends MacroTools {
@@ -34,6 +39,17 @@ object Ptr {
 
     def getPtrValue[T: c.WeakTypeTag](): c.Tree = genGetValue(c.prefix,weakTypeOf[T],0)
 
+  }
+
+  object PtrConverter extends TypeConverter {
+    override def fromNative(nativeValue: Any, context: FromNativeContext): AnyRef = {
+      val raw = nativeValue.asInstanceOf[Long]
+      new Ptr(raw)
+    }
+
+    override def toNative(value: Any, context: ToNativeContext): AnyRef = value.asInstanceOf[Ptr[_]].raw.asInstanceOf[AnyRef]
+
+    override def nativeType(): Class[_] = classOf[Long]
   }
   
 }
