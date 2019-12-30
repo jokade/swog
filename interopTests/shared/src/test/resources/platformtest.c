@@ -20,6 +20,22 @@ long ptest_return_long_long(long long l) {
   return l;
 }
 
+unsigned char ptest_return_uchar(unsigned char u) {
+  return u;
+}
+
+unsigned short ptest_return_ushort(unsigned short u) {
+  return u;
+}
+
+unsigned int ptest_return_uint(unsigned int u) {
+  return u;
+}
+
+unsigned long ptest_return_ulong(unsigned long u) {
+  return u;
+}
+
 float ptest_return_float(float f) {
   return f;
 }

@@ -1,12 +1,29 @@
 // Copied from ScalaNative: https://github.com/scala-native/scala-native/blob/master/nativelib/src/main/scala/scala/scalanative/unsigned/UShort.scala
+// Modifications:
+//  - implement JNA NativeMapped interface + equals
 package scala.scalanative
 package unsigned
 
+import com.sun.jna.{FromNativeContext, NativeMapped}
+
 /** `UShort`, a 16-bit unsigned integer. */
-final class UShort private[scalanative] (
-                                          private[scalanative] val underlying: Short)
+final class UShort private[scalanative] (private[scalanative] var underlying: Short)
   extends java.io.Serializable
-    with Comparable[UShort] {
+    with Comparable[UShort] with NativeMapped {
+
+  def this() = this(0)
+
+  override def fromNative(nativeValue: Any, context: FromNativeContext): AnyRef = {
+    underlying = nativeValue.asInstanceOf[Short]
+    this
+  }
+  override def toNative: AnyRef = underlying.asInstanceOf[AnyRef]
+  override def nativeType(): Class[_] = classOf[Short]
+
+  override def equals(obj: Any): Boolean = obj match {
+    case other: UShort => underlying == other.underlying
+    case x => false
+  }
 
   @inline final def toByte: Byte     = underlying.toByte
   @inline final def toShort: Short   = underlying

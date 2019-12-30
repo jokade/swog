@@ -1,6 +1,9 @@
-package scala.scalanative.unsafe
+package test.interop
 
 import de.surfice.smacrotools.debug
+
+import scala.scalanative._
+import scala.scalanative.unsafe._
 
 @extern
 @external("platformtest")
@@ -16,6 +19,14 @@ object Mockups {
   def ptest_return_long(l: CLong): CLong = extern
   /// returns the passed-in CLongLong unmodified
   def ptest_return_long_long(l: CLongLong): CLongLong = extern
+  /// returns the passed-in CUnsignedChar unmodified
+  def ptest_return_uchar(l: CUnsignedChar): CUnsignedChar = extern
+  /// returns the passed-in CUnsignedShort unmodified
+  def ptest_return_ushort(l: CUnsignedShort): CUnsignedShort = extern
+  /// returns the passed-in CUnsignedInt unmodified
+  def ptest_return_uint(l: CUnsignedInt): CUnsignedInt = extern
+  /// returns the passed-in CUnsignedLong unmodified
+  def ptest_return_ulong(l: CUnsignedLong): CUnsignedLong = extern
   /// returns the passed-in CFloat unmodified
   def ptest_return_float(f: CFloat): CFloat = extern
   /// returns the passed-in CDouble unmodified

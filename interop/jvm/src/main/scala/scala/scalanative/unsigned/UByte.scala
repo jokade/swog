@@ -1,12 +1,29 @@
 // Copied from ScalaNative: https://github.com/scala-native/scala-native/blob/master/nativelib/src/main/scala/scala/scalanative/unsigned/UByte.scala
+// Modifications:
+//  - implement JNA NativeMapped interface + equals
 package scala.scalanative
 package unsigned
 
+import com.sun.jna.{FromNativeContext, NativeMapped}
+
 /** `UByte`, a 8-bit unsigned integer. */
-final class UByte private[scalanative] (
-                                         private[scalanative] val underlying: Byte)
+final class UByte private[scalanative] (private[scalanative] var underlying: Byte)
   extends java.io.Serializable
-    with Comparable[UByte] {
+    with Comparable[UByte] with NativeMapped {
+
+  def this() = this(0)
+
+  override def fromNative(nativeValue: Any, context: FromNativeContext): AnyRef = {
+    underlying = nativeValue.asInstanceOf[Byte]
+    this
+  }
+  override def toNative: AnyRef = underlying.asInstanceOf[AnyRef]
+  override def nativeType(): Class[_] = classOf[Byte]
+
+  override def equals(obj: Any): Boolean = obj match {
+    case other: UByte => underlying == other.underlying
+    case x => false
+  }
 
   @inline final def toByte: Byte     = underlying
   @inline final def toShort: Short   = toInt.toShort

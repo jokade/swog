@@ -17,6 +17,8 @@ final class Ptr[T] (protected[scalanative] var rawptr: RawPtr) extends NativeMap
   override def toNative: AnyRef = rawptr.asInstanceOf[AnyRef]
   override def nativeType(): Class[_] = classOf[RawPtr]
 
+  @inline def raw: RawPtr = rawptr
+
   def :=(value: T): Unit =  macro Ptr.MacroImpl.setPtrValue[T]
   def unary_!(): T = macro Ptr.MacroImpl.getPtrValue[T]
 }

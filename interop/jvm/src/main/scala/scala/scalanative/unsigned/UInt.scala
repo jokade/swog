@@ -1,4 +1,6 @@
 // Copied from ScalaNative: https://raw.githubusercontent.com/scala-native/scala-native/master/nativelib/src/main/scala/scala/scalanative/unsigned/UInt.scala
+// Modifications:
+//  - implement JNA NativeMapped interface + equals
 package scala.scalanative
 package unsigned
 
@@ -10,10 +12,28 @@ package unsigned
 //}
 import java.lang.{Integer => JInteger}
 
+import com.sun.jna.{FromNativeContext, NativeMapped}
+
 /** `UInt`, a 32-bit unsigned integer. */
-final class UInt private[scalanative] (private[scalanative] val underlying: Int)
+final class UInt private[scalanative] (private[scalanative] var underlying: Int)
   extends java.io.Serializable
-    with Comparable[UInt] {
+    with Comparable[UInt] with NativeMapped {
+
+  def this() = this(0)
+
+  override def fromNative(nativeValue: Any, context: FromNativeContext): AnyRef = {
+    underlying = nativeValue.asInstanceOf[Int]
+    this
+  }
+  override def toNative: AnyRef = underlying.asInstanceOf[AnyRef]
+  override def nativeType(): Class[_] = classOf[Int]
+
+  override def equals(obj: Any): Boolean = obj match {
+    case other: UInt => underlying == other.underlying
+    case x => false
+  }
+
+  override def hashCode(): Int = underlying
 
   @inline final def toByte: Byte     = underlying.toByte
   @inline final def toShort: Short   = underlying.toShort
@@ -285,6 +305,8 @@ final class UInt private[scalanative] (private[scalanative] val underlying: Int)
 }
 
 object UInt {
+
+  @inline final def fromInt(i: Int): UInt = new UInt(i)
 
   /** The smallest value representable as a UInt. */
   final val MinValue = new UInt(0)

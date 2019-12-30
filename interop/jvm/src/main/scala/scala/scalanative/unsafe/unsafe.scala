@@ -3,8 +3,7 @@ package scala.scalanative
 import com.sun.jna.{Callback, NativeLong, Pointer, SWOGHelper}
 
 import scala.reflect.macros.blackbox
-import scala.scalanative.unsigned.{UInt, ULong}
-
+import scala.scalanative.unsigned.{UByte, UInt, ULong, UShort}
 import scala.language.experimental.macros
 
 package object unsafe {
@@ -12,9 +11,9 @@ package object unsafe {
   type CBool             = Boolean
   type CChar             = Byte
   type CSignedChar       = Char
-  type CUnsignedChar     = Char
+  type CUnsignedChar     = UByte
   type CShort            = Short
-  type CUnsignedShort    = Short
+  type CUnsignedShort    = UShort
   type CInt              = Int
   type CLongInt          = Int
   type CUnsignedInt      = UInt

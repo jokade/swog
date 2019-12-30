@@ -1,4 +1,4 @@
-package scala.scalanative.unsafe
+package test.interop
 
 import utest._
 

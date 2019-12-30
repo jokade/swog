@@ -8,22 +8,24 @@ protected[unsafe] trait MacroTools {
 
   import c.universe._
 
-  val tCChar     = c.weakTypeOf[CChar]
-  val tCShort    = c.weakTypeOf[CShort]
-  val tCInt      = c.weakTypeOf[CInt]
-  val tCLong     = c.weakTypeOf[CLong]
-  val tCLongLong = c.weakTypeOf[CLongLong]
-  val tPtrByte   = c.weakTypeOf[Ptr[Byte]]
-  val tCStruct   = c.weakTypeOf[CStruct]
+  val tCChar        = c.weakTypeOf[CChar]
+  val tCShort       = c.weakTypeOf[CShort]
+  val tCInt         = c.weakTypeOf[CInt]
+  val tCLong        = c.weakTypeOf[CLong]
+  val tCLongLong    = c.weakTypeOf[CLongLong]
+  val tCUnsignedInt = c.weakTypeOf[CUnsignedInt]
+  val tPtrByte      = c.weakTypeOf[Ptr[Byte]]
+  val tCStruct      = c.weakTypeOf[CStruct]
 
   def computeFieldSize(tpe: c.Type): Int = tpe match {
-    case t if t =:= tCChar     => 1
-    case t if t =:= tCShort    => 2
-    case t if t =:= tCInt      => 4
-    case t if t =:= tCLong     => 8
-    case t if t =:= tCLongLong => 8
-    case t if t =:= tPtrByte   => 8
-    case t if t <:< tCStruct   =>
+    case t if t =:= tCChar        => 1
+    case t if t =:= tCShort       => 2
+    case t if t =:= tCInt         => 4
+    case t if t =:= tCLong        => 8
+    case t if t =:= tCLongLong    => 8
+    case t if t =:= tCUnsignedInt => 4
+    case t if t =:= tPtrByte      => 8
+    case t if t <:< tCStruct      =>
       t.dealias.typeArgs.foldLeft(0)((size,tpe)=> size + computeFieldSize(tpe))
   }
 
@@ -42,7 +44,7 @@ protected[unsafe] trait MacroTools {
     loop(0,typeArgs.take(index+1))
   }
 
-  def genStructInstantiation(typeArgs: List[c.Type],rawptr: c.Tree): c.Tree = typeArgs match {
+  def genStructInstantiation(typeArgs: List[c.Type], rawptr: c.Tree): c.Tree = typeArgs match {
   % for N in range(1,22):
   %    Ts = ", ".join("t" + str(i) for i in range(1, N+1))
   %    args = ", ".join("$t" + str(i) for i in range(1, N+1))
@@ -52,24 +54,26 @@ protected[unsafe] trait MacroTools {
 
   def genGetValue(prefix: c.Expr[c.PrefixType], tpe: Type, offset: Int): Tree = {
     tpe match {
-      case t if t =:= tCChar     => q"$prefix.rawptr.getByte($offset)"
-      case t if t =:= tCShort    => q"$prefix.rawptr.getShort($offset)"
-      case t if t =:= tCInt      => q"$prefix.rawptr.getInt($offset)"
-      case t if t =:= tCLong     => q"$prefix.rawptr.getNativeLong($offset)"
-      case t if t =:= tCLongLong => q"$prefix.rawptr.getLong($offset)"
-      case t if t =:= tPtrByte   => q"new scalanative.unsafe.Ptr[Byte]($prefix.rawptr.getPointer($offset))"
-      case t if t <:< tCStruct   => genStructInstantiation(t.typeArgs,q"$prefix.rawptr")
+      case t if t =:= tCChar        => q"$prefix.raw.getByte($offset)"
+      case t if t =:= tCShort       => q"$prefix.raw.getShort($offset)"
+      case t if t =:= tCInt         => q"$prefix.raw.getInt($offset)"
+      case t if t =:= tCLong        => q"$prefix.raw.getNativeLong($offset)"
+      case t if t =:= tCLongLong    => q"$prefix.raw.getLong($offset)"
+      case t if t =:= tCUnsignedInt => q"scalanative.unsigned.UInt.fromInt($prefix.raw.getInt($offset))"
+      case t if t =:= tPtrByte      => q"new scalanative.unsafe.Ptr[Byte]($prefix.raw.getPointer($offset))"
+      case t if t <:< tCStruct      => genStructInstantiation(t.typeArgs,q"$prefix.raw")
     }
   }
 
   def genSetValue(prefix: c.Expr[c.PrefixType], tpe: Type, offset: Int, value: c.Tree): Tree =
     tpe match {
-      case t if t =:= tCChar     => q"$prefix.rawptr.setByte($offset,$value)"
-      case t if t =:= tCShort    => q"$prefix.rawptr.setShort($offset,$value)"
-      case t if t =:= tCInt      => q"$prefix.rawptr.setInt($offset,$value)"
-      case t if t =:= tCLong     => q"$prefix.rawptr.setNativeLong($offset,$value)"
-      case t if t =:= tCLongLong => q"$prefix.rawptr.setLong($offset,$value)"
-      case t if t =:= tPtrByte   => q"$prefix.rawptr.setPointer($offset,$value.rawptr)"
+      case t if t =:= tCChar        => q"$prefix.raw.setByte($offset,$value)"
+      case t if t =:= tCShort       => q"$prefix.raw.setShort($offset,$value)"
+      case t if t =:= tCInt         => q"$prefix.raw.setInt($offset,$value)"
+      case t if t =:= tCLong        => q"$prefix.raw.setNativeLong($offset,$value)"
+      case t if t =:= tCLongLong    => q"$prefix.raw.setLong($offset,$value)"
+      case t if t =:= tCUnsignedInt => q"$prefix.raw.setInt($offset,$value.toInt)"
+      case t if t =:= tPtrByte      => q"$prefix.raw.setPointer($offset,$value.raw)"
     }
 
   def genFieldGetter(prefix: c.Expr[c.PrefixType], index: Int): Tree = {
@@ -90,7 +94,7 @@ protected[unsafe] trait MacroTools {
       % for N in range(1,22):
       %    Ts = ", ".join("t" + str(i) for i in range(1, N+1))
       %    args = ", ".join("$t" + str(i) for i in range(1, N+1))
-      case List(${Ts}) => q"new scalanative.unsafe.CStruct${N}[${args}]($ptr.rawptr)"
+      case List(${Ts}) => q"new scalanative.unsafe.CStruct${N}[${args}]($ptr.raw)"
       % end
     }
   }

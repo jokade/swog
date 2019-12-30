@@ -1,9 +1,11 @@
-package scala.scalanative.unsafe
+package test.interop
 
+import test.interop.Mockups.PTestNumStruct
 import utest._
 
-import scala.scalanative.unsafe.Mockups.PTestNumStruct
-import scalanative.interop._
+import scala.scalanative._
+import scala.scalanative.unsafe._
+import scala.scalanative.unsigned._
 
 /**
  * Interop tests for 'extern' objects.
@@ -28,6 +30,26 @@ object ExternTest extends TestSuite {
       'CLongLong-{
         Mockups.ptest_return_long_long(Long.MinValue) ==> Long.MinValue
         Mockups.ptest_return_long_long(Long.MaxValue) ==> Long.MaxValue
+      }
+      'CUnsignedChar-{
+        Mockups.ptest_return_uchar(UByte.MinValue) ==> UByte.MinValue
+        Mockups.ptest_return_uchar(UByte.MaxValue) ==> UByte.MaxValue
+        Mockups.ptest_return_uchar(34.toUByte) ==> 34.toUByte
+      }
+      'CUnsignedShort-{
+        Mockups.ptest_return_ushort(UShort.MinValue) ==> UShort.MinValue
+        Mockups.ptest_return_ushort(UShort.MaxValue) ==> UShort.MaxValue
+        Mockups.ptest_return_ushort(1234.toUShort) ==> 1234.toUShort
+      }
+      'CUnsigedInt-{
+        Mockups.ptest_return_uint(UInt.MinValue) ==> UInt.MinValue
+        Mockups.ptest_return_uint(UInt.MaxValue) ==> UInt.MaxValue
+        Mockups.ptest_return_uint(12345678.toUInt) ==> 12345678.toUInt
+      }
+      'CUnsignedLong-{
+        Mockups.ptest_return_ulong(ULong.MinValue) ==> ULong.MinValue
+        Mockups.ptest_return_ulong(ULong.MaxValue) ==> ULong.MaxValue
+        Mockups.ptest_return_ulong(12345678.toULong) ==> 12345678.toULong
       }
       'CFloat-{
         Mockups.ptest_return_float(Float.MinPositiveValue) ==> Float.MinPositiveValue

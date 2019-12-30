@@ -9,7 +9,7 @@ package object jvm {
   lazy val nativeIntSize: Int = Native.getNativeSize(classOf[Int])
   lazy val nativeCharSize: Int = Native.getNativeSize(classOf[Char])
 
-  @inline final def ptrToCString(p: Ptr[Byte]): CString = p.asInstanceOf[CString]
+//  @inline final def ptrToCString(p: Ptr[Byte]): CString = p.asInstanceOf[CString]
 
   private var _jnaNameResolver = JNANameResolver.interfaceName
   def jnaNameResolver: JNANameResolver = _jnaNameResolver
