@@ -1,8 +1,7 @@
-package tests.cobj
+package test.cobj
 
 import de.surfice.smacrotools.debug
 
-import scala.scalanative.annotation.InlineSource
 import scala.scalanative.cobj.{ResultPtr, _}
 import scala.scalanative.unsafe._
 

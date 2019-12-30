@@ -32,10 +32,10 @@ package object unsafe {
   type CDouble           = Double
   type CString           = Ptr[Byte]
 
-  type CFuncPtr0[R]               = Callback
-  type CFuncPtr1[T1,R]            = Callback
-  type CFuncPtr2[T1,T2,R]         = Callback
-  type CFuncPtr3[T1,T2,T3,R]      = Callback
+//  type CFuncPtr0[R]               = Callback
+//  type CFuncPtr1[T1,R]            = Callback
+//  type CFuncPtr2[T1,T2,R]         = Callback
+//  type CFuncPtr3[T1,T2,T3,R]      = Callback
 
 
   def extern: Nothing = throw new UnsupportedOperationException("A call to 'extern' was not properly transformed.")

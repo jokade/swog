@@ -129,7 +129,7 @@ lazy val cobjTests = crossProject(JVMPlatform,NativePlatform)
   .dependsOn(cobj)
   .settings(commonSettings ++ dontPublish:_*)
   .settings(
-    fork := false
+    unmanagedResourceDirectories in Test += baseDirectory.value / "../shared/src/test/resources"
   )
   .nativeSettings(
     nativeLinkStubs := true,

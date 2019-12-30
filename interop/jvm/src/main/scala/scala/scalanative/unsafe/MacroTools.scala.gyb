@@ -14,6 +14,8 @@ protected[unsafe] trait MacroTools {
   val tCLong        = c.weakTypeOf[CLong]
   val tCLongLong    = c.weakTypeOf[CLongLong]
   val tCUnsignedInt = c.weakTypeOf[CUnsignedInt]
+  val tCFloat       = c.weakTypeOf[CFloat]
+  val tCDouble      = c.weakTypeOf[CDouble]
   val tPtrByte      = c.weakTypeOf[Ptr[Byte]]
   val tCStruct      = c.weakTypeOf[CStruct]
 
@@ -24,6 +26,8 @@ protected[unsafe] trait MacroTools {
     case t if t =:= tCLong        => 8
     case t if t =:= tCLongLong    => 8
     case t if t =:= tCUnsignedInt => 4
+    case t if t =:= tCFloat       => 4
+    case t if t =:= tCDouble      => 8
     case t if t =:= tPtrByte      => 8
     case t if t <:< tCStruct      =>
       t.dealias.typeArgs.foldLeft(0)((size,tpe)=> size + computeFieldSize(tpe))

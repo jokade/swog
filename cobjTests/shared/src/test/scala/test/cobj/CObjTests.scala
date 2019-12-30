@@ -1,12 +1,15 @@
-package tests.cobj
+package test.cobj
 
 import utest._
 
-import scala.scalanative.runtime.Intrinsics
-import scala.scalanative.unsafe._
-import scala.scalanative.cobj._
+import scalanative._
+import unsafe._
+import cobj._
+import interop.jvm._
 
 object CObjTests extends TestSuite {
+  jnaNameResolver = JNANameResolver.singleLibrary("cobjtest")
+
   val tests = Tests {
     'SimpleObject - {
       'Number - {
