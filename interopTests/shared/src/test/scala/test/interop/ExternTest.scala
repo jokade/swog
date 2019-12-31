@@ -1,5 +1,6 @@
 package test.interop
 
+import test.interop.Mockups.PTestNumStruct
 import utest._
 
 import scala.scalanative._
@@ -118,7 +119,7 @@ object ExternTest extends TestSuite {
         Mockups.ptest_global_int ==> 12345678
       }
     }
-/*
+
     'alloc-{
       'stackalloc-{
         'CInt-{
@@ -143,8 +144,18 @@ object ExternTest extends TestSuite {
           p._2 ==> 43
         }
       }
+      'zone-{
+        'CInt-{
+          Zone{ implicit z =>
+            val p = alloc[CInt]
+
+            p := -1
+            !p ==> -1
+            Mockups.ptest_incr_int_ptr(p)
+          }
+        }
+      }
     }
-    */
   }
 }
 

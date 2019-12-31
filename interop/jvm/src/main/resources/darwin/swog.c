@@ -10,7 +10,7 @@
 #endif
 
 // Returns the address of the specified byte array
-JNIEXPORT jlong JNICALL Java_scala_scalanative_interop_jvm_JNI_getByteArrayAddress(JNIEnv * env, jclass cls, jbyteArray arr) {
+JNIEXPORT jlong JNICALL Java_scala_scalanative_interop_JNI_getByteArrayAddress(JNIEnv * env, jclass cls, jbyteArray arr) {
   return (jlong)(*env)->GetByteArrayElements(env,arr,JNI_FALSE);
 }
 

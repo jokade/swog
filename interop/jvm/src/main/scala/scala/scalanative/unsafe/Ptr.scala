@@ -4,32 +4,28 @@ import com.sun.jna.{FromNativeContext, Native, NativeLong, NativeMapped, Pointer
 
 import scala.language.experimental.macros
 import scala.reflect.macros.blackbox
+import scala.scalanative.interop.JNI
 
-class Ptr[T](_peer: Long) extends Pointer(_peer) {
-  def this() = this(0)
-
-//  override def nativeType(): Class[_] = classOf[Long]
-//  override def fromNative(nativeValue: Any, context: FromNativeContext): AnyRef = {
-//    peer = nativeValue.asInstanceOf[Long]
-//    this
-//  }
-//  override def toNative: AnyRef = peer.asInstanceOf[AnyRef]
-
-  def raw: Long = peer
-
-//  @inline def raw: RawPtr = this
-
+trait Ptr[T] extends Pointer {
+  def raw: Long
   def :=(value: T): Unit =  macro Ptr.MacroImpl.setPtrValue[T]
   def unary_!(): T = macro Ptr.MacroImpl.getPtrValue[T]
-
 }
 
 
 object Ptr {
-  @inline final def apply[T](peer: Long): Ptr[T] = new Ptr(peer)
+  @inline final def apply[T](peer: Long): Ptr[T] = new Impl(peer)
+
+  @inline final def alloc[T](size: Int): Ptr[T] = new Memory(new Array[Byte](size))
 
   implicit def ptrToCStruct[T <: CStruct](ptr: Ptr[T]): T = macro MacroImpl.ptrToCStruct[T]
-  
+
+  class Impl[T](val raw: Long) extends Pointer(raw) with Ptr[T]
+
+  class Memory[T](buffer: Array[Byte], val raw: Long) extends Pointer(raw) with Ptr[T] {
+    def this(buffer: Array[Byte]) = this(buffer, JNI.getByteArrayAddress(buffer))
+  }
+
   private class MacroImpl(val c: blackbox.Context) extends MacroTools {
     import c.universe._
     
@@ -41,10 +37,11 @@ object Ptr {
 
   }
 
+
   object PtrConverter extends TypeConverter {
     override def fromNative(nativeValue: Any, context: FromNativeContext): AnyRef = {
       val raw = nativeValue.asInstanceOf[Long]
-      new Ptr(raw)
+      new Impl(raw)
     }
 
     override def toNative(value: Any, context: ToNativeContext): AnyRef = value.asInstanceOf[Ptr[_]].raw.asInstanceOf[AnyRef]

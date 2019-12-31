@@ -25,7 +25,9 @@ object Zone {
       if(_closed)
         throw new RuntimeException("Zone is already closed!")
       else {
-        ???
+        val p = Ptr.alloc[Byte](size.toInt)
+        _refs += p
+        p
       }
 
     override def close(): Unit = synchronized{

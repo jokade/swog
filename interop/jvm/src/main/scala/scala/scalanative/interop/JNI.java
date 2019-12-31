@@ -1,4 +1,4 @@
-package scala.scalanative.interop.jvm;
+package scala.scalanative.interop;
 
 import com.sun.jna.NativeLibrary;
 
