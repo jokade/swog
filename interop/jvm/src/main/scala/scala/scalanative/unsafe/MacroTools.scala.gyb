@@ -33,6 +33,11 @@ protected[unsafe] trait MacroTools {
       t.dealias.typeArgs.foldLeft(0)((size,tpe)=> size + computeFieldSize(tpe))
   }
 
+  def computeFieldOffset(tpe: c.Type, index: c.Tree): Tree = {
+    val tpesize = Constant(computeFieldSize(tpe))
+    q"$tpesize*$index"
+  }
+
   def computeFieldOffset(typeArgs: List[c.Type], index: Int): Int = {
     @tailrec
     def loop(lastOffset: Int, fields: List[c.Type]): Int = fields match {
@@ -56,7 +61,10 @@ protected[unsafe] trait MacroTools {
   % end
   }
 
-  def genGetValue(prefix: c.Expr[c.PrefixType], tpe: Type, offset: Int): Tree = {
+  def genGetValue(prefix: c.Expr[c.PrefixType], tpe: Type, offset: Int): Tree =
+    genGetValue(prefix,tpe,q"$${Constant(offset)}")
+
+  def genGetValue(prefix: c.Expr[c.PrefixType], tpe: Type, offset: Tree): Tree = {
     tpe match {
       case t if t =:= tCChar        => q"$prefix.getByte($offset)"
       case t if t =:= tCShort       => q"$prefix.getShort($offset)"
@@ -70,6 +78,9 @@ protected[unsafe] trait MacroTools {
   }
 
   def genSetValue(prefix: c.Expr[c.PrefixType], tpe: Type, offset: Int, value: c.Tree): Tree =
+    genSetValue(prefix,tpe,q"$${Constant(offset)}",value)
+
+  def genSetValue(prefix: c.Expr[c.PrefixType], tpe: Type, offset: Tree, value: c.Tree): Tree =
     tpe match {
       case t if t =:= tCChar        => q"$prefix.setByte($offset,$value)"
       case t if t =:= tCShort       => q"$prefix.setShort($offset,$value)"

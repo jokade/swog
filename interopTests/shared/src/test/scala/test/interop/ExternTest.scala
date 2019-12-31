@@ -70,6 +70,7 @@ object ExternTest extends TestSuite {
         fromCString(s2)  ==> "hello world"
       }
 
+
       'CStruct-{
         'CInt-{
           val s = Mockups.ptest_struct1_new()
@@ -109,7 +110,7 @@ object ExternTest extends TestSuite {
           
           s._1 ==> 'c'
           s._2 ==> 99
-          s._3._1 ==> 'x'
+//          s._3._1 ==> 'x'
         }
       }
     } 
@@ -155,6 +156,25 @@ object ExternTest extends TestSuite {
           }
         }
       }
+
+      'Ptr-{
+        'null-{
+          Mockups.ptest_return_ptr(null) ==> null
+        }
+        'index-{
+          val p = stackalloc[CInt](4)
+          p(0) = 0
+          p(1) = 123456789
+          p(2) = Int.MinValue
+          p(3) = Int.MaxValue
+
+          p(0) ==> 0
+          p(1) ==> 123456789
+          p(2) ==> Int.MinValue
+          p(3) ==> Int.MaxValue
+        }
+      }
+
     }
   }
 }

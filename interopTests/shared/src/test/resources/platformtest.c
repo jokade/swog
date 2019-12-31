@@ -4,6 +4,10 @@
 #include <stdlib.h>
 #include <limits.h>
 
+void* ptest_return_ptr(void* p) {
+  return p;
+}
+
 int ptest_return_char(char c) {
   return c;
 }

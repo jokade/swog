@@ -3,10 +3,14 @@ package scala.scalanative
 import com.sun.jna.{Callback, NativeLong, Pointer, SWOGHelper}
 
 import scala.reflect.macros.blackbox
+import scala.reflect.runtime.universe._
 import scala.scalanative.unsigned.{UByte, UInt, ULong, UShort}
 import scala.language.experimental.macros
 
 package object unsafe {
+  type Word              = Long
+  type UWord             = ULong
+
   // TODO: check type mappings and correct
   type CBool             = Boolean
   type CChar             = Byte
@@ -44,13 +48,13 @@ package object unsafe {
    *
    *  Note: unlike alloc, the memory is not zero-initialized.
    */
-  def stackalloc[T]: Ptr[T] = macro MacroImpl.stackalloc[T]
+  def stackalloc[T](implicit tag: WeakTypeTag[T]): Ptr[T] = macro MacroImpl.stackalloc[T]
 
   /** Stack allocate n values of given type.
    *
    *  Note: unlike alloc, the memory is not zero-initialized.
    */
-  def stackalloc[T](n: CSize): Ptr[T] = ???
+  def stackalloc[T](n: CSize)(implicit tag: WeakTypeTag[T]): Ptr[T] = macro MacroImpl.stackallocN[T]
 
   /** Heap allocate and zero-initialize a value.
    */

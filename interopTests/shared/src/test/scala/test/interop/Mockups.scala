@@ -10,6 +10,8 @@ import scala.scalanative.unsafe._
 object Mockups {
   val ptest_global_int: Int = extern
 
+  def ptest_return_ptr(p: Ptr[Byte]): Ptr[Byte] = extern
+
   /// returns the passed-in CChar unmodified
   def ptest_return_char(c: CChar): CChar = extern
   /// returns the passed-in CInt unmodified

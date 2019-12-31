@@ -3,7 +3,6 @@ package scala.scalanative.interop
 import com.sun.jna._
 
 import scala.collection.JavaConverters._
-import scala.scalanative.interop.jvm.JNANameResolver
 import scala.scalanative.unsafe.Ptr
 
 object JNA {
@@ -11,29 +10,29 @@ object JNA {
   lazy val nativeIntSize: Int = Native.getNativeSize(classOf[Int])
   lazy val nativeCharSize: Int = Native.getNativeSize(classOf[Char])
 
-  lazy val mapper: TypeMapper = {
+  lazy val defaultMapper: TypeMapper = {
     val m = new DefaultTypeMapper()
     m.addTypeConverter(classOf[Ptr[_]],Ptr.PtrConverter)
     m
   }
 
-  private lazy val options = Map(Library.OPTION_TYPE_MAPPER->mapper).asJava
+  private lazy val options = Map(Library.OPTION_TYPE_MAPPER->defaultMapper).asJava
 
 //  @inline final def ptrToCString(p: Ptr[Byte]): CString = p.asInstanceOf[CString]
 
-  private var _jnaNameResolver = JNANameResolver.interfaceName
-  def jnaNameResolver: JNANameResolver = _jnaNameResolver
-  def jnaNameResolver_=(r: JNANameResolver): Unit = this.synchronized( _jnaNameResolver = r )
+  private var _nameResolver = JNANameResolver.interfaceName
+  def nameResolver: JNANameResolver = _nameResolver
+  def nameResolver_=(r: JNANameResolver): Unit = this.synchronized( _nameResolver = r )
 
-  def loadJNALibrary[T<:Library](fullName: String, iface: Class[T]): T =
-    _jnaNameResolver(fullName) match {
+  def loadInterface[T<:Library](fullName: String, iface: Class[T]): T =
+    _nameResolver(fullName) match {
       case Some(libName) =>
         Native.load(libName,iface,options)
       case x => throw new RuntimeException(s"cannot resolve JNA library name for interface type '$x'")
     }
 
   def loadNativeLibrary(fullName: String): NativeLibrary =
-    _jnaNameResolver(fullName) match {
+    _nameResolver(fullName) match {
       case Some(libName) =>
         NativeLibrary.getInstance(libName,options)
       case x => throw new RuntimeException(s"cannot resolve JNA library name for interface type '$x'")

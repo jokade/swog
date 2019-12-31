@@ -1,4 +1,4 @@
-package scala.scalanative.interop.jvm
+package scala.scalanative.interop
 
 trait JNANameResolver {
   def apply(interfaceName: String): Option[String]

@@ -119,7 +119,7 @@ object external {
           trait __IFace extends com.sun.jna.Library {
               ..$jnaDefs
           }""",
-        q"""lazy val __inst: __IFace = scalanative.interop.JNA.loadJNALibrary(${data.jnaLibraryName},classOf[__IFace])""")
+        q"""lazy val __inst: __IFace = scalanative.interop.JNA.loadInterface(${data.jnaLibraryName},classOf[__IFace])""")
     }
 
     protected def genJnaCall(scalaDef: DefDef)(implicit data: Data): DefDef = {

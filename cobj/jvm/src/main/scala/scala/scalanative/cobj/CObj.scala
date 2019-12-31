@@ -68,7 +68,7 @@ object CObj {
             }
          """,
         q"""
-            lazy val __ext = scalanative.interop.jvm.loadJNALibrary($jnaName, classOf[__IFace])
+            lazy val __ext = scalanative.interop.JNA.loadInterface($jnaName, classOf[__IFace])
          """
       )
     }
