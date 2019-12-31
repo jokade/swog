@@ -1,6 +1,7 @@
 package scala.scalanative.interop;
 
 import com.sun.jna.NativeLibrary;
+import com.sun.jna.Platform;
 
 import java.io.File;
 import java.io.IOException;
@@ -14,11 +15,12 @@ public class JNI {
 
   static {
     // load the native library
-    String dir = NativeLibrary.getInstance("swog").getFile().getParent();
-    if(dir != null) {
-      try{ addLibraryDir(dir); } catch(IOException ex) { throw new RuntimeException(ex); }
+    String path = "/libswog.dylib";
+    try{
+      NativeUtils.loadLibraryFromJar(path);
+    } catch(IOException e) {
+      throw new RuntimeException(e);
     }
-    System.loadLibrary("swog");
   }
   /// registers the specified dir as directory from which to load the native lib
   private static void addLibraryDir(String s) throws IOException {
