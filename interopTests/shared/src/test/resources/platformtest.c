@@ -8,6 +8,10 @@ void* ptest_return_ptr(void* p) {
   return p;
 }
 
+_Bool ptest_return_bool(_Bool b) {
+  return b;
+}
+
 int ptest_return_char(char c) {
   return c;
 }

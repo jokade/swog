@@ -291,6 +291,8 @@ final class UShort private[scalanative] (private[scalanative] var underlying: Sh
 
 object UShort {
 
+  @inline final def fromShort(s: Short): UShort = new UShort(s)
+
   /** The smallest value representable as a UShort. */
   final val MinValue = new UShort(0.toShort)
 

@@ -14,11 +14,14 @@ import unsigned._
 object ExternTest extends TestSuite {
   val tests = Tests {
     'types-{
+      'CBool-{
+        Mockups.ptest_return_bool(false) ==> false
+        Mockups.ptest_return_bool(true) ==> true
+      }
       'CChar-{
         Mockups.ptest_return_char(Byte.MinValue) ==> Byte.MinValue
         Mockups.ptest_return_char(Byte.MaxValue) ==> Byte.MaxValue
       }
-
       'CInt-{
         Mockups.ptest_return_int(Int.MinValue) ==> Int.MinValue
         Mockups.ptest_return_int(Int.MaxValue) ==> Int.MaxValue
@@ -160,6 +163,48 @@ object ExternTest extends TestSuite {
       'Ptr-{
         'null-{
           Mockups.ptest_return_ptr(null) ==> null
+        }
+        'CBool-{
+          val p = stackalloc[CBool]
+          p := false
+          !p ==> false
+          p := true
+          !p ==> true
+        }
+        'CUnsignedChar-{
+          val p = stackalloc[CUnsignedChar]
+          p := 0xFF.toUByte
+          assert( !p == 0xFF.toUByte )
+        }
+        'CUnsignedShort-{
+          val p = stackalloc[CUnsignedShort]
+          p := 0xFFFF.toUShort
+          assert( !p == 0xFFFF.toUShort )
+        }
+        'CUnsignedInt-{
+          val p = stackalloc[CUnsignedInt]
+          p := 4321.toUInt
+          assert( !p == 4321.toUInt )
+        }
+        'CUnsignedLong-{
+          val p = stackalloc[CUnsignedLong]
+          p := 0xFFFFFFFF.toULong
+          assert( !p == 0xFFFFFFFF.toULong )
+        }
+        'CFloat-{
+          val p = stackalloc[CFloat]
+          p := 1.2345F
+          !p ==> 1.2345F
+        }
+        'CDouble-{
+          val p = stackalloc[CDouble]
+          p := 1.23456789
+          !p ==> 1.23456789
+        }
+        'CString-{
+          val p = stackalloc[CString]
+          p := c"hello world"
+          fromCString(!p) ==> "hello world"
         }
         'index-{
           val p = stackalloc[CInt](4)

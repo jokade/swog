@@ -2,7 +2,6 @@ package scala.scalanative
 
 import com.sun.jna.{Callback, NativeLong, Pointer, SWOGHelper}
 
-import scala.reflect.macros.blackbox
 import scala.reflect.runtime.universe._
 import scala.scalanative.unsigned.{UByte, UInt, ULong, UShort}
 import scala.language.experimental.macros
@@ -36,12 +35,6 @@ package object unsafe {
   type CDouble           = Double
   type CString           = Ptr[Byte]
 
-//  type CFuncPtr0[R]               = Callback
-//  type CFuncPtr1[T1,R]            = Callback
-//  type CFuncPtr2[T1,T2,R]         = Callback
-//  type CFuncPtr3[T1,T2,T3,R]      = Callback
-
-
   def extern: Nothing = throw new UnsupportedOperationException("A call to 'extern' was not properly transformed.")
 
   /** Stack allocate a value of given type.
@@ -60,10 +53,8 @@ package object unsafe {
    */
   def alloc[T]: Ptr[T] = macro MacroImpl.alloc[T]
 
-  def fromCString(cstr: CString): String = {
-    val s = cstr.getString(0)
-    s
-  } //new Pointer(cstr.rawptr).getString(0)
+  @inline final def fromCString(cstr: CString): String = cstr.getString(0)
+
   @inline final def toCString(s: String)(implicit zone: Zone): CString = zone.makeNativeString(s)
 
   implicit def longToCLong(l: Long): CLong = new NativeLong(l)

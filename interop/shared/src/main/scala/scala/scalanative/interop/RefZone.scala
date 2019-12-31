@@ -1,7 +1,9 @@
 package scala.scalanative.interop
 
-import scala.scalanative.runtime.{Intrinsics, RawPtr}
-import scala.scalanative.unsafe.Ptr
+import scalanative._
+import runtime.RawPtr
+import interop._
+import unsafe._
 
 trait RefZone {
   /**
@@ -39,7 +41,7 @@ object RefZone {
 
     override def export(o: AnyRef): RawPtr = {
       _set += o
-      Intrinsics.castObjectToRawPtr(o)
+      objectToRawPtr(o)
     }
 
 //    override def close(): Unit = {}
@@ -51,7 +53,7 @@ object RefZone {
    * Use only if you're sure, that the exported objects stay reachable after they were exported.
    */
   lazy val None = new RefZone {
-    override def export(o: AnyRef): RawPtr = scalanative.runtime.Intrinsics.castObjectToRawPtr(o)
+    override def export(o: AnyRef): RawPtr = objectToRawPtr(o)
 
     override def release(o: AnyRef): Unit = {}
   }

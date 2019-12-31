@@ -295,6 +295,8 @@ final class ULong private[scalanative] (private[scalanative] var underlying: Lon
 
 object ULong {
 
+  @inline final def fromLong(l: Long): ULong = new ULong(l)
+
   /** The smallest value representable as a ULong. */
   final val MinValue = new ULong(0L)
 

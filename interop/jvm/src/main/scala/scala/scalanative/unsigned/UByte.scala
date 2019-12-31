@@ -291,6 +291,8 @@ final class UByte private[scalanative] (private[scalanative] var underlying: Byt
 
 object UByte {
 
+  @inline final def fromByte(b: Byte): UByte = new UByte(b)
+
   /** The smallest value representable as a UByte. */
   final val MinValue = new UByte(0.toByte)
 

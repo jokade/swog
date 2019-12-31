@@ -12,6 +12,8 @@ trait Ptr[T] extends Pointer {
   def unary_!(): T = macro Ptr.MacroImpl.getPtrValue[T]
   def apply(offset: Word): T = macro Ptr.MacroImpl.apply[T]
   def update(offset: Word, value: T): Unit = macro Ptr.MacroImpl.update[T]
+  @inline final def setPtr(offset: Long, value: Ptr[_]): Unit = setLong(offset,value.raw)
+  @inline final def getPtr[U](offset: Long): Ptr[U] = Ptr(getLong(offset))
 }
 
 
@@ -33,9 +35,7 @@ object Ptr {
 
     val exprZero = q"0"
     
-    def setPtrValue[T: c.WeakTypeTag](value: c.Tree): c.Tree = {
-      genSetValue(c.prefix,weakTypeOf[T],exprZero,value)
-    }
+    def setPtrValue[T: c.WeakTypeTag](value: c.Tree): c.Tree = genSetValue(c.prefix,weakTypeOf[T],exprZero,value)
 
     def getPtrValue[T: c.WeakTypeTag](): c.Tree = genGetValue(c.prefix,weakTypeOf[T],exprZero)
 

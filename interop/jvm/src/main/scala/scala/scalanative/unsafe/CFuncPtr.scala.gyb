@@ -1,13 +1,15 @@
 package scala.scalanative.unsafe
 
-trait CFuncPtr0[R] {
+trait CFuncPtr
+
+trait CFuncPtr0[R] extends CFuncPtr {
   def apply(): R
 }
 
 % for N in range(1, 23):
 %    Ts = "" if N == 0 else "[" + ", ".join("T" + str(i) for i in range(1, N + 1)) + ", R]"
 %    args = ", ".join("arg" + str(i) +": T" + str(i) for i in range(1, N+1))
-trait CFuncPtr${N}${Ts} {
+trait CFuncPtr${N}${Ts} extends CFuncPtr {
   def apply(${args}): R
 }
 % end
