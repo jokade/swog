@@ -25,7 +25,8 @@ lazy val commonSettings = Seq(
 lazy val root  = project.in(file("."))
   .aggregate(
     interopJVM, interopNative,
-    cobjJVM, cobjNative )
+    cobjJVM, cobjNative,
+    cxx, cxxlib )
   .settings(commonSettings ++ dontPublish:_*)
   .settings(
     name := "swog"
@@ -72,10 +73,10 @@ lazy val objc = project
   .settings(
     name := "swog-objc"
   )
-
+*/
 lazy val cxx = project
   .enablePlugins(ScalaNativePlugin)
-  .dependsOn(cobj)
+  .dependsOn(cobjNative)
   .settings(commonSettings ++ publishingSettings: _*)
   .settings(
     name := "swog-cxx"
@@ -90,7 +91,7 @@ lazy val cxxlib = project
 //    nativeLinkStubs := true,
 //    nbhCxxCXXFlags += "-std=c++11"
   )
-
+/*
 lazy val scriptbridge = project
   .enablePlugins(ScalaNativePlugin)
   .settings(commonSettings ++ publishingSettings: _*)
