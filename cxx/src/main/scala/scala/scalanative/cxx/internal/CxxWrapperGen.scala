@@ -6,7 +6,7 @@ import scala.scalanative.cobj.{NamingConvention, ResultPtr, ResultValue}
 import scala.scalanative.cobj.internal.CommonHandler
 import scala.scalanative.cxx.{CxxEnum, CxxObject}
 import scala.scalanative.runtime.RawPtr
-import scala.scalanative.unsafe.{CChar, CDouble, CFloat, CInt, CLong, CString, Ptr}
+import scala.scalanative.unsafe.{CChar, CDouble, CFloat, CInt, CLong, CLongLong, CShort, CString, CUnsignedChar, CUnsignedInt, CUnsignedLong, CUnsignedLongLong, CUnsignedShort, Ptr}
 
 
 trait CxxWrapperGen extends CommonHandler {
@@ -18,11 +18,18 @@ trait CxxWrapperGen extends CommonHandler {
   private val tUnit = weakTypeOf[Unit]
   private val tBoolean = weakTypeOf[Boolean]
   private val tChar = weakTypeOf[CChar]
+  private val tShort = weakTypeOf[CShort]
   private val tInt = weakTypeOf[CInt]
   private val tLong = weakTypeOf[CLong]
+  private val tLongLong = weakTypeOf[CLongLong]
   private val tFloat = weakTypeOf[CFloat]
   private val tDouble = weakTypeOf[CDouble]
   private val tCString = weakTypeOf[CString]
+  private val tUByte = weakTypeOf[CUnsignedChar]
+  private val tUShort = weakTypeOf[CUnsignedShort]
+  private val tUInt = weakTypeOf[CUnsignedInt]
+  private val tULong = weakTypeOf[CUnsignedLong]
+  private val tULongLong = weakTypeOf[CUnsignedLongLong]
   private val tPtrCString = weakTypeOf[Ptr[CString]]
   private val tPtrBoolean = weakTypeOf[Ptr[Boolean]]
   private val tPtrInt = weakTypeOf[Ptr[Int]]
@@ -42,10 +49,20 @@ trait CxxWrapperGen extends CommonHandler {
   sealed trait PrimitiveType extends CxxType { def default = name }
   case object BoolType       extends PrimitiveType { val name = "bool" }
   case object CharType       extends PrimitiveType { val name = "char" }
+  case object ShortType      extends PrimitiveType { val name = "short" }
   case object IntType        extends PrimitiveType { val name = "int" }
   case object LongType       extends PrimitiveType { val name = "long" }
+  case object LongLongType   extends PrimitiveType { val name = "long long" }
+
+  case object UCharType      extends PrimitiveType { val name = "unsigned char" }
+  case object UShortType     extends PrimitiveType { val name = "unsigned short" }
+  case object UIntType       extends PrimitiveType { val name = "unsigned int" }
+  case object ULongType      extends PrimitiveType { val name = "unsigned long" }
+  case object ULongLongType  extends PrimitiveType { val name = "unsigned long long" }
+
   case object FloatType      extends PrimitiveType { val name = "float" }
   case object DoubleType     extends PrimitiveType { val name = "double" }
+
   case object UnitType       extends PrimitiveType { val name = "void" }
   case object CStringType    extends PrimitiveType { val name = "char*" }
   case object CStringPtrType extends PrimitiveType { val name = "char**" }
@@ -286,11 +303,18 @@ trait CxxWrapperGen extends CommonHandler {
     try{ genCxxWrapperType(getType(tpe, true)) }
     catch { case _:Throwable => VoidPtr }
 
-  protected def genCxxWrapperType(tpe: Type)(implicit data: Data): CxxType = tpe match {
+  protected def genCxxWrapperType(tpe: Type)(implicit data: Data): CxxType = tpe.dealias match {
     case t if t =:= tBoolean    => BoolType
     case t if t =:= tChar       => CharType
+    case t if t =:= tShort      => ShortType
     case t if t =:= tInt        => IntType
     case t if t =:= tLong       => LongType
+    case t if t =:= tLongLong   => LongLongType
+    case t if t =:= tUByte      => UCharType
+    case t if t =:= tUShort     => UShortType
+    case t if t =:= tUInt       => UIntType
+    case t if t =:= tULong      => ULongType
+    case t if t =:= tULongLong  => ULongLongType
     case t if t =:= tFloat      => FloatType
     case t if t =:= tDouble     => DoubleType
     case t if t =:= tUnit       => UnitType

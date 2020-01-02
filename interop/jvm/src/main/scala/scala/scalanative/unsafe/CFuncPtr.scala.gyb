@@ -1,6 +1,8 @@
 package scala.scalanative.unsafe
 
-trait CFuncPtr
+import com.sun.jna.Callback
+
+sealed trait CFuncPtr extends Callback
 
 trait CFuncPtr0[R] extends CFuncPtr {
   def apply(): R

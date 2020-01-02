@@ -126,9 +126,7 @@ object external {
       val DefDef(mods,name,types,args,rettype,rhs) = scalaDef
       val params = args match {
         case Nil => Nil
-        case List(params) => params map {
-          case ValDef(_,name,_,_) => name
-        }
+        case List(params) => transformJnaCallParams(params)
         case x =>
           c.error(c.enclosingPosition, "extern methods with more than two parameter lists are not supported")
           ???
@@ -136,6 +134,11 @@ object external {
       val call = q"__inst.$name(..$params)"
       DefDef(mods,name,types,args,rettype,call)
     }
+
+    protected def transformJnaCallParams(params: Seq[Tree]): Seq[Tree] =
+      params map {
+        case ValDef(_,name,_,_) => q"name"
+      }
 
     protected def genJnaDef(scalaDef: DefDef)(implicit data: Data): DefDef = {
       val DefDef(mods, name, types, args, rettype, rhs) = scalaDef

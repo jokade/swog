@@ -127,3 +127,9 @@ void ptest_incr_num_struct(ptest_num_struct* p) {
 }
 
 int ptest_global_int = 12345678;
+
+typedef int (*func0_t)();
+
+int ptest_call_func0(func0_t f) {
+  return f();
+}

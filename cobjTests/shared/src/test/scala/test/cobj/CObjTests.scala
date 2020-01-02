@@ -5,10 +5,10 @@ import utest._
 import scalanative._
 import unsafe._
 import cobj._
-import interop.jvm._
+import interop._
 
 object CObjTests extends TestSuite {
-  jnaNameResolver = JNANameResolver.singleLibrary("cobjtest")
+  JNA.nameResolver = JNANameResolver.singleLibrary("cobjtest")
 
   val tests = Tests {
     'SimpleObject - {
@@ -45,7 +45,7 @@ object CObjTests extends TestSuite {
         val list2 = list.prepend(number)
         list2.isEmpty ==> false
         list2.size ==> 1
-        /*
+
         list.isEmpty ==> true
         list.size ==> 0
         list.itemAt(0) ==> null
@@ -59,11 +59,9 @@ object CObjTests extends TestSuite {
         }
         list3.itemAt(0).getValue() ==> 2
         list3.itemAt(1).getValue() ==> 42
-
- */
       }
     }
-/*
+
     'Callbacks-{
       val cb = new CFuncPtr0[Int] {
         override def apply(): Int = 42
@@ -76,7 +74,7 @@ object CObjTests extends TestSuite {
       Callbacks.exec0(cb) ==> 42
       Callbacks.exec1(cb1,43) ==> 43
     }
-
+/*
     'ResultPtrs-{
       'Int- {
         implicit val out = ResultPtr.stackalloc[Int]

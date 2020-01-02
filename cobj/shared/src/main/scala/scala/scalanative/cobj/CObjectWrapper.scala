@@ -1,6 +1,5 @@
 package scala.scalanative.cobj
 
-import scala.scalanative.runtime.Intrinsics
 import scala.scalanative.unsafe._
 
 trait CObjectWrapper[T] {

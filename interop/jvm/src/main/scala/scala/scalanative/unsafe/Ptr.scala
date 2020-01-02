@@ -14,6 +14,8 @@ trait Ptr[T] extends Pointer {
   def update(offset: Word, value: T): Unit = macro Ptr.MacroImpl.update[T]
   @inline final def setPtr(offset: Long, value: Ptr[_]): Unit = setLong(offset,value.raw)
   @inline final def getPtr[U](offset: Long): Ptr[U] = Ptr(getLong(offset))
+
+  @inline final def toInt: Int = raw.toInt
 }
 
 

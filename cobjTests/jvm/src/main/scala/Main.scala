@@ -4,13 +4,13 @@ import de.surfice.smacrotools.debug
 import scala.scalanative._
 import unsafe._
 import cobj._
-import scala.scalanative.interop.jvm._
+import scala.scalanative.interop.{JNA, JNANameResolver}
 
 @CObj
 @debug
 object Main {
 
-  jnaNameResolver = JNANameResolver.prefixResolver(Seq("Gtk"->"gtk-3"))
+  JNA.nameResolver = JNANameResolver.prefixResolver(Seq("Gtk"->"gtk-3"))
 
   @syncOnMainThread
   def main(args: Array[String]): Unit = {

@@ -220,6 +220,12 @@ object ExternTest extends TestSuite {
         }
       }
 
+      'CFunc- {
+        'CFunc0 - {
+          val f = new CFuncPtr0[Int] { def apply(): Int = 42 }
+          Mockups.ptest_call_func0(f) ==> 42
+        }
+      }
     }
   }
 }
