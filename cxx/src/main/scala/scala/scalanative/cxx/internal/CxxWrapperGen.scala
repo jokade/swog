@@ -80,6 +80,10 @@ trait CxxWrapperGen extends CommonHandler {
 
     def cxxType: String = data.getOrElse("cxxType",cxxFQClassName).asInstanceOf[String]
     def withCxxType(tpe: Option[String]): Data = if(tpe.isDefined) data.updated("cxxType",tpe.get) else data
+
+    /// indicates if the annottee is a object representing functions in a C++ namespace (instead of a class)
+    def cxxIsNamespaceObject: Boolean = data.getOrElse("cxxIsNamespaceObject",false).asInstanceOf[Boolean]
+    def setCxxIsNamespaceObject(f: Boolean): Data = data.updated("cxxIsNamespaceObject",f)
   }
 
   private def genSizeOfExternal(data: Data): Tree = {
@@ -100,10 +104,18 @@ trait CxxWrapperGen extends CommonHandler {
       .map( _.apply("header").get )
       .flatMap(extractStringConstant)
 
-    data
+
+    val updData =
+      data
       .withNamingConvention(NamingConvention.CxxWrapper)
       .withCxxIncludes(includes)
       .withCxxFQClassName(genCxxFQClassName(tpe)(data))
+
+    if(data.cxxIsNamespaceObject)
+      updData
+    // add 'sizeof' if the annottee represents functions in a C++ namespace
+    else
+      updData
       .addExternals(Seq("__sizeof"->("__sizeof"->genSizeOfExternal(data))))
       .withAdditionalCompanionStmts(Seq(genSizeOfVal(data)))
   }
@@ -120,7 +132,11 @@ trait CxxWrapperGen extends CommonHandler {
 
   def genCxxSource(data: Data): Tree = {
     val includes = data.cxxIncludes.map( i => "#include "+i ).mkString("","\n","\n\n")
-    val sizeof = s"""  int ${data.externalPrefix}__sizeof() { return sizeof(${data.cxxType}); }\n"""
+    val sizeof =
+      if(!data.cxxIsNamespaceObject)
+        s"""  int ${data.externalPrefix}__sizeof() { return sizeof(${data.cxxType}); }\n"""
+      else
+        ""
     genCxxWrapper( includes + """extern "C" {""" + "\n" + sizeof + data.cxxWrappers.mkString("\n") + "\n}" )
   }
 
@@ -185,7 +201,13 @@ trait CxxWrapperGen extends CommonHandler {
       case _ => "return " + cast
     }
 
-    val body = findCxxBody(scalaDef).getOrElse(s"$ret ${data.cxxFQClassName}::$name(${callArgs.mkString(", ")});")
+    val calleeName =
+      if(data.cxxIsNamespaceObject)
+        data.cxxNamespace.map(_+"::").getOrElse("") + name
+      else
+        data.cxxFQClassName + "::" + name
+
+    val body = findCxxBody(scalaDef).getOrElse(s"$ret $calleeName(${callArgs.mkString(", ")});")
     s"""  $returnType ${data.externalPrefix}$scalaName(${params.mkString(", ")}) { $body }"""
   }
 

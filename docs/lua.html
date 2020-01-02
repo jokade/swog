@@ -220,7 +220,7 @@ reading and writing Lua objects, and of course exposing SN objects to the Lua in
 <li><p>Define and register a Scala class that is accessible from Lua:</p></li>
 </ol>
 <div class="highlight-scala notranslate"><div class="highlight"><pre><span></span><span class="k">package</span> <span class="nn">bar</span>
-<span class="k">import</span> <span class="nn">scalanative.scriptbridge._</span>
+<span class="k">import</span> <span class="nn">scala.scalanative.scriptbridge._</span>
 
 <span class="nd">@ScriptObj</span>
 <span class="k">class</span> <span class="nc">Foo</span><span class="o">(</span><span class="k">var</span> <span class="n">num</span><span class="k">:</span> <span class="kt">Int</span><span class="o">)</span> <span class="o">{</span>
@@ -275,7 +275,7 @@ reading and writing Lua objects, and of course exposing SN objects to the Lua in
 <div class="section" id="basic-rules-for-exposing-objects-to-lua">
 <h3>Basic Rules for Exposing Objects to Lua<a class="headerlink" href="#basic-rules-for-exposing-objects-to-lua" title="Permalink to this headline">¶</a></h3>
 <p>Here is the basic template for SN classes exposed to Lua:</p>
-<div class="highlight-scala notranslate"><div class="highlight"><pre><span></span><span class="k">import</span> <span class="nn">scalanative.scriptbridge._</span>
+<div class="highlight-scala notranslate"><div class="highlight"><pre><span></span><span class="k">import</span> <span class="nn">scala.scalanative.scriptbridge._</span>
 <span class="k">import</span> <span class="nn">lua._</span>
 
 <span class="nd">@ScriptObj</span>

@@ -164,7 +164,7 @@ class LuaScriptBridge(val c: whitebox.Context) extends ScriptBridgeHandler {
       val (args, argDefs) = genArgs(constr.params, 0)
       val call = args match {
         case Nil => q"val res = new ${constr.name}"
-        case List(args) => q"val res = new ${constr.name}(..$args)"
+        case List(xs) => q"val res = new ${constr.name}(..$xs)"
       }
       val func =
         q"""val f_new = new CFuncPtr1[RawPtr,Int] {
