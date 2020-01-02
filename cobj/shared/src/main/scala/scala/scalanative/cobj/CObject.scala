@@ -8,6 +8,8 @@ import scala.scalanative.unsafe.Ptr
  */
 trait CObject extends ExternalObject {
   //override def equals(obj: Any): Boolean = super.equals(obj)
+  /// Wraps the underlying pointer into the specified type
+  def as[T<:CObject](implicit wrapper: CObjectWrapper[T]): T = wrapper.wrap(__ptr)
 }
 
 trait MutableCObject extends CObject {
