@@ -6,8 +6,16 @@ import scala.reflect.macros.whitebox
 import scala.scalanative.cobj.internal.CommonHandler
 import scala.scalanative.cxx.internal.CxxWrapperGen
 
+/**
+ * @param namespace The C++ namespace.
+ * @param classname The C++ classname to be used.
+ * @param prefix
+ * @param cxxType The name of the C++ type represented by this class or trait
+ * @param isNamespaceObject Set this to true, if the annotated object contains functions defined in the specified C++ namespace
+ */
 @compileTimeOnly("enable macro paradise to expand macro annotations")
-class Cxx(namespace: String = null, classname: String = null, prefix: String = null, cxxType: String = null) extends StaticAnnotation {
+class Cxx(namespace: String = null, classname: String = null, prefix: String = null, cxxType: String = null,
+          isNamespaceObject: Boolean = false) extends StaticAnnotation {
   def macroTransform(annottees: Any*): Any = macro Cxx.Macro.impl
 }
 
@@ -21,7 +29,7 @@ object Cxx {
     override def supportsObjects: Boolean = true
     override def createCompanion: Boolean = true
 
-    val annotationParamNames = Seq("namespace","classname","prefix","cxxType")
+    val annotationParamNames = Seq("namespace","classname","prefix","cxxType","isNamespaceObject")
 
     import c.universe._
 
@@ -100,11 +108,16 @@ object Cxx {
         case Some(t) => Some(extractStringConstant(t).get)
         case None => None
       }
+      val isNamespaceObject = annotParams("isNamespaceObject") match {
+        case Some(t) => extractBooleanConstant(t).get
+        case _ => false
+      }
       val updData = data
         .withExternalPrefix(externalPrefix)
         .withCxxNamespace(namespace)
         .withCxxClassName(classname)
         .withCxxType(cxxType)
+        .setCxxIsNamespaceObject(isNamespaceObject)
       analyzeCxxAnnotation(tpe)(updData)
     }
 
