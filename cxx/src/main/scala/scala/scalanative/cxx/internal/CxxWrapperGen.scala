@@ -77,11 +77,20 @@ trait CxxWrapperGen extends CommonHandler {
 
   val notPrivate = Modifiers().privateWithin
 
-  case class Template(instance: ClassParts, templateType: Type, annotation: Tree)(implicit data: Data) {
+  case class Template(instance: TypeParts, templateType: Type, annotation: Tree)(implicit data: Data) {
     val params = extractAnnotationParameters(annotation,Seq("namespace","classname"))
-    val namespace = extractStringConstant(params("namespace").get)
-    val classname = extractStringConstant(params("classname").get)
-    val templateArgs = templateType.typeArgs.map(genCxxWrapperType(_).default).mkString("<",",",">")
+
+    // If 'namespace' is explicitly set in the @Cxx annotation, use that value;
+    // otherwise use the value from the @CxxTemplate annotation
+    val namespace = data.cxxNamespace.orElse(extractStringConstant(params("namespace").get))
+    // If 'classname' is explicitly set in the @Cxx annotation, use that value;
+    // otherwise use the value from the @CxxTemplate annotation
+    val classname = data.cxxClassName.orElse(extractStringConstant(params("classname").get))
+
+    // Only add the template type arguments to the FQName if 'classname' was not explicitly set in the @Cxx annotation
+    val templateArgs =
+      if(data.cxxClassName.isEmpty) templateType.typeArgs.map(genCxxWrapperType(_).default).mkString("<",",",">")
+      else ""
 
     val fqName = ((namespace,classname) match {
       case (None,None) => templateType.typeSymbol.name.toString
@@ -107,7 +116,8 @@ trait CxxWrapperGen extends CommonHandler {
         val name = f.name.toTermName
         val vparamss =
           f.typeSignature.paramLists.map( l => l.map{p =>
-            val mods = Modifiers()
+            val ref = findAnnotation(p,"scala.scalanative.cxx.ref")
+            val mods = Modifiers(NoFlags,notPrivate,ref.toList)
             val name = p.name.toTermName
             val tpe = substituteTemplateType( p.typeSignature.resultType )
             val tpt = tq"$tpe"
@@ -213,7 +223,7 @@ trait CxxWrapperGen extends CommonHandler {
   def genCxxSource(data: Data, isTrait: Boolean): Tree = {
     val includes = data.cxxIncludes.map( i => "#include "+i ).mkString("","\n","\n\n")
     val sizeof =
-      if(isTrait || !data.cxxIsNamespaceObject)
+      if(isTrait || data.cxxIsNamespaceObject)
         ""
       else
         s"""  int ${data.externalPrefix}__sizeof() { return sizeof(${data.cxxType}); }\n"""

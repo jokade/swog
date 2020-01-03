@@ -1,6 +1,8 @@
 package cxxlib
 
+import scala.collection.mutable
 import scala.scalanative._
+import scala.scalanative.cobj.CObjectWrapper
 import scala.scalanative.cxx._
 import scala.scalanative.unsafe._
 
@@ -28,7 +30,15 @@ trait CxxVector[T] {
   def apply(idx: CSize): T
   @cxxBody("__p->operator[](idx) = value;")
   def update(idx: CSize, value: T): Unit
-}
 
+  lazy val seq: mutable.Seq[T] = new CxxVector.CxxVectorSeq[T](this)
+}
+object CxxVector {
+  class CxxVectorSeq[T](v: CxxVector[T]) extends mutable.AbstractSeq[T] with mutable.IndexedSeq[T] {
+    override def update(idx: CInt, elem: T): Unit = v.update(idx,elem)
+    override def length: CInt = v.size.toInt
+    override def apply(idx: CInt): T = v.apply(idx)
+  }
+}
 
 

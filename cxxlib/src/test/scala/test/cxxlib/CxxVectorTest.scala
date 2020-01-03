@@ -22,8 +22,12 @@ object CxxVectorTest extends TestSuite {
     'basicOps-{
       val v = CxxIntVector()
       v.push_back(1)
-      v.size ==> 1
+      v.push_back(2)
+      v.push_back(3)
+      v.size ==> 3
       v(0) ==> 1
+      v(1) ==> 2
+      v(2) ==> 3
       v(0) = 42
       v(0) ==> 42
     }

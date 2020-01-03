@@ -50,6 +50,7 @@ object Cxx {
       case (trt: TraitParts, data) =>
         val updData = (
           analyzeMainAnnotation(trt) _
+          andThen analyzeTemplate(trt) _
           andThen analyzeTypes(trt) _
           andThen analyzeBody(trt) _
           )(data)
@@ -75,7 +76,6 @@ object Cxx {
         trt
           .updBody(genTransformedTypeBody(trt))
           .addAnnotations(genCxxSource(trt.data,isTrait = true),genCxxWrapperAnnot(trt.data))
-          .updParents(genTransformedParents(trt))
       case obj: ObjectTransformData =>
         val transformedBody = genTransformedCompanionBody(obj) ++ obj.data.additionalCompanionStmts :+ genBindingsObject(obj.data)
         if(obj.modParts.isCompanion)
@@ -128,7 +128,7 @@ object Cxx {
       analyzeCxxAnnotation(tpe)(updData)
     }
 
-    private def analyzeTemplate(cls: ClassParts)(data: Data): Data = {
+    private def analyzeTemplate(cls: TypeParts)(data: Data): Data = {
       cls.parents.flatMap { t =>
         val tpe = getType(t, true)
         findAnnotation(tpe.typeSymbol,"scala.scalanative.cxx.CxxTemplate")
