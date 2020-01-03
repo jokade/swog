@@ -1,5 +1,5 @@
-swog - ScalaNative Wrapper Object Generator
-===========================================
+swog - Scala Wrapper Object Generator
+=====================================
 
 **[Documentation](http://jokade.surfice.de/swog/)**
 
