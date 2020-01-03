@@ -75,6 +75,60 @@ trait CxxWrapperGen extends CommonHandler {
   case class EnumType(name: String) extends CxxType { def default = "int" }
   case class ClassType(name: String) extends CxxType { def default = ptr }
 
+  val notPrivate = Modifiers().privateWithin
+
+  case class Template(instance: ClassParts, templateType: Type, annotation: Tree)(implicit data: Data) {
+    val params = extractAnnotationParameters(annotation,Seq("namespace","classname"))
+    val namespace = extractStringConstant(params("namespace").get)
+    val classname = extractStringConstant(params("classname").get)
+    val templateArgs = templateType.typeArgs.map(genCxxWrapperType(_).default).mkString("<",",",">")
+
+    val fqName = ((namespace,classname) match {
+      case (None,None) => templateType.typeSymbol.name.toString
+      case (Some(ns),None) => ns + "::" + templateType.typeSymbol.name.toString
+      case (None,Some(cn)) => cn
+      case (Some(ns),Some(cn)) => ns + "::" + cn
+    }) + templateArgs
+
+    val includes = analyzeCxxIncludes(templateType.typeSymbol)
+
+    val templateTypes = templateType.baseClasses.head.typeSignature.typeParams
+    val instanceTypes = templateType.typeArgs.map(_.typeSymbol)
+
+    def substituteTemplateType(tpe: Type): Type =
+      tpe.substituteSymbols(templateTypes,instanceTypes)
+
+    val templateMethods = templateType.decls
+      .collect{case f if f.isMethod && f.isAbstract => f}
+      .map{f =>
+        val cxxBody = findAnnotation(f,"scala.scalanative.cxx.cxxBody")
+        val cxxName = findAnnotation(f,"scala.scalanative.cxx.cxxName")
+        val mods = Modifiers(NoFlags,notPrivate,cxxBody.toList ++ cxxName.toList)
+        val name = f.name.toTermName
+        val vparamss =
+          f.typeSignature.paramLists.map( l => l.map{p =>
+            val mods = Modifiers()
+            val name = p.name.toTermName
+            val tpe = substituteTemplateType( p.typeSignature.resultType )
+            val tpt = tq"$tpe"
+            ValDef(mods,name,tpt,EmptyTree)
+          })
+        val resultType = substituteTemplateType(f.typeSignature.resultType)
+        DefDef(mods,name,Nil,vparamss,tq"$resultType",expExtern)
+      }
+
+    val externalBindings = templateMethods.map(f => genExternalBinding(data.externalPrefix,f,true)(data))
+
+    def templateWrappers(data: Data): Seq[String] = templateMethods.map(m => genCxxMethodWrapper(m)(data)).toSeq
+
+    def updData: Data =
+      data
+        .withCxxTemplate(this)
+        .withCxxFQClassName(fqName)
+        .withCxxIncludes(includes)
+        .addExternals(externalBindings.toMap)
+  }
+
   implicit class CxxMacroData(data: Map[String,Any]) {
     type Data = Map[String, Any]
     type CxxWrapper = String
@@ -101,6 +155,10 @@ trait CxxWrapperGen extends CommonHandler {
     /// indicates if the annottee is a object representing functions in a C++ namespace (instead of a class)
     def cxxIsNamespaceObject: Boolean = data.getOrElse("cxxIsNamespaceObject",false).asInstanceOf[Boolean]
     def setCxxIsNamespaceObject(f: Boolean): Data = data.updated("cxxIsNamespaceObject",f)
+
+    /// Returns the template data if this class instantiates a C++ template
+    def cxxTemplate: Option[Template] = data.getOrElse("cxxTemplate",None).asInstanceOf[Option[Template]]
+    def withCxxTemplate(tpl: Template): Data = data.updated("cxxTemplate",Some(tpl))
   }
 
   private def genSizeOfExternal(data: Data): Tree = {
@@ -113,14 +171,19 @@ trait CxxWrapperGen extends CommonHandler {
     q"lazy val __sizeof: Int = __ext.$name()"
   }
 
-  def analyzeCxxAnnotation(tpe: CommonParts)(data: Data): Data = {
-    val includes = findAnnotations(tpe.modifiers.annotations)
+  private def analyzeCxxIncludes(tpe: Symbol): Seq[String] =
+    analyzeCxxIncludes(tpe.annotations.map(_.tree))
+
+  private def analyzeCxxIncludes(annotations: List[Tree]): Seq[String] =
+    findAnnotations(annotations)
       .collect{
-        case ("include",annot) => extractAnnotationParameters(annot,Seq("header"))
+        case (name,annot)  if name.endsWith("include") => extractAnnotationParameters(annot,Seq("header"))
       }
       .map( _.apply("header").get )
       .flatMap(extractStringConstant)
 
+  def analyzeCxxAnnotation(tpe: CommonParts)(data: Data): Data = {
+    val includes = analyzeCxxIncludes(tpe.modifiers.annotations)
 
     val updData =
       data
@@ -128,9 +191,9 @@ trait CxxWrapperGen extends CommonHandler {
       .withCxxIncludes(includes)
       .withCxxFQClassName(genCxxFQClassName(tpe)(data))
 
-    if(data.cxxIsNamespaceObject)
+    // don't add 'sizeof' if the annottee represents a trait or functions in a C++ namespace
+    if(tpe.isTrait || data.cxxIsNamespaceObject)
       updData
-    // add 'sizeof' if the annottee represents functions in a C++ namespace
     else
       updData
       .addExternals(Seq("__sizeof"->("__sizeof"->genSizeOfExternal(data))))
@@ -147,13 +210,13 @@ trait CxxWrapperGen extends CommonHandler {
     case o: ObjectParts => genCxxObjectWrappers(o)(data)
   }
 
-  def genCxxSource(data: Data): Tree = {
+  def genCxxSource(data: Data, isTrait: Boolean): Tree = {
     val includes = data.cxxIncludes.map( i => "#include "+i ).mkString("","\n","\n\n")
     val sizeof =
-      if(!data.cxxIsNamespaceObject)
-        s"""  int ${data.externalPrefix}__sizeof() { return sizeof(${data.cxxType}); }\n"""
-      else
+      if(isTrait || !data.cxxIsNamespaceObject)
         ""
+      else
+        s"""  int ${data.externalPrefix}__sizeof() { return sizeof(${data.cxxType}); }\n"""
     genCxxWrapper( includes + """extern "C" {""" + "\n" + sizeof + data.cxxWrappers.mkString("\n") + "\n}" )
   }
 
@@ -170,7 +233,7 @@ trait CxxWrapperGen extends CommonHandler {
         genCxxDeleteWrapper(t)
       case t@DefDef(mods, name, types, args, rettype, rhs) if isExtern(rhs) =>
           genCxxMethodWrapper(t)
-    }
+    } ++ data.cxxTemplate.map(_.templateWrappers(data)).getOrElse(Nil)
     data
       .addCxxWrappers(methods)
   }

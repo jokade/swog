@@ -83,11 +83,12 @@ lazy val cxx = project
   )
 
 lazy val cxxlib = project
-  .enablePlugins(ScalaNativePlugin)
+  .enablePlugins(ScalaNativePlugin,NBHCxxPlugin)
   .dependsOn(cxx)
   .settings(commonSettings ++ publishingSettings: _*)
   .settings(
-    name := "swog-cxxlib"
+    name := "swog-cxxlib",
+    nativeLinkStubs := true
 //    nativeLinkStubs := true,
 //    nbhCxxCXXFlags += "-std=c++11"
   )

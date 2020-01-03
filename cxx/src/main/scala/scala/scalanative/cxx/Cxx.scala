@@ -41,6 +41,7 @@ object Cxx {
       case (cls: ClassParts, data) =>
         val updData = (
           analyzeMainAnnotation(cls) _
+            andThen analyzeTemplate(cls) _
             andThen analyzeTypes(cls) _
             andThen analyzeConstructor(cls) _
             andThen analyzeBody(cls) _
@@ -49,6 +50,8 @@ object Cxx {
       case (trt: TraitParts, data) =>
         val updData = (
           analyzeMainAnnotation(trt) _
+          andThen analyzeTypes(trt) _
+          andThen analyzeBody(trt) _
           )(data)
         (trt,updData)
       case (obj: ObjectParts, data) =>
@@ -65,12 +68,14 @@ object Cxx {
       case cls: ClassTransformData =>
         cls
           .updBody(genTransformedTypeBody(cls))
-          .addAnnotations(genCxxSource(cls.data),genCxxWrapperAnnot(cls.data))
+          .addAnnotations(genCxxSource(cls.data, isTrait = false),genCxxWrapperAnnot(cls.data))
           .updCtorParams(genTransformedCtorParams(cls))
           .updParents(genTransformedParents(cls))
       case trt: TraitTransformData =>
         trt
-          .addAnnotations(genCxxWrapperAnnot(trt.data))
+          .updBody(genTransformedTypeBody(trt))
+          .addAnnotations(genCxxSource(trt.data,isTrait = true),genCxxWrapperAnnot(trt.data))
+          .updParents(genTransformedParents(trt))
       case obj: ObjectTransformData =>
         val transformedBody = genTransformedCompanionBody(obj) ++ obj.data.additionalCompanionStmts :+ genBindingsObject(obj.data)
         if(obj.modParts.isCompanion)
@@ -79,7 +84,7 @@ object Cxx {
         else
           obj
             .updBody(transformedBody)
-            .addAnnotations(genCxxSource(obj.data))
+            .addAnnotations(genCxxSource(obj.data, isTrait = false))
       case default => default
     }
 
@@ -112,13 +117,30 @@ object Cxx {
         case Some(t) => extractBooleanConstant(t).get
         case _ => false
       }
+
       val updData = data
         .withExternalPrefix(externalPrefix)
         .withCxxNamespace(namespace)
         .withCxxClassName(classname)
         .withCxxType(cxxType)
         .setCxxIsNamespaceObject(isNamespaceObject)
+
       analyzeCxxAnnotation(tpe)(updData)
+    }
+
+    private def analyzeTemplate(cls: ClassParts)(data: Data): Data = {
+      cls.parents.flatMap { t =>
+        val tpe = getType(t, true)
+        findAnnotation(tpe.typeSymbol,"scala.scalanative.cxx.CxxTemplate")
+          .map( annot => Template(cls,tpe,annot)(data))
+      } match {
+        case Nil => data
+        case Seq(tpl) =>
+          tpl.updData
+        case _ =>
+          c.error(c.enclosingPosition,"Cxx classes extendning multiple CxxTemplates are not supported!")
+          ???
+      }
     }
 
     private def analyzeConstructor(cls: ClassParts)(data: Data): Data = {
@@ -138,6 +160,12 @@ object Cxx {
     override def analyzeBody(tpe: CommonParts)(data: Data): Data =
       ( super.analyzeBody(tpe) _ andThen analyzeCxxBody(tpe) _ )(data)
 
+    override def genTransformedTypeBody(t: TypeTransformData[TypeParts]): Seq[c.universe.Tree] = {
+      val templateMethods = t.data.cxxTemplate.map{ tpl =>
+        tpl.templateMethods.map(m => transformBody(m)(t.data))
+      } getOrElse Nil
+      super.genTransformedTypeBody(t) ++ templateMethods
+    }
 
   }
 }

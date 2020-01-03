@@ -100,13 +100,20 @@ abstract class CommonHandler extends MacroAnnotationHandler {
     val imports = Seq(q"import $companion.__ext")
     val ctors = genSecondaryConstructor(t)
 
-    imports ++ ctors ++ (t.modParts.body map {
-      case tree @ DefDef(mods, name, types, args, rettype, rhs) if isExtern(rhs) =>
-        val externalKey = genScalaName(tree)(t.data)
-        val externalName = t.data.externals(externalKey)._1
-        genExternalCall(externalName,tree,false,t.data)
+    imports ++ ctors ++ transformBody(t.modParts.body)(t.data)
+  }
+
+  protected def transformBody(body: Seq[Tree])(implicit data: Data): Seq[Tree] =
+    body map {
+      case scalaDef @ DefDef(_, _, _, _, _, rhs) if isExtern(rhs) =>
+        transformBody(scalaDef)
       case default => default
-    })
+    }
+
+  protected def transformBody(scalaDef: DefDef)(implicit data: Data): Tree = {
+    val externalKey = genScalaName(scalaDef)(data)
+    val externalName = data.externals(externalKey)._1
+    genExternalCall(externalName, scalaDef, false, data)
   }
 
   protected def implicitParamsFilter(param: ValDef): Boolean =

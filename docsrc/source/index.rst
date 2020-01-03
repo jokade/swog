@@ -3,16 +3,36 @@
    You can adapt this file completely to your liking, but it should at least
    contain the root `toctree` directive.
 
-swog - ScalaNative Wrapper Object Generator
+swog - Scala Wrapper Object Generator
 *******************************************
 swog provides seamless integration of `Scala Native <https://www.scala-native.org>`_ with external, object-oriented libaries
-written in **C**, **C++**, or **Objective-C**, as well as integration with embedded scripting languages (currently: **Lua**).
-To this end it takes a plain Scala class/object and transforms it into a wrapper object that handles the interop with the
-underlying external object under the hood.
+written in **C**, **C++**, or **Objective-C**. As a highly experimental feature, bindings for C libraries can also be used
+unmodified on the JVM (e.g. for prototyping with ammonite).
+
+To this end it takes a plain Scala class/object and transforms it into a wrapper object during compilation.
+This wrapper holds the pointer to the underlying external object, and converts arguments and return values of external calls
+transparently to/from Scala types.
 
 .. note::
 
   This guide is work in progress.
+
+Features
+========
+- Use Scala classes for bindings to object-oriented C libraries (e.g. Gtk+), Objective-C classes, or C++ classes.
+
+- Represent external type hierarchies with Scala classes and traits.
+
+- Traits/classes/objects representing external objects can contain additional members defined in Scala.
+
+- Scala-style camel case names for bindings can be automatically translated into C-style snake case
+  (or other naming conventions like PascalCase); supports global prefix for bindings classes/objects.
+
+- Map untyped collections returned by C or Objective-C bindings to Scala generic classes; interact with C++ template classes.
+
+- Use bindings unmodified with ScalaNative and Scala/JVM (experimental, currently only supported for C).
+
+- Integrate with embedded scripting languages (currently: **Lua**).
 
 
 Example for C
