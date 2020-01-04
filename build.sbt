@@ -92,7 +92,7 @@ lazy val cxxlib = project
 //    nativeLinkStubs := true,
 //    nbhCxxCXXFlags += "-std=c++11"
   )
-/*
+
 lazy val scriptbridge = project
   .enablePlugins(ScalaNativePlugin)
   .settings(commonSettings ++ publishingSettings: _*)
@@ -102,14 +102,14 @@ lazy val scriptbridge = project
 
 lazy val lua = project
   .enablePlugins(ScalaNativePlugin)
-  .dependsOn(scriptbridge,cobj)
+  .dependsOn(scriptbridge,cobjNative)
   .settings(commonSettings ++ publishingSettings: _*)
   .settings(
     name := "swog-lua"
   )
 
-import scalanative.sbtplugin.ScalaNativePluginInternal._
-*/
+//import scalanative.sbtplugin.ScalaNativePluginInternal._
+
 
 lazy val interopTests = crossProject(JVMPlatform,NativePlatform)
   .dependsOn(interop)

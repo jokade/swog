@@ -16,7 +16,6 @@ object CxxIntVector{
   def apply(): CxxIntVector = extern
 }
 
-
 object CxxVectorTest extends TestSuite {
   val tests = Tests {
     'basicOps-{
