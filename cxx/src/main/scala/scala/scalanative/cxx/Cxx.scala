@@ -69,22 +69,18 @@ object Cxx {
       case cls: ClassTransformData =>
         cls
           .updBody(genTransformedTypeBody(cls))
-          .addAnnotations(genCxxSource(cls.data, isTrait = false),genCxxWrapperAnnot(cls.data))
+          .addAnnotations(genCxxSource(cls.data, isTrait = false, false),genCxxWrapperAnnot(cls.data))
           .updCtorParams(genTransformedCtorParams(cls))
           .updParents(genTransformedParents(cls))
       case trt: TraitTransformData =>
         trt
           .updBody(genTransformedTypeBody(trt))
-          .addAnnotations(genCxxSource(trt.data,isTrait = true),genCxxWrapperAnnot(trt.data))
+          .addAnnotations(genCxxSource(trt.data, isTrait = true, false),genCxxWrapperAnnot(trt.data))
       case obj: ObjectTransformData =>
         val transformedBody = genTransformedCompanionBody(obj) ++ obj.data.additionalCompanionStmts :+ genBindingsObject(obj.data)
-        if(obj.modParts.isCompanion)
           obj
             .updBody(transformedBody)
-        else
-          obj
-            .updBody(transformedBody)
-            .addAnnotations(genCxxSource(obj.data, isTrait = false))
+            .addAnnotations(genCxxSource(obj.data, isTrait = false, isObject = true))
       case default => default
     }
 

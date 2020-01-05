@@ -143,9 +143,13 @@ trait CxxWrapperGen extends CommonHandler {
     type Data = Map[String, Any]
     type CxxWrapper = String
 
-    def cxxWrappers: Seq[CxxWrapper] = data.getOrElse("cxxWrappers", Nil).asInstanceOf[Seq[CxxWrapper]]
-    def withCxxWrappers(wrappers: Seq[CxxWrapper]): Data = data.updated("cxxWrappers",wrappers)
-    def addCxxWrappers(wrappers: Seq[CxxWrapper]): Data = data.updated("cxxWrappers",cxxWrappers ++ wrappers)
+    // Holds the C++ wrappers for external methods defined in Scala classes
+    def cxxMethodWrappers: Seq[CxxWrapper] = data.getOrElse("cxxMethodWrappers", Nil).asInstanceOf[Seq[CxxWrapper]]
+    def addCxxMethodWrappers(wrappers: Seq[CxxWrapper]): Data = data.updated("cxxMethodWrappers",cxxMethodWrappers ++ wrappers)
+
+    // Holds the C++ wrappers for external functions defined on Scala objects
+    def cxxFunctionWrappers: Seq[CxxWrapper] = data.getOrElse("cxxFunctionWrappers", Nil).asInstanceOf[Seq[CxxWrapper]]
+    def addCxxFunctionWrappers(wrappers: Seq[CxxWrapper]): Data = data.updated("cxxFunctionWrappers",cxxFunctionWrappers ++ wrappers)
 
     def cxxNamespace: Option[String] = data.getOrElse("cxxNamespace",None).asInstanceOf[Option[String]]
     def withCxxNamespace(namespace: Option[String]): Data = data.updated("cxxNamespace",namespace)
@@ -220,14 +224,16 @@ trait CxxWrapperGen extends CommonHandler {
     case o: ObjectParts => genCxxObjectWrappers(o)(data)
   }
 
-  def genCxxSource(data: Data, isTrait: Boolean): Tree = {
+  def genCxxSource(data: Data, isTrait: Boolean, isObject: Boolean): Tree = {
     val includes = data.cxxIncludes.map( i => "#include "+i ).mkString("","\n","\n\n")
     val sizeof =
-      if(isTrait || data.cxxIsNamespaceObject)
-        ""
-      else
+      if(isObject && !data.cxxIsNamespaceObject)
         s"""  int ${data.externalPrefix}__sizeof() { return sizeof(${data.cxxType}); }\n"""
-    genCxxWrapper( includes + """extern "C" {""" + "\n" + sizeof + data.cxxWrappers.mkString("\n") + "\n}" )
+      else
+        ""
+    val wrappers = if(isObject) data.cxxFunctionWrappers else data.cxxMethodWrappers
+
+    genCxxWrapper( includes + """extern "C" {""" + "\n" + sizeof + wrappers.mkString("\n") + "\n}" )
   }
 
   protected def genCxxWrapper(src: String): Tree = q"""new scalanative.annotation.InlineSource("Cxx",${Literal(Constant(src))})"""
@@ -245,7 +251,7 @@ trait CxxWrapperGen extends CommonHandler {
           genCxxMethodWrapper(t)
     } ++ data.cxxTemplate.map(_.templateWrappers(data)).getOrElse(Nil)
     data
-      .addCxxWrappers(methods)
+      .addCxxMethodWrappers(methods)
   }
 
   protected def genCxxObjectWrappers(obj: ObjectParts)(implicit data: Data): Data = {
@@ -260,7 +266,7 @@ trait CxxWrapperGen extends CommonHandler {
       }
     }
     data
-      .addCxxWrappers(functions)
+      .addCxxFunctionWrappers(functions)
   }
 
   protected def genCxxMethodWrapper(scalaDef: DefDef)(implicit data: Data): String = {
