@@ -30,3 +30,10 @@ class cxxName(name: String) extends StaticAnnotation
  * @param body
  */
 class cxxBody(body: String) extends StaticAnnotation
+
+/**
+ * Allows manual definition of the C++ implementation for methods defined in a @ScalaCxx class
+ *
+ * @param impl
+ */
+class cxxImpl(impl: String) extends StaticAnnotation

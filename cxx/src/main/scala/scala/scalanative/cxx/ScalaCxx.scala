@@ -27,7 +27,12 @@ object ScalaCxx {
 
     import c.universe._
 
-    private val registerFunc = q"""@scalanative.cxx.cxxBody("___register((void**)callbacks);") def ___register(callbacks: scalanative.unsafe.Ptr[$tpeRawPtr]): Unit = scalanative.unsafe.extern"""
+    private def registerFunc(data: Data) = {
+      val cxxBody = Literal(Constant(data.cxxFQClassName+"::___register((void**)callbacks);"))
+      q"""@scalanative.cxx.cxxBody($cxxBody) def ___register(callbacks: scalanative.unsafe.Ptr[$tpeRawPtr]): Unit = scalanative.unsafe.extern"""
+    }
+
+    //    private val registerFunc = q"""@scalanative.cxx.cxxBody("___register((void**)callbacks);") def ___register(callbacks: scalanative.unsafe.Ptr[$tpeRawPtr]): Unit = scalanative.unsafe.extern"""
 
     private val setWrapperFunc = q"""override def ___setWrapper(w: $tpeRawPtr): Unit = scalanative.unsafe.extern"""
 
@@ -78,16 +83,9 @@ object ScalaCxx {
         val updCls =
           cls
             .addStatements(setWrapperFunc)
-//            .addStatements(setWrapperStmt)
         transformClass(updCls)
-//        updCls
-//          .updBody(genTransformedTypeBody(updCls))
-          //.addAnnotations(genCxxWrapperAnnot(updCls.data))
-//          .addAnnotations(genCxxSource(cls.data, isTrait = false, false),genCxxWrapperAnnot(cls.data))
-//          .updCtorParams(genTransformedCtorParams(updCls))
-//          .updParents(genTransformedParents(updCls))
       case obj: ObjectTransformData =>
-        val updObj = obj.updBody(obj.modParts.body:+registerFunc)
+        val updObj = obj.updBody(obj.modParts.body:+registerFunc(obj.data))
 //        transformObject(updObj)
         val externalSource = genCxxWrapper(genScalaCxxClass(obj.data))
         val transformedBody = genTransformedCompanionBody(updObj) ++ obj.data.additionalCompanionStmts :+ genBindingsObject(obj.data) :+ genRegistration(obj.data)
@@ -138,7 +136,8 @@ object ScalaCxx {
         data
       else {
         val prefix = data.externalPrefix
-        val registerExternal = genExternalBinding(prefix,registerFunc.asInstanceOf[DefDef],false)(data)
+        val registerExternal = genExternalBinding(prefix,registerFunc(data).asInstanceOf[DefDef],false)(data)
+        println("EXTERNAL: "+registerExternal)
         data.addExternals(Seq(registerExternal))
       }
 
@@ -169,7 +168,7 @@ object ScalaCxx {
 
     private def addScalaCxxWrapperFunctions(tpe: CommonParts)(data: Data): Data =
       data
-        .addCxxFunctionWrappers(Seq(registerFunc) map {
+        .addCxxFunctionWrappers(Seq(registerFunc(data)) map {
           case scalaDef: DefDef => genCxxFunctionWrapper(scalaDef)(data)
         })
 
@@ -177,7 +176,7 @@ object ScalaCxx {
       implicit val d = data
       val (callbacks,wrappers) = tpe.body.collect {
         case t: DefDef if (isPublic(t) && !isExtern(t.rhs)) =>
-          (genScalaCxxCallback(t,tpe.name),genScalaCxxMethodWrapper(t))
+          (genScalaCxxCallback(t,tpe.name),genScalaCxxMethodWrapper(t,tpe))
       }.unzip
       val callbacksObject =
         q"""object __callbacks {
@@ -260,19 +259,41 @@ object ScalaCxx {
       tpe.fullName.replaceAll("\\.","_") + "_"
 
 
-    private def genScalaCxxMethodWrapper(scalaDef: DefDef)(implicit data: Data): CxxMember = {
+    private def genScalaCxxMethodWrapper(scalaDef: DefDef, tpe: TypeParts)(implicit data: Data): CxxMember = {
       val fqClassname = data.cxxFQClassName
       val name = genCxxName(scalaDef)
       val rettype = genCxxReturnType(scalaDef,false)
       val (params,args) = genCxxParams(scalaDef)
-      val paramString = params.mkString(", ")
-      val argString = ("this->___wrapper" +: args).mkString(", ")
-      val method = s"""$rettype $name($paramString) { return __$name($argString); }"""
+      val method =  genCxxImpl(scalaDef,tpe)
       val callbackParams = ("void* __p" +: params).mkString(", ")
       val callbackDecl = s"""static $rettype (*__$name)($callbackParams);"""
       val callbackDefn = s"""$rettype (*$fqClassname::__$name)($callbackParams);"""
       val callbackReg = s"$fqClassname::__$name = ($rettype (*)($callbackParams))"
       CxxMember(method,callbackDecl,callbackDefn,callbackReg,TermName(name))
+    }
+
+
+    private def genCxxImpl(scalaDef: DefDef, tpe: TypeParts)(implicit data: Data): String = {
+      val implAnnotation =
+        // check if the current method itself is annotated with @cxxSignature
+        findAnnotation(scalaDef.mods.annotations, "scala.scalanative.cxx.cxxImpl")
+          // else check if one of its parent is annotated
+          .orElse (
+            tpe.parents
+              .flatMap(p => getType(p, true).members)
+              .find(_.name == scalaDef.name)
+              .flatMap(sym => findAnnotation(sym.asMethod, "scala.scalanative.cxx.cxxImpl"))
+          )
+      implAnnotation
+        .flatMap(annot => extractAnnotationParameters(annot,Seq("impl")).apply("impl").map(extractStringConstant).get)
+        .getOrElse {
+          val (params,args) = genCxxParams(scalaDef)
+          val name = genCxxName(scalaDef)
+          val rettype = genCxxReturnType(scalaDef,false)
+          val paramString = params.mkString(", ")
+          val argString = ("this->___wrapper" +: args).mkString(", ")
+          s"""$rettype $name($paramString) { return __$name($argString); }"""
+        }
     }
 
     private def genScalaCxxClass(implicit data: ScalaCxxData): String = {
