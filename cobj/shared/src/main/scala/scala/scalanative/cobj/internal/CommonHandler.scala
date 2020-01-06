@@ -94,7 +94,7 @@ abstract class CommonHandler extends MacroAnnotationHandler {
       case (tree,tpe) if tpe =:= tAnyRef =>
         c.warning(c.enclosingPosition,s"${cls.modParts.fullName} doesn't extend $tpeDefaultParent! This might result in unexpected runtime behaviour!")
         tpeDefaultParent
-      case (tree,tpe) if tpe =:= tCObject || tpe.typeSymbol.isAbstract => tree
+      case (tree,tpe) if tpe =:= tCObject || tpe.typeSymbol.asClass.isTrait => tree
       case (tree,tpe) if tpe <:< tCObject => q"$tree(__ptr)"
       case (tree,_) => tree
     }

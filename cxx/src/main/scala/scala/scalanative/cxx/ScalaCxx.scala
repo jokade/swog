@@ -145,6 +145,9 @@ object ScalaCxx {
     private def genScalaCxxParentClass(tpe: TypeParts)(data: Data): Data = {
       val parent = tpe.parents.headOption.map(p => getType(p,true)) match {
         case Some(t) if t =:= tAnyRef || t =:= tCxxObject => None
+        case Some(t) => findAnnotation(t.typeSymbol,"scala.scalanative.cxx.internal.CxxWrapper").flatMap { annot =>
+          extractAnnotationParameters(annot,Seq("cxxType")).apply("cxxType").map(extractStringConstant).get
+        }
         case _ => None
       }
       data
@@ -169,9 +172,6 @@ object ScalaCxx {
         .addCxxFunctionWrappers(Seq(registerFunc) map {
           case scalaDef: DefDef => genCxxFunctionWrapper(scalaDef)(data)
         })
-//        .addCxxMethodWrappers(Seq(setWrapperFunc) map {
-//          case scalaDef: DefDef => genCxxMethodWrapper(scalaDef)(data)
-//        })
 
     private def genScalaCxxMethodCallbacks(tpe: TypeParts)(data: Data): Data = {
       implicit val d = data
@@ -190,23 +190,23 @@ object ScalaCxx {
     }
 
     private def genScalaCxxCallback(scalaDef: DefDef, classType: TypeName)(implicit data: Data) = {
-
       val (scalaCallbackParams,args,callbackTypes) = scalaDef.vparamss match {
         case Nil => (Nil,Nil,Nil)
         case List(args) => (
           transformExternalBindingParams(args,data),
-          transformExternalCallArgs(args,data),
+          transformCallbackCallArgs(args,data),
         args.map(tranformScalaCallbackType))
       }
-//      val call = q"42"
-      val call =
-        if(scalaDef.vparamss.isEmpty)
-          q"o.${scalaDef.name}"
-        else
-          q"o.${scalaDef.name}(..$args)"
+
+      val resultType = getType(scalaDef.tpt,true)
+      val call = (scalaDef.vparamss.isEmpty, resultType <:< tCObject) match {
+        case (true,true) => q"o.${scalaDef.name}.__ptr"
+        case (true,false) => q"o.${scalaDef.name}"
+        case (false,true) => q"o.${scalaDef.name}(..$args).__ptr"
+        case (false,false) => q"o.${scalaDef.name}(..$args)"
+      }
 
       val instance = q"val o = Intrinsics.castRawPtrToObject(ptr).asInstanceOf[$classType]"
-//      val instance = q""
 
       val scalaCallbackReturnType = tranformScalaCallbackType(scalaDef)
 
@@ -225,9 +225,30 @@ object ScalaCxx {
                   $call
                 }
               }"""
+        case 2 =>
+          q"""new CFuncPtr3[$tpeRawPtr,..$callbackTypes,$scalaCallbackReturnType] {
+                def apply(ptr: $tpeRawPtr, ..$scalaCallbackParams): $scalaCallbackReturnType = {
+                  $instance
+                  $call
+                }
+              }"""
       }
       val defn = q"val ${scalaDef.name} = $callback"
       defn
+    }
+
+    private def transformCallbackCallArgs(args: Seq[ValDef], data: Data, outArgs: Boolean = false, wrappers: List[ValDef] = Nil): Seq[Tree] = {
+      args filter(implicitParamsFilter) map {
+        case ValDef(_,name,tpt,_) if isExternalObject(tpt,data) || outArgs =>
+          findWrapper(tpt,wrappers) match {
+            case Some(wrapperName) => q"""$wrapperName.wrap($name)"""
+            case _ => q"""if($name==null) null else new $tpt($name)"""
+          }
+        case ValDef(_,name,tpt,_) if isCEnum(tpt,data) =>
+          q"$name.value"
+        case ValDef(_,name,AppliedTypeTree(tpe,_),_) if tpe.toString == "_root_.scala.<repeated>" => q"$name:_*"
+        case ValDef(_,name,tpt,_) => q"$name"
+      }
     }
 
     private def tranformScalaCallbackType(scalaDef: ValOrDefDef)(implicit data: Data) = getType(scalaDef.tpt,true) match {
