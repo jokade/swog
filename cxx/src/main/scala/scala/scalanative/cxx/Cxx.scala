@@ -33,32 +33,29 @@ object Cxx {
 
     import c.universe._
 
-    private val tpeCxxObject = tq"$tCxxObject"
-    override protected def tpeDefaultParent = tpeCxxObject
-
 
     override def analyze: Analysis = super.analyze andThen {
       case (cls: ClassParts, data) =>
         val updData = (
           analyzeMainAnnotation(cls) _
-            andThen analyzeTemplate(cls) _
-            andThen analyzeTypes(cls) _
-            andThen analyzeConstructor(cls) _
-            andThen analyzeBody(cls) _
+            andThen analyzeTemplate(cls)
+            andThen analyzeTypes(cls)
+            andThen analyzeConstructor(cls)
+            andThen analyzeBody(cls)
           )(data)
         (cls, updData)
       case (trt: TraitParts, data) =>
         val updData = (
           analyzeMainAnnotation(trt) _
-          andThen analyzeTemplate(trt) _
-          andThen analyzeTypes(trt) _
-          andThen analyzeBody(trt) _
+          andThen analyzeTemplate(trt)
+          andThen analyzeTypes(trt)
+          andThen analyzeBody(trt)
           )(data)
         (trt,updData)
       case (obj: ObjectParts, data) =>
         val updData = (
           analyzeMainAnnotation(obj) _
-            andThen analyzeBody(obj) _
+            andThen analyzeBody(obj)
           )(data)
         (obj, updData)
       case default => default
@@ -67,20 +64,11 @@ object Cxx {
 
     override def transform: Transformation = super.transform andThen {
       case cls: ClassTransformData =>
-        cls
-          .updBody(genTransformedTypeBody(cls))
-          .addAnnotations(genCxxSource(cls.data, isTrait = false, false),genCxxWrapperAnnot(cls.data))
-          .updCtorParams(genTransformedCtorParams(cls))
-          .updParents(genTransformedParents(cls))
+        transformClass(cls)
       case trt: TraitTransformData =>
-        trt
-          .updBody(genTransformedTypeBody(trt))
-          .addAnnotations(genCxxSource(trt.data, isTrait = true, false),genCxxWrapperAnnot(trt.data))
+        transformTrait(trt)
       case obj: ObjectTransformData =>
-        val transformedBody = genTransformedCompanionBody(obj) ++ obj.data.additionalCompanionStmts :+ genBindingsObject(obj.data)
-          obj
-            .updBody(transformedBody)
-            .addAnnotations(genCxxSource(obj.data, isTrait = false, isObject = true))
+        transformObject(obj)
       case default => default
     }
 
@@ -139,22 +127,14 @@ object Cxx {
       }
     }
 
-    private def analyzeConstructor(cls: ClassParts)(data: Data): Data = {
-      val companionStmts =
-        if (cls.isClass && !cls.modifiers.hasFlag(Flag.ABSTRACT))
-          List(genWrapperImplicit(cls.name, cls.tparams, cls.params))
-        else
-          Nil
-      data
-        .withAdditionalCompanionStmts(data.additionalCompanionStmts ++ companionStmts)
-    }
 
     private def genPrefixName(tpe: CommonParts): String =
       tpe.fullName.replaceAll("\\.","_") + "_"
 
 
     override def analyzeBody(tpe: CommonParts)(data: Data): Data =
-      ( super.analyzeBody(tpe) _ andThen analyzeCxxBody(tpe) _ )(data)
+      ( super.analyzeBody(tpe) _
+        andThen analyzeCxxBody(tpe) )(data)
 
     override def genTransformedTypeBody(t: TypeTransformData[TypeParts]): Seq[c.universe.Tree] = {
       val templateMethods = t.data.cxxTemplate.map{ tpl =>

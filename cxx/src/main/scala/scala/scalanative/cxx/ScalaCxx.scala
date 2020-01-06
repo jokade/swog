@@ -52,22 +52,23 @@ object ScalaCxx {
 
     override def analyze: Analysis = super.analyze andThen {
       case (cls: ClassParts, data) =>
-        val updCls = cls.copy(
-          body = cls.body :+ setWrapperFunc)
+        val updCls = cls.copy(body = cls.body :+ setWrapperFunc)
         val updData = (
           analyzeMainAnnotation(updCls) _
             andThen analyzeTypes(updCls)
             andThen analyzeConstructor(updCls)
             andThen analyzeBody(updCls)
+            andThen addScalaCxxWrapperFunctions(updCls)
           )(data)
+
         (updCls,updData)
-      case (obj: ObjectParts, data) =>
-        val updObj = obj.copy(body = obj.body :+ registerFunc)
-        val updData = (
-          analyzeMainAnnotation(updObj) _
-            andThen analyzeBody(updObj)
-          )(data)
-        (updObj,updData)
+//      case (obj: ObjectParts, data) =>
+//        val updObj = obj.copy(body = obj.body :+ registerFunc)
+//        val updData = (
+//          analyzeMainAnnotation(updObj) _
+//            andThen analyzeBody(updObj)
+//          )(data)
+//        (updObj,updData)
       case default => default
     }
 
@@ -78,18 +79,21 @@ object ScalaCxx {
           cls
             .addStatements(setWrapperFunc)
 //            .addStatements(setWrapperStmt)
-        updCls
-          .updBody(genTransformedTypeBody(updCls))
-          .addAnnotations(genCxxWrapperAnnot(updCls.data))
-          .updCtorParams(genTransformedCtorParams(updCls))
-          .updParents(genTransformedParents(updCls))
+        transformClass(updCls)
+//        updCls
+//          .updBody(genTransformedTypeBody(updCls))
+          //.addAnnotations(genCxxWrapperAnnot(updCls.data))
+//          .addAnnotations(genCxxSource(cls.data, isTrait = false, false),genCxxWrapperAnnot(cls.data))
+//          .updCtorParams(genTransformedCtorParams(updCls))
+//          .updParents(genTransformedParents(updCls))
       case obj: ObjectTransformData =>
         val updObj = obj.updBody(obj.modParts.body:+registerFunc)
+//        transformObject(updObj)
         val externalSource = genCxxWrapper(genScalaCxxClass(obj.data))
         val transformedBody = genTransformedCompanionBody(updObj) ++ obj.data.additionalCompanionStmts :+ genBindingsObject(obj.data) :+ genRegistration(obj.data)
-        obj
+        updObj
           .updBody(transformedBody)
-          .addAnnotations(externalSource,genCxxSource(obj.data))
+          .addAnnotations(externalSource,genCxxSource(obj.data, isObject = true, isTrait = false))
       case default => default
     }
 
@@ -149,17 +153,28 @@ object ScalaCxx {
 
     private def analyzeScalaCxxBody(tpe: CommonParts)(data: Data): Data = tpe match {
       case t: TypeParts =>
-        val updData = genScalaCxxMethodCallbacks(t)(data)
-//        if(t.companion.isDefined)
-//          genCxxObjectWrappers(t.companion.get)(updData)
-//        else
+        val updData =
+          (genCxxTypeWrappers(t) _
+            andThen genScalaCxxMethodCallbacks(t)) (data)
+        if(t.companion.isDefined)
+          genCxxObjectWrappers(t.companion.get)(updData)
+        else
           updData
       case o: ObjectParts =>
-        data
-        //genCxxObjectWrappers(o)(data)
+        genCxxObjectWrappers(o)(data)
     }
 
-    private def genScalaCxxMethodCallbacks(tpe: TypeParts)(implicit data: Data): Data = {
+    private def addScalaCxxWrapperFunctions(tpe: CommonParts)(data: Data): Data =
+      data
+        .addCxxFunctionWrappers(Seq(registerFunc) map {
+          case scalaDef: DefDef => genCxxFunctionWrapper(scalaDef)(data)
+        })
+//        .addCxxMethodWrappers(Seq(setWrapperFunc) map {
+//          case scalaDef: DefDef => genCxxMethodWrapper(scalaDef)(data)
+//        })
+
+    private def genScalaCxxMethodCallbacks(tpe: TypeParts)(data: Data): Data = {
+      implicit val d = data
       val (callbacks,wrappers) = tpe.body.collect {
         case t: DefDef if (isPublic(t) && !isExtern(t.rhs)) =>
           (genScalaCxxCallback(t,tpe.name),genScalaCxxMethodWrapper(t))

@@ -4,7 +4,7 @@ import scalanative._
 import unsafe._
 import scala.scalanative.annotation.InlineSource
 import scala.scalanative.cobj.CObj
-import scala.scalanative.cxx.{Cxx, ScalaCxx, constructor, cxxName, delete}
+import scala.scalanative.cxx.{Cxx, CxxObject, ScalaCxx, ScalaCxxObject, constructor, cxxName, delete}
 import scala.scalanative.runtime.{Intrinsics, RawPtr}
 import scala.scalanative.unsafe.Tag.CFuncPtr1
 
@@ -20,14 +20,14 @@ object Main {
 
 @ScalaCxx
 @debug
-abstract class AbstractClass {
+abstract class AbstractClass extends ScalaCxxObject {
   def getBool(): Boolean
 
 }
 
 @ScalaCxx
 @debug
-class SimpleScalaCxx {
+class SimpleScalaCxx extends ScalaCxxObject {
   @delete
   def free(): Unit = extern
 
@@ -38,8 +38,8 @@ class SimpleScalaCxx {
   def getInt(i: Int): Int = i+1
   @cxxName("getInt")
   def test_getInt(i: Int): Int = extern
-
 }
+
 object SimpleScalaCxx {
   @constructor
   def apply(): SimpleScalaCxx = extern

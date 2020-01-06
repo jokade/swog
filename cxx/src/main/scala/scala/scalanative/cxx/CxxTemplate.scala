@@ -26,8 +26,8 @@ object CxxTemplate {
 
     import c.universe._
 
-    private val tpeCxxObject = tq"$tCxxObject"
-    override protected def tpeDefaultParent = tpeCxxObject
+//    private val tpeCxxObject = tq"$tCxxObject"
+//    override protected def tpeDefaultParent = tpeCxxObject
 
     override def analyze: Analysis = super.analyze andThen {
       case (trt: TraitParts, data) =>

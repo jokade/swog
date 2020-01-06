@@ -32,7 +32,7 @@ object FooEnum extends CEnum {
 }
 
 @Cxx
-class Date {
+class Date extends CxxObject {
   def day: Int = extern
   def month: Int = extern
   def year: Int = extern
@@ -107,7 +107,7 @@ object Date extends CxxClass {
 }
 
 @Cxx
-class ImplicitConstructor()(implicit s: String) {
+class ImplicitConstructor()(implicit s: String) extends CxxObject {
   def string: String = s
   def self()(implicit s: String): ImplicitConstructor = extern
 }

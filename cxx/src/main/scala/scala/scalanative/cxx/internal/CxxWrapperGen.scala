@@ -37,7 +37,6 @@ trait CxxWrapperGen extends CommonHandler {
   private val tPtrDouble = weakTypeOf[Ptr[Double]]
   private val tPtrFloat = weakTypeOf[Ptr[Float]]
   private val tPtr = weakTypeOf[Ptr[_]]
-  private val tRawPtr = weakTypeOf[RawPtr]
   protected val tCxxObject = weakTypeOf[CxxObject]
 
   protected val tpeCxxObject = tq"$tCxxObject"
@@ -227,6 +226,35 @@ trait CxxWrapperGen extends CommonHandler {
     case o: ObjectParts => genCxxObjectWrappers(o)(data)
   }
 
+  def analyzeConstructor(cls: ClassParts)(data: Data): Data = {
+    val companionStmts =
+      if (cls.isClass && !cls.modifiers.hasFlag(Flag.ABSTRACT))
+        List(genWrapperImplicit(cls.name, cls.tparams, cls.params))
+      else
+        Nil
+    data
+      .withAdditionalCompanionStmts(data.additionalCompanionStmts ++ companionStmts)
+  }
+
+  protected def transformClass(cls: ClassTransformData): ClassTransformData =
+    cls
+      .updBody(genTransformedTypeBody(cls))
+      .addAnnotations(genCxxSource(cls.data, isTrait = false, false),genCxxWrapperAnnot(cls.data))
+      .updCtorParams(genTransformedCtorParams(cls))
+      .updParents(genTransformedParents(cls))
+
+  protected def transformTrait(trt: TraitTransformData): TraitTransformData =
+    trt
+      .updBody(genTransformedTypeBody(trt))
+      .addAnnotations(genCxxSource(trt.data, isTrait = true, false),genCxxWrapperAnnot(trt.data))
+
+  protected def transformObject(obj: ObjectTransformData): ObjectTransformData = {
+    val transformedBody = genTransformedCompanionBody(obj) ++ obj.data.additionalCompanionStmts :+ genBindingsObject(obj.data)
+    obj
+      .updBody(transformedBody)
+      .addAnnotations(genCxxSource(obj.data, isTrait = false, isObject = true))
+  }
+
   def genCxxSource(data: Data, isTrait: Boolean, isObject: Boolean): Tree = {
     val includes = data.cxxIncludes.map( i => "#include "+i ).mkString("","\n","\n\n")
     val sizeof =
@@ -246,7 +274,8 @@ trait CxxWrapperGen extends CommonHandler {
     q"new scalanative.cxx.internal.CxxWrapper($cxxName)"
   }
 
-  protected def genCxxTypeWrappers(tpe: TypeParts)(implicit data: Data): Data = {
+  protected def genCxxTypeWrappers(tpe: TypeParts)(data: Data): Data = {
+    implicit val d = data
     val methods = tpe.body.collect {
       case t:DefDef if isDelete(t) =>
         genCxxDeleteWrapper(t)

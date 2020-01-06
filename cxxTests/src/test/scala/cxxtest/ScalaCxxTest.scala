@@ -21,8 +21,7 @@ object ScalaCxxTest extends TestSuite {
 }
 
 @ScalaCxx
-@debug
-class SimpleScalaCxx {
+class SimpleScalaCxx extends ScalaCxxObject {
   @delete
   def free(): Unit = extern
 
