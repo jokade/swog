@@ -137,7 +137,6 @@ object ScalaCxx {
       else {
         val prefix = data.externalPrefix
         val registerExternal = genExternalBinding(prefix,registerFunc(data).asInstanceOf[DefDef],false)(data)
-        println("EXTERNAL: "+registerExternal)
         data.addExternals(Seq(registerExternal))
       }
 
@@ -244,7 +243,7 @@ object ScalaCxx {
             case _ => q"""if($name==null) null else new $tpt($name)"""
           }
         case ValDef(_,name,tpt,_) if isCEnum(tpt,data) =>
-          q"$name.value"
+          q"new $tpt($name)"
         case ValDef(_,name,AppliedTypeTree(tpe,_),_) if tpe.toString == "_root_.scala.<repeated>" => q"$name:_*"
         case ValDef(_,name,tpt,_) => q"$name"
       }
@@ -252,6 +251,7 @@ object ScalaCxx {
 
     private def tranformScalaCallbackType(scalaDef: ValOrDefDef)(implicit data: Data) = getType(scalaDef.tpt,true) match {
       case t if t <:< tCObject => tpePtrByte
+      case t if t <:< tCEnum => tpeInt
       case _ => scalaDef.tpt
     }
 
