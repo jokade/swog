@@ -6,12 +6,15 @@ import utest._
 import scalanative._
 import unsafe._
 import cxx._
+import scala.scalanative.annotation.InlineSource
 
 object ScalaCxxTest extends TestSuite {
   val tests = Tests {
-    'create-{
+    'usingFromCxx-{
+      FromNative.create()
     }
   }
+
 
   @ScalaCxx
   @debug
@@ -22,6 +25,19 @@ object ScalaCxxTest extends TestSuite {
     @constructor
     def apply(): EUT = extern
   }
+
+  @InlineSource("Cxx",
+    """extern "C" {
+         using namespace cxxtest::ScalaCxxTest;
+         EUT* cxxtest_create() { return new EUT; }
+       }""")
+  @extern
+  object FromNative {
+    @name("cxxtest_create")
+    def create(): EUT = extern
+  }
 }
+
+
 
 

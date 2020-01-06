@@ -152,7 +152,7 @@ lazy val objcTests = project
     nbhMakeProjects += NBHMakeProject(baseDirectory.value / "src" / "test" / "objc" ,Seq(NBHMakeArtifact("mockups.o"))),
     nbhLinkFrameworks += "Foundation"
   )
-
+*/
 lazy val cxxTests = project
   .enablePlugins(ScalaNativePlugin,NBHCxxPlugin)
   .dependsOn(cxx,cxxlib)
@@ -161,7 +161,7 @@ lazy val cxxTests = project
     nativeLinkStubs := true,
     nbhCxxCXXFlags += "-std=c++11"
   )
-
+/*
 lazy val luaTests = project
   .enablePlugins(ScalaNativePlugin,NBHAutoPlugin)
   .dependsOn(lua)

@@ -6,6 +6,7 @@ import scalanative._
 import unsafe._
 import cxx._
 import cobj._
+import scala.scalanative.annotation.alwaysinline
 import scala.scalanative.interop.AutoReleasable
 
 /**
@@ -15,6 +16,7 @@ import scala.scalanative.interop.AutoReleasable
  */
 @Cxx(namespace = "std", classname = "string")
 @include("<string>")
+@debug
 class CxxString extends CxxObject with AutoReleasable {
   final def length: Int = extern
 
@@ -31,6 +33,10 @@ class CxxString extends CxxObject with AutoReleasable {
 
   def clear(): Unit = extern
 
+//  @name("cxxlib_CxxString_$colon$eq_1820053044")
+//  @cxxBody("__p->operator=(c_str);")
+//  def :=(c_str: CString): Unit = extern
+
   @delete
   override def free(): Unit = extern
 }
@@ -40,4 +46,11 @@ object CxxString {
   def apply(): CxxString = extern
   @constructor
   def apply(c_str: CString): CxxString = extern
+
+//  @alwaysinline def stackalloc(c_str: CString): CxxString = {
+//    val p = unsafe.stackalloc[Byte](__sizeof)
+//    val s = new CxxString(p)
+//    s := c_str
+//    s
+//  }
 }

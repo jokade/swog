@@ -1,11 +1,11 @@
-package cxxlib.test
+package test.cxxlib
 
 import cxxlib.CxxString
 import utest._
 
-import scalanative._
-import unsafe._
-import libc.string
+import scala.scalanative._
+import scala.scalanative.libc.string
+import scala.scalanative.unsafe._
 
 object CxxStringTest extends TestSuite {
   val tests = Tests {

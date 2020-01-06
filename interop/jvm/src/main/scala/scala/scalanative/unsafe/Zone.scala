@@ -48,8 +48,12 @@ object Zone {
   }
 
   protected[scalanative] lazy val global: Zone = new ZoneImpl
+  def open(): Zone = new ZoneImpl
 
   final def apply[T](f: Zone => T): T = {
-    f(global)
+    val z = open()
+    val res = f(z)
+    z.close()
+    res
   }
 }
