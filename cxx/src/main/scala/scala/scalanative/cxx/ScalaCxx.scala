@@ -230,6 +230,27 @@ object ScalaCxx {
                   $call
                 }
               }"""
+        case 3 =>
+          q"""new CFuncPtr4[$tpeRawPtr,..$callbackTypes,$scalaCallbackReturnType] {
+                def apply(ptr: $tpeRawPtr, ..$scalaCallbackParams): $scalaCallbackReturnType = {
+                  $instance
+                  $call
+                }
+              }"""
+        case 4 =>
+          q"""new CFuncPtr5[$tpeRawPtr,..$callbackTypes,$scalaCallbackReturnType] {
+                def apply(ptr: $tpeRawPtr, ..$scalaCallbackParams): $scalaCallbackReturnType = {
+                  $instance
+                  $call
+                }
+              }"""
+        case 5 =>
+          q"""new CFuncPtr6[$tpeRawPtr,..$callbackTypes,$scalaCallbackReturnType] {
+                def apply(ptr: $tpeRawPtr, ..$scalaCallbackParams): $scalaCallbackReturnType = {
+                  $instance
+                  $call
+                }
+              }"""
       }
       val defn = q"val ${scalaDef.name} = $callback"
       defn

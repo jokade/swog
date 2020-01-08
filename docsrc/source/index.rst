@@ -9,9 +9,9 @@ swog provides seamless integration of `Scala Native <https://www.scala-native.or
 written in **C**, **C++**, or **Objective-C**. As a highly experimental feature, bindings for C libraries can also be used
 unmodified on the JVM (e.g. for prototyping with ammonite).
 
-To this end it takes a plain Scala class/object and transforms it into a wrapper object during compilation.
-This wrapper holds the pointer to the underlying external object, and converts arguments and return values of external calls
-transparently to/from Scala types.
+Under the hood, swog takes an annotated, but otherwise plain Scala class/object and transforms it into a wrapper object during compilation
+using macro expansion. At runtime, this wrapper holds the pointer to the underlying external object, converting arguments
+and return values of external calls transparently to/from Scala types.
 
 .. note::
 
@@ -25,12 +25,13 @@ Features
 
 - Traits/classes/objects representing external objects can contain additional members defined in Scala.
 
-- Scala-style camel case names for bindings can be automatically translated into C-style snake case
-  (or other naming conventions like PascalCase); supports global prefix for bindings classes/objects.
+- Scala-style camel case names are automatically translated into C-style snake case
+  (or other naming conventions like PascalCase), and all external functions declared in a class/object
+  can be given a common prefix either derived from the parent name, or explicitly assigned to.
 
 - Map untyped collections returned by C or Objective-C bindings to Scala generic classes; interact with C++ template classes.
 
-- Use bindings unmodified with ScalaNative and Scala/JVM (experimental, currently only supported for C).
+- Use the same binding with both,  ScalaNative and Scala/JVM (experimental, currently only supported for C).
 
 - Integrate with embedded scripting languages (currently: **Lua**).
 

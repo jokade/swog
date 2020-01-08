@@ -1,5 +1,7 @@
 package scala.scalanative.cobj
 
+import scala.scalanative.annotation.alwaysinline
+
 abstract class CEnum {
   class Value(val value: Int) {
     def |(or: Value): Value = new Value(value | or.value)
