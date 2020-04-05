@@ -5,9 +5,37 @@ import de.surfice.smacrotools.CommonMacroTools
 import scala.language.reflectiveCalls
 import scala.reflect.macros.TypecheckException
 import scala.scalanative.unsafe.Ptr
+import scala.scalanative.unsigned.{UByte, UInt, ULong, UShort}
 
 trait ObjCMacroTools extends CommonMacroTools {
   import c.universe._
+
+  // see https://developer.apple.com/library/archive/documentation/Cocoa/Conceptual/ObjCRuntimeGuide/Articles/ocrtTypeEncodings.html
+  sealed abstract class TypeCode(val code: String, // the Objective-C type code
+                                 val suffix: String // suffix used to generate distinctive names for msgSend signatures
+                                 ) {
+    override def toString(): String = suffix
+  }
+  object TypeCode {
+    object byte extends TypeCode("c","y")
+    object ubyte extends TypeCode("C","Y")
+    object char extends TypeCode("c","c")
+    object uchar extends TypeCode("C","C")
+    object short extends TypeCode("s","s")
+    object ushort extends TypeCode("S","S")
+    object int extends TypeCode("i","i")
+    object uint extends TypeCode("I","I")
+    object long extends TypeCode("l","l")
+    object ulong extends TypeCode("L","L")
+    object longlong extends TypeCode("q","q")
+    object ulonglong extends TypeCode("Q","Q")
+    object float extends TypeCode("f","f")
+    object double extends TypeCode("d","d")
+    object bool extends TypeCode("B","B")
+    object void extends TypeCode("v","v")
+    object string extends TypeCode("*","a")
+    object obj extends TypeCode("@","p")
+  }
 
   implicit class MacroData(var data: Map[String, Any]) {
     type Data = Map[String, Any]
@@ -63,8 +91,14 @@ trait ObjCMacroTools extends CommonMacroTools {
   protected[this] val tFloat = c.weakTypeOf[Float]
   protected[this] val tDouble = c.weakTypeOf[Double]
   protected[this] val tBoolean = c.weakTypeOf[Boolean]
+  protected[this] val tByte = c.weakTypeOf[Byte]
+  protected[this] val tUByte = c.weakTypeOf[UByte]
+  protected[this] val tShort = c.weakTypeOf[Short]
+  protected[this] val tUShort = c.weakTypeOf[UShort]
   protected[this] val tInt = c.weakTypeOf[Int]
+  protected[this] val tUInt = c.weakTypeOf[UInt]
   protected[this] val tLong = c.weakTypeOf[Long]
+  protected[this] val tULong = c.weakTypeOf[ULong]
   protected[this] val tUnit = c.weakTypeOf[Unit]
   protected[this] val tPtr = c.weakTypeOf[Ptr[_]]
   protected[this] val tChar = c.weakTypeOf[Char]
@@ -113,7 +147,8 @@ trait ObjCMacroTools extends CommonMacroTools {
       val typed = getType(tpt,true)
       Some(typed)
     } catch {
-      case ex: TypecheckException => None
+      case ex: TypecheckException =>
+        None
     }
 
   protected[this] def isObjCObject(tpt: Tree): Boolean = isObjCObject(getObjCType(tpt))
@@ -128,31 +163,48 @@ trait ObjCMacroTools extends CommonMacroTools {
     wrapResult(result,tpe)
   }
 
-  protected def wrapResult(result: Tree, resultType: Option[Type]): Tree = resultType match {
-    case Some(t) if t <:< tInt || t <:< tLong || t <:< tBoolean || t <:< tFloat || t <:< tDouble || t <:< tChar =>
+  protected def wrapResult(result: Tree, resultType: Option[Type]): Tree = {
+    resultType match {
+    case Some(t) if t <:< tByte  || t <:< tUByte  || t <:< tShort || t <:< tUShort || t <:< tInt || t <:< tUInt ||
+                    t <:< tLong  || t <:< tULong  || t <:< tFloat || t <:< tDouble ||
+                    t <:< tChar  || t <:< tBoolean || t <:< tUnit =>
       result
     case Some(t) if t <:< tPtr =>
       q"scalanative.runtime.fromRawPtr($result)"
     case _ =>
+      println("result: "+result)
       q"{val r = $result; if(r==null) null else new ${resultType.get}(scalanative.runtime.fromRawPtr(r))}"
   }
-
-  private def genTypeCode(tpt: Tree): String = getType(tpt,true) match {
-    case t if t <:< tInt => "i"
-    case t if t <:< tLong => "l"
-    case t if t <:< tBoolean => "b"
-    case t if t <:< tChar => "c"
-    case t if t <:< tDouble => "d"
-    case t if t <:< tFloat => "f"
-    case t if t <:< tObjCObject || t <:< tPtr => "p"
-    case t if t <:< tUnit => "v"
-    case _ =>
-      c.error(c.enclosingPosition,s"unsupported type: $tpt")
-      ???
   }
 
+  private def genTypeCode(tpt: Tree): TypeCode =
+    try{
+      getType(tpt, true).dealias match {
+        case t if t <:< tByte => TypeCode.byte
+        case t if t <:< tUByte => TypeCode.ubyte
+        case t if t <:< tShort => TypeCode.short
+        case t if t <:< tUShort => TypeCode.ushort
+        case t if t <:< tInt => TypeCode.int
+        case t if t <:< tUInt => TypeCode.uint
+        case t if t <:< tLong => TypeCode.long
+        case t if t <:< tULong => TypeCode.ulong
+        case t if t <:< tBoolean => TypeCode.bool
+        case t if t <:< tChar => TypeCode.char
+        case t if t <:< tDouble => TypeCode.double
+        case t if t <:< tFloat => TypeCode.float
+        case t if t <:< tObjCObject || t <:< tPtr => TypeCode.obj
+        case t if t <:< tUnit => TypeCode.void
+        case _ =>
+          c.error(c.enclosingPosition, s"unsupported type: $tpt")
+          ???
+      }
+    } catch {
+      // if type checking fails we simply assume that we're handling an ObjC object
+      case ex: TypecheckException => TypeCode.obj //"p"
+    }
+
   private def mapTypeForExternalCall(tpt: Tree): Tree = getType(tpt,true) match {
-    case t if t <:< tAnyVal => tpt
+    case t if t <:< tAnyVal || t <:< tUByte || t <:< tUShort || t <:< tUInt || t <:< tULong => tpt
     case t if t <:< tObjCObject || t <:< tPtr => tpePtr
     case _ =>
       c.error(c.enclosingPosition,s"unsupported type: $tpt")
@@ -183,19 +235,33 @@ trait ObjCMacroTools extends CommonMacroTools {
       }
     }
     genTypeCode(scalaDef.tpt) match {
-      case "i" =>
+      case TypeCode.byte =>
+        External(name.toString)(q"$msgSendNameAnnot def $name(self: id, sel: SEL, ..$args): Byte = extern" )
+      case TypeCode.ubyte =>
+        External(name.toString)(q"$msgSendNameAnnot def $name(self: id, sel: SEL, ..$args): scalanative.unsigned.UByte = extern" )
+      case TypeCode.short =>
+        External(name.toString)(q"$msgSendNameAnnot def $name(self: id, sel: SEL, ..$args): Short = extern" )
+      case TypeCode.ushort =>
+        External(name.toString)(q"$msgSendNameAnnot def $name(self: id, sel: SEL, ..$args): scalanative.unsigned.UShort = extern" )
+      case TypeCode.int =>
         External(name.toString)(q"$msgSendNameAnnot def $name(self: id, sel: SEL, ..$args): Int = extern" )
-      case "l" =>
+      case TypeCode.uint =>
+        External(name.toString)(q"$msgSendNameAnnot def $name(self: id, sel: SEL, ..$args): scalanative.unsigned.UInt = extern" )
+      case TypeCode.long =>
         External(name.toString)(q"$msgSendNameAnnot def $name(self: id, sel: SEL, ..$args): Long = extern" )
-      case "b" =>
+      case TypeCode.ulong =>
+        External(name.toString)(q"$msgSendNameAnnot def $name(self: id, sel: SEL, ..$args): scalanative.unsigned.ULong = extern" )
+      case TypeCode.bool =>
         External(name.toString)(q"$msgSendNameAnnot def $name(self: id, sel: SEL, ..$args): Boolean = extern" )
-      case "d" =>
+      case TypeCode.double =>
         External(name.toString)(q"$msgSendFpretNameAnnot def $name(self: id, sel: SEL, ..$args): Double = extern" )
-      case "f" =>
+      case TypeCode.float =>
         External(name.toString)(q"$msgSendFpretNameAnnot def $name(self: id, sel: SEL, ..$args): Float = extern" )
-      case "c" =>
+      case TypeCode.char =>
         External(name.toString)(q"$msgSendNameAnnot def $name(self: id, sel: SEL, ..$args): Char = extern" )
-      case _ =>
+      case TypeCode.void =>
+        External(name.toString)(q"$msgSendNameAnnot def $name(self: id, sel: SEL, ..$args): Unit = extern" )
+      case TypeCode.obj =>
         External(name.toString)(q"$msgSendNameAnnot def $name(self: id, sel: SEL, ..$args): scalanative.runtime.RawPtr = extern" )
     }
   }

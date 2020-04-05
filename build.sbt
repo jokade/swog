@@ -144,7 +144,7 @@ lazy val cobjTests = crossProject(JVMPlatform,NativePlatform)
 lazy val cobjTestsJVM = cobjTests.jvm
 lazy val cobjTestsNative = cobjTests.native
 
-/*
+
 lazy val objcTests = project
   .enablePlugins(ScalaNativePlugin,NBHAutoPlugin,NBHCxxPlugin)
   .dependsOn(objc)
@@ -154,7 +154,7 @@ lazy val objcTests = project
     nbhMakeProjects += NBHMakeProject(baseDirectory.value / "src" / "test" / "objc" ,Seq(NBHMakeArtifact("mockups.o"))),
     nbhLinkFrameworks += "Foundation"
   )
-*/
+
 lazy val cxxTests = project
   .enablePlugins(ScalaNativePlugin,NBHCxxPlugin)
   .dependsOn(cxx,cxxlib)

@@ -2,13 +2,15 @@ package tests.objc.foundation
 
 import de.surfice.smacrotools.debug
 
+import scalanative._
+import unsafe._
+import unsigned._
 import objc._
-import scala.scalanative.objc.{ObjC, ObjCClass}
+import scala.scalanative.objc.runtime.id
 
 @ObjC
 @debug
 class NSObject extends ObjCObject {
-
   @inline def `class`: id = extern
   @inline def hash: UInt = extern
   @inline def init(): this.type = extern
