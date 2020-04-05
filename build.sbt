@@ -1,3 +1,5 @@
+import scala.sys.process._
+
 organization in ThisBuild := "de.surfice"
 
 version in ThisBuild := "0.1.0-SNAPSHOT"
@@ -175,8 +177,7 @@ lazy val luaTests = project
 lazy val dontPublish = Seq(
   publish := {},
   publishLocal := {},
-  com.typesafe.sbt.pgp.PgpKeys.publishSigned := {},
-  com.typesafe.sbt.pgp.PgpKeys.publishLocalSigned := {},
+  publish / skip := true,
   publishArtifact := false,
   publishTo := Some(Resolver.file("Unused transient repository",file("target/unusedrepo")))
 )
