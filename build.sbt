@@ -67,15 +67,15 @@ lazy val cobj = crossProject(JVMPlatform,NativePlatform)
 lazy val cobjJVM = cobj.jvm
 lazy val cobjNative = cobj.native
 
-/*
+
 lazy val objc = project
   .enablePlugins(ScalaNativePlugin)
-  .dependsOn(common)
+  .dependsOn(interopNative)
   .settings(commonSettings ++ publishingSettings:_*)
   .settings(
     name := "swog-objc"
   )
-*/
+
 lazy val cxx = project
   .enablePlugins(ScalaNativePlugin)
   .dependsOn(cobjNative)
