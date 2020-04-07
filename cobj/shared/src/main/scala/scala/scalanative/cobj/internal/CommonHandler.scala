@@ -4,11 +4,15 @@ import de.surfice.smacrotools.MacroAnnotationHandler
 
 import scala.reflect.macros.{TypecheckException, whitebox}
 import scala.scalanative.cobj.{CEnum, CObject, CObjectWrapper, NamingConvention, ResultPtr, ResultValue}
+import scala.scalanative.unsafe.Ptr
+import scala.scalanative.unsigned.{UByte, UInt, ULong, UShort}
 
 abstract class CommonHandler extends MacroAnnotationHandler {
   val c: whitebox.Context
 
   import c.universe._
+
+  type External = (String,(String,Tree))
 
   protected val tRawPtr = weakTypeOf[scalanative.runtime.RawPtr]
   protected val tpeRawPtr = tq"$tRawPtr"
@@ -22,7 +26,37 @@ abstract class CommonHandler extends MacroAnnotationHandler {
   protected val tResultPtr = weakTypeOf[ResultPtr[_]]
   protected val tResultValue = weakTypeOf[ResultValue[_]]
   protected val expExtern = q"scalanative.unsafe.extern"
-  protected val tpeInt = tq"Int"
+
+  protected val tFloat = c.weakTypeOf[Float]
+  protected val tpeFloat = tq"$tFloat"
+  protected val tDouble = c.weakTypeOf[Double]
+  protected val tpeDouble = tq"$tDouble"
+  protected val tBoolean = c.weakTypeOf[Boolean]
+  protected val tpeBoolean = tq"$tBoolean"
+  protected val tByte = c.weakTypeOf[Byte]
+  protected val tpeByte = tq"$tByte"
+  protected val tUByte = c.weakTypeOf[UByte]
+  protected val tpeUByte = tq"$tUByte"
+  protected val tShort = c.weakTypeOf[Short]
+  protected val tpeShort = tq"$tShort"
+  protected val tUShort = c.weakTypeOf[UShort]
+  protected val tpeUShort = tq"$tUShort"
+  protected val tInt = c.weakTypeOf[Int]
+  protected val tpeInt = tq"$tInt"
+  protected val tUInt = c.weakTypeOf[UInt]
+  protected val tpeUInt = tq"$tUInt"
+  protected val tLong = c.weakTypeOf[Long]
+  protected val tpeLong = tq"$tLong"
+  protected val tULong = c.weakTypeOf[ULong]
+  protected val tpeULong = tq"$tULong"
+  protected val tUnit = c.weakTypeOf[Unit]
+  protected val tpeUnit = tq"$tUnit"
+  protected val tPtr = c.weakTypeOf[Ptr[_]]
+  protected val tpePtr = tq"$tPtr"
+  protected val tChar = c.weakTypeOf[Char]
+  protected val tpeChar = tq"$tChar"
+  protected val tAnyVal = c.weakTypeOf[AnyVal]
+
   protected def tpeDefaultParent: Tree
 
   implicit class MacroData(data: Map[String,Any]) {
@@ -295,7 +329,8 @@ abstract class CommonHandler extends MacroAnnotationHandler {
     if(wrappers.isEmpty) None
     else {
       wrappers.find {
-        case ValDef(_,_,AppliedTypeTree(_,List(Ident(n))),_) if n.toString == tpt.toString => true
+//        case ValDef(_,_,AppliedTypeTree(_,List(Ident(n))),_) if n.toString == tpt.toString => true
+        case ValDef(_,_,AppliedTypeTree(_,List(x)),_) if x.toString() == tpt.toString() => true
         case _ => false
       }.map(_.name)
     }
@@ -459,4 +494,17 @@ abstract class CommonHandler extends MacroAnnotationHandler {
 
   protected def executeSyncOnMainThread(m: DefDef): Boolean =
     findAnnotation(m.mods.annotations,"scala.scalanative.cobj.syncOnMainThread").isDefined
+
+
+  object ArgsAndWrappers {
+    def unapply(argLists: List[List[ValDef]]): Option[(Option[List[ValDef]],List[ValDef])] = argLists match {
+      case Nil => Some((None,Nil))
+      case List(args) => Some( (Some(args),Nil) )
+      case List(inargs,outargs) =>
+        val (wrappers,filteredOutargs) = outargs.partition(p => isCObjectWrapper(p.tpt))
+        Some( (Some(filteredOutargs), wrappers) )
+      case _ =>
+        None
+    }
+  }
 }

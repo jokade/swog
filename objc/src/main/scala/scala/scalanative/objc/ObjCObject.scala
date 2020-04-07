@@ -1,7 +1,7 @@
 package scala.scalanative.objc
 
-import scala.scalanative.interop.ExternalObject
+import scala.scalanative.cobj.CObject
 
-trait ObjCObject extends ExternalObject {
+trait ObjCObject extends CObject {
 
 }

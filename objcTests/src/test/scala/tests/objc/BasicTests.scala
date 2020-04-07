@@ -146,6 +146,7 @@ object BasicTests extends TestSuite {
 }
 
 @ObjC
+@debug
 class BasicTestsEUT extends ObjCObject {
   def name: CString = extern
   def maxInt: Int = extern

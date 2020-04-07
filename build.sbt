@@ -70,7 +70,7 @@ lazy val cobjNative = cobj.native
 
 lazy val objc = project
   .enablePlugins(ScalaNativePlugin)
-  .dependsOn(interopNative)
+  .dependsOn(cobjNative)
   .settings(commonSettings ++ publishingSettings:_*)
   .settings(
     name := "swog-objc"

@@ -4,6 +4,7 @@ import de.surfice.smacrotools.CommonMacroTools
 
 import scala.language.reflectiveCalls
 import scala.reflect.macros.TypecheckException
+import scala.scalanative.cobj.internal.CommonHandler
 import scala.scalanative.unsafe.Ptr
 import scala.scalanative.unsigned.{UByte, UInt, ULong, UShort}
 
@@ -39,7 +40,7 @@ trait ObjCMacroTools extends CommonMacroTools {
 
   implicit class MacroData(var data: Map[String, Any]) {
     type Data = Map[String, Any]
-    type Selectors = Seq[(String, TermName)]
+    type Selectors = Seq[(String,TermName)]
     type Externals = Set[External]
     type Statements = Seq[Tree]
 
@@ -103,6 +104,8 @@ trait ObjCMacroTools extends CommonMacroTools {
   protected[this] val tPtr = c.weakTypeOf[Ptr[_]]
   protected[this] val tChar = c.weakTypeOf[Char]
   protected[this] val tAnyVal = c.weakTypeOf[AnyVal]
+
+  protected[this] val tpeObjCObject = tq"$tObjCObject"
 
   private val tpePtr = tq"scalanative.unsafe.Ptr[Byte]"
 

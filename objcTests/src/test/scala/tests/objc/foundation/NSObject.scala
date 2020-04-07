@@ -6,6 +6,7 @@ import scalanative._
 import unsafe._
 import unsigned._
 import objc._
+import scala.scalanative.cobj.CObjectWrapper
 import scala.scalanative.objc.runtime.id
 
 @ObjC
@@ -13,19 +14,19 @@ import scala.scalanative.objc.runtime.id
 class NSObject extends ObjCObject {
   @inline def `class`: id = extern
   @inline def hash: UInt = extern
-  @inline def init(): this.type = extern
-  @inline def retain(): this.type = extern
-  @inline def release(): Unit = extern
+  @inline def init()(implicit w: CObjectWrapper[this.type]): this.type = extern
+//  @inline def retain(): this.type = extern
+//  @inline def release(): Unit = extern
 }
 
-@ObjCClass
-@debug
-abstract class NSObjectClass extends ObjCObject {
-  def __cls: id
-  type InstanceType
-  @inline def alloc(): InstanceType = extern
-}
+//@ObjCClass
+//@debug
+//abstract class NSObjectClass extends ObjCObject {
+//  def __cls: id
+//  type InstanceType
+//  @inline def alloc(): InstanceType = extern
+//}
 
-object NSObject extends NSObjectClass {
-  type InstanceType = NSObject
-}
+//object NSObject extends NSObjectClass {
+//  type InstanceType = NSObject
+//}
