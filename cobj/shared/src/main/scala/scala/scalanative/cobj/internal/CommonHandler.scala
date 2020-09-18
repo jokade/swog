@@ -205,7 +205,7 @@ abstract class CommonHandler extends MacroAnnotationHandler {
       case (externalName,args) => q"def ${TermName(externalName)}(..$args): $tPtrByte = $expExtern"
     }
     val defs = data.externals.values.map(_._2)
-    q"""@scalanative.unsafe.extern object __ext {..${ctors++defs}}"""
+    q"""@scalanative.unsafe.extern object __ext {import scalanative.unsafe._; ..${ctors++defs}}"""
   }
 
   protected def genExternalCall(externalName: String, scalaDef: DefDef, isClassMethod: Boolean, data: Data): DefDef = {
@@ -502,7 +502,7 @@ abstract class CommonHandler extends MacroAnnotationHandler {
       case List(args) => Some( (Some(args),Nil) )
       case List(inargs,outargs) =>
         val (wrappers,filteredOutargs) = outargs.partition(p => isCObjectWrapper(p.tpt))
-        Some( (Some(filteredOutargs), wrappers) )
+        Some( (Some(inargs++filteredOutargs), wrappers) )
       case _ =>
         None
     }

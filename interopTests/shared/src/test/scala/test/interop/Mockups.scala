@@ -52,7 +52,7 @@ object Mockups {
 
   def ptest_incr_num_struct(p: Ptr[PTestNumStruct]): Unit = extern
 
-  def ptest_call_func0(f: CFuncPtr0[CInt]): Unit = extern
+  def ptest_call_func0(f: CFuncPtr0[CInt]): CInt = extern
 
 //  def ptest_get_struct(): Ptr[CStruct1[Int]] = _inst.ptest_struct_get()
 }

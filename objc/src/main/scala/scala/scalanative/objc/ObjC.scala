@@ -178,12 +178,13 @@ object ObjC {
       /* transform companion object */
       case obj: ObjectTransformData =>
         // val containing the class reference
+        val clsName = obj.modParts.name.toString
         val objcCls =
           q"""lazy val __cls = {
               import scalanative._
               import unsafe._
               ..${obj.data.objcClassInits}
-              objc.runtime.objc_getClass(CQuote(StringContext(${obj.modParts.name.toString})).c() )
+              objc.runtime.objc_getClass(CQuote(StringContext($clsName)).c() )
               }"""
         // collect selector definitions from class
         val clsSelectors = obj.data.selectors
@@ -355,6 +356,7 @@ object ObjC {
 
     private def genMsgSend(scalaDef: DefDef): External = {
       val name = genMsgSendName(scalaDef)
+
       val (args, wrappers) = scalaDef.vparamss match {
         case ArgsAndWrappers(None,wrappers) =>
           (Nil, wrappers)

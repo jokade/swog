@@ -60,6 +60,7 @@ object external {
 
     override def createCompanion: CBool = false
 
+    protected val tCFuncPtr = c.weakTypeOf[CFuncPtr]
 
     override def analyze: Analysis = super.analyze andThen {
       case (obj: ObjectParts, data) =>
@@ -124,6 +125,7 @@ object external {
 
     protected def genJnaCall(scalaDef: DefDef)(implicit data: Data): DefDef = {
       val DefDef(mods,name,types,args,rettype,rhs) = scalaDef
+      val mappedArgs = args //mapJnaParams(args)
       val params = args match {
         case Nil => Nil
         case List(params) => transformJnaCallParams(params)
@@ -132,17 +134,39 @@ object external {
           ???
       }
       val call = q"__inst.$name(..$params)"
-      DefDef(mods,name,types,args,rettype,call)
+      DefDef(mods,name,types,mappedArgs,rettype,call)
     }
 
     protected def transformJnaCallParams(params: Seq[Tree]): Seq[Tree] =
       params map {
-        case ValDef(_,name,_,_) => q"name"
+        case ValDef(_,name,_,_) => q"$name"
       }
 
     protected def genJnaDef(scalaDef: DefDef)(implicit data: Data): DefDef = {
       val DefDef(mods, name, types, args, rettype, rhs) = scalaDef
-      DefDef(Modifiers(Flag.DEFERRED),name,types,args,rettype,q"")
+      val paramss = args //mapJnaParams(args)
+      DefDef(Modifiers(Flag.DEFERRED),name,types,paramss,rettype,q"")
+    }
+
+    protected def mapJnaParams(paramss: List[List[ValDef]]): List[List[ValDef]] = paramss match {
+      case List(params) => List(params map mapJnaParam)
+      case Nil => Nil
+      case _ =>
+        c.error(c.enclosingPosition,"methods with multiple parameter lists are currently not supported")
+        ???
+    }
+
+    protected def mapJnaParam(param: ValDef): ValDef = param match {
+      case p@ValDef(mods,name,CFuncPtr(tpe),rhs) =>
+        //println(tpe.typeArgs)
+        val cbType = mapJnaCallbackType(tpe)
+        ValDef(mods,name,cbType,rhs)
+      case p => p
+    }
+
+    protected def mapJnaCallbackType(tpe: c.Type): Tree = {
+      val resultTpe = tpe.typeArgs.last
+      tq"Callback{def apply(): $resultTpe}"
     }
 
     protected def genJnaGlobalDef(scalaDef: ValDef)(implicit data: Data): Tree = {
@@ -167,6 +191,14 @@ object external {
         .map{ annot =>
           extractAnnotationParameters(annot,Seq("name")).apply("name").flatMap(extractStringConstant).get
         }.getOrElse( scalaDef.name.toString )
+
+    object CFuncPtr {
+      def unapply(p: c.Tree): Option[c.Type] =
+        getType(p,true) match {
+          case tpe if tpe <:< tCFuncPtr => Some(tpe)
+          case _ => None
+        }
+    }
   }
 
 }

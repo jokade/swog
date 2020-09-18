@@ -4,9 +4,9 @@ import test.interop.Mockups.PTestNumStruct
 import utest._
 
 import scala.scalanative._
+import scala.scalanative.unsafe._
+import scala.scalanative.unsigned._
 import interop._
-import unsafe._
-import unsigned._
 
 /**
  * Interop tests for 'extern' objects.
@@ -222,7 +222,8 @@ object ExternTest extends TestSuite {
 
       'CFunc- {
         'CFunc0 - {
-          val f = new CFuncPtr0[Int] { def apply(): Int = 42 }
+          //val f = new CFuncPtr0[CInt] { def apply(): Int = 42 }
+          val f = new CB0 { def apply(): Int = 42 }
           Mockups.ptest_call_func0(f) ==> 42
         }
       }

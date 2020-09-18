@@ -5,9 +5,11 @@
 # Sets this project up using a RAM disk for builds
 #
 RAMDISKSIZE=256  # in MB
-if ! [[ -d ramdisk ]]
+mkdir -p ramdisk
+if [ -e .ramdevice ]
 then
-  mkdir ramdisk
+  echo ".ramdevice already exists!"
+  exit 1
 fi
 
 size=$(($RAMDISKSIZE * 1024 * 2))  # size in 512 blocks
