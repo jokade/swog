@@ -12,7 +12,7 @@ trait ResultValue[T<:CObject] extends CObject {
   @inline final def :=[R](f: Function1[ResultValue[T],R]): R = f(this)
 }
 object ResultValue {
-  final class Impl[T<:CObject](val __ptr: Ptr[Byte])(implicit tag: Tag[T]) extends ResultValue[T] {
+  final class Impl[T<:CObject](var __ptr: Ptr[Byte])(implicit tag: Tag[T]) extends ResultValue[T] {
     @inline override def wrappedValue(implicit wrapper: CObjectWrapper[T]): T = macro ResultValue.Macros.wrappedValueImpl[T]
   }
 

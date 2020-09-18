@@ -86,6 +86,9 @@ abstract class CommonHandler extends MacroAnnotationHandler {
     def parentIsCObj: Boolean = data.getOrElse("parentIsCObj",false).asInstanceOf[Boolean]
     def withParentIsCObj(flag: Boolean): Data = data.updated("parentIsCObj",flag)
 
+    def requiresPtrImpl: Boolean = data.getOrElse("requiresPtrImpl",true).asInstanceOf[Boolean]
+    def withRequiresPtrImpl(flag: Boolean): Data = data.updated("requiresPtrImpl",flag)
+
     def additionalCompanionStmts: Statements = data.getOrElse("compStmts", Nil).asInstanceOf[Statements]
     def withAdditionalCompanionStmts(stmts: Statements): Data = data.updated("compStmts",stmts)
   }
@@ -94,10 +97,12 @@ abstract class CommonHandler extends MacroAnnotationHandler {
   protected def analyzeTypes(tpe: TypeParts)(data: Data): Data = {
     val isAbstract = tpe.modifiers.hasFlag(Flag.ABSTRACT)
     val parentIsCObj = isExternalObject(tpe.parents.head,data)
+    val ptrImpl = ! hasPtrImpl(tpe.parents.head,data)
     data
       .withIsAbstract(isAbstract)
       .withCurrentType(tpe.fullName)
       .withParentIsCObj(parentIsCObj)
+      .withRequiresPtrImpl(ptrImpl)
   }
 
   protected def analyzeBody(tpe: CommonParts)(data: Data): Data = {
@@ -118,10 +123,10 @@ abstract class CommonHandler extends MacroAnnotationHandler {
   }
 
   protected def genTransformedCtorParams(cls: ClassTransformData): (Seq[Tree],Seq[Tree]) =
-    if(cls.data.parentIsCObj)
-      (Seq(q"override val __ptr: $tPtrByte"),cls.modParts.params)
+    if(cls.data.requiresPtrImpl)
+      (Seq(q"var __ptr: $tPtrByte"),cls.modParts.params)
     else
-      (Seq(q"val __ptr: $tPtrByte"),cls.modParts.params)
+      (Seq(q"ptr: $tPtrByte"),cls.modParts.params)
 
   protected def genTransformedParents(cls: TypeTransformData[TypeParts]): Seq[Tree] = {
     cls.modParts.parents map (p => (p,getType(p,true))) map {
@@ -129,7 +134,8 @@ abstract class CommonHandler extends MacroAnnotationHandler {
         c.warning(c.enclosingPosition,s"${cls.modParts.fullName} doesn't extend $tpeDefaultParent! This might result in unexpected runtime behaviour!")
         tpeDefaultParent
       case (tree,tpe) if tpe =:= tCObject || tpe.typeSymbol.asClass.isTrait => tree
-      case (tree,tpe) if tpe <:< tCObject => q"$tree(__ptr)"
+      case (tree,tpe) if tpe <:< tCObject =>
+        if(cls.data.requiresPtrImpl) q"$tree(__ptr)" else q"ptr"
       case (tree,_) => tree
     }
   }
@@ -140,8 +146,14 @@ abstract class CommonHandler extends MacroAnnotationHandler {
     val companion = t.modParts.companion.get.name
     val imports = Seq(q"import $companion.__ext")
     val ctors = genSecondaryConstructor(t)
+    val ptrAssign = t match {
+      case cls: ClassTransformData =>
+        if(cls.data.parentIsCObj) Seq(q"foo")
+        else Nil
+      case _ => Nil
+    }
 
-    imports ++ ctors ++ transformBody(t.modParts.body)(t.data)
+    imports ++ ctors ++ ptrAssign ++ transformBody(t.modParts.body)(t.data)
   }
 
   protected def transformBody(body: Seq[Tree])(implicit data: Data): Seq[Tree] =
@@ -315,7 +327,8 @@ abstract class CommonHandler extends MacroAnnotationHandler {
           q"$wrapperName.wrap($tree)"
       case None if isExternalObject(tpt,data) =>
         if(returnsThis)
-          q"""$tree;this"""
+        q"""this.__ptr = $tree
+            this"""
         else if(isNullable)
           q"""val res = $tree; if(res == null) null else new $tpt(res)"""
         else
@@ -452,6 +465,14 @@ abstract class CommonHandler extends MacroAnnotationHandler {
     case x =>
       false
   }
+
+  protected def hasPtrImpl(tpt: Tree, data: Data): Boolean =
+    try {
+      val typed = getType(tpt,true)
+      ! typed.member(TermName("__ptr")).isAbstract
+    } catch {
+      case ex: TypecheckException => true // the type check fails for type parameters => we assume that they represent an external Object
+    }
 
   protected def isExternalObject(tpt: Tree, data: Data): Boolean =
     try {

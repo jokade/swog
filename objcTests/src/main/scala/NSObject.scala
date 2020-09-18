@@ -22,11 +22,10 @@ class NSObject extends ObjCObject {
 }
 
 @ObjCClass
-@debug
-abstract class NSObjectClass extends ObjCObject {
+abstract class NSObjectClass {
   type InstanceType
   def __cls: id
-  def __ptr = __cls
+//  def __ptr = __cls
   //  def __wrapper: CObjectWrapper[InstanceType]
   @inline def alloc()(implicit w: CObjectWrapper[InstanceType]): InstanceType = extern
 }
@@ -35,18 +34,3 @@ object NSObject extends NSObjectClass {
   type InstanceType = NSObject
 }
 
-@ObjC
-class NSString extends NSObject {
-  type InstanceType = NSString
-  def initWithUTF8String_(s: CString): NSString = extern
-  def length: CUnsignedLong = extern
-}
-
-@ObjCClass
-@debug
-abstract class NSStringClass extends NSObjectClass {
-}
-
-object NSString extends NSStringClass {
-  override type InstanceType = NSString
-}

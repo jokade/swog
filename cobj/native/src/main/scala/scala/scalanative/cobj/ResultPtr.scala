@@ -7,7 +7,8 @@ import scala.reflect.macros.blackbox
 import scala.scalanative.unsafe._
 
 final class ResultPtr[T](val ptr: Ptr[T])(implicit tag: Tag[T]) extends CObject {
-  @inline def __ptr: Ptr[Byte] = ptr.asInstanceOf[Ptr[Byte]]
+//  @inline def __ptr: Ptr[Byte] = ptr.asInstanceOf[Ptr[Byte]]
+  var __ptr: Ptr[Byte] = ptr.asInstanceOf[Ptr[Byte]]
   @inline def isDefined: Boolean = !ptr != null
   @inline def isEmpty: Boolean = !isDefined
 //  @inline def valuePtr: Ptr[Byte] = !ptr

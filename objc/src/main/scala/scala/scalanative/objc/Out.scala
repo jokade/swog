@@ -8,7 +8,7 @@ import scalanative.unsafe._
 
 final class Out[T](ptr: Ptr[Ptr[Byte]]) extends ObjCObject {
   !ptr = null
-  @inline override def __ptr: Ptr[Byte] = ptr.asInstanceOf[Ptr[Byte]]
+  var __ptr: Ptr[Byte] = ptr.asInstanceOf[Ptr[Byte]]
   @inline def isDefined: Boolean = !ptr != null
   @inline def isEmpty: Boolean = !isDefined
   @inline def valuePtr: Ptr[Byte] = !ptr

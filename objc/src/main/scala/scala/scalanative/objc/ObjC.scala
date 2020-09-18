@@ -123,6 +123,8 @@ object ObjC {
 
     override def analyze: Analysis = super.analyze andThen {
       case (cls: TypeParts, data) =>
+        val updData = analyzeTypes(cls)(data)
+
         val companionStmts =
           if (cls.isClass && !cls.modifiers.hasFlag(Flag.ABSTRACT))
             List(genWrapperImplicit(cls.name, cls.tparams, Seq.empty))
@@ -135,7 +137,7 @@ object ObjC {
         }.unzip
 
         (cls,
-          data
+          updData
             .withCompanionName(cls.name.toTermName)
             .withSelectors(selectors)
             .addExternals(externals.toMap)
@@ -146,9 +148,13 @@ object ObjC {
     override def transform: Transformation = super.transform andThen {
       /* transform class */
       case cls: ClassTransformData =>
-        val ctorParams = transformCtorParams(cls.modParts.params)
+//        val ctorParams = transformCtorParams(cls.modParts.params)
+        val ctorParams =
+          if(isObjCClass) (Nil, Nil)
+          else
+            genTransformedCtorParams(cls)
 
-        val parents = transformParents(cls.modParts.parents)
+        val parents = transformParents(cls.modParts.parents,cls.data)
 
         val annots =
           if (isObjCClass) cls.modParts.modifiers.annotations
@@ -210,7 +216,8 @@ object ObjC {
       case default => default
     }
 
-    private def transformBody(body: Seq[Tree], typeName: TypeName)(implicit data: Data): Seq[Tree] =
+    private def transformBody(body: Seq[Tree], typeName: TypeName)(implicit data: Data): Seq[Tree] = {
+//      (if (data.parentIsCObj && !data.requiresPtrImpl) Seq(q"this.__ptr = ptr") else Nil) ++
       (if (data.replaceClassBody.isDefined)
         data.replaceClassBody.get
       else body)
@@ -225,6 +232,7 @@ object ObjC {
             DefDef(mods, name, types, args, rettype, call)
           case x => x
         }
+    }
 
 
     private def isObjCObject(tpt: Tree): Boolean =
@@ -238,15 +246,17 @@ object ObjC {
 
     private def isObjCObject(tpe: Type): Boolean = tpe.baseClasses.map(_.asType.toType).exists( t => t <:< tObjCObject )
 
-    private def transformCtorParams(params: Seq[Tree]): Seq[Tree] =
-      if(isObjCClass) Nil
-      else Seq(q"override val __ptr: scalanative.unsafe.Ptr[Byte]")
+//    private def transformCtorParams(params: Seq[Tree]): Seq[Tree] =
+//      if(isObjCClass) Nil
+//      else Seq(q"var __ptr: scalanative.unsafe.Ptr[Byte]")
 
-    private def transformParents(parents: Seq[Tree]): Seq[Tree] =
+    // TODO: can we use CommonHandler.transformParents instead?
+    private def transformParents(parents: Seq[Tree], data: Data): Seq[Tree] =
       if(isObjCClass) parents
       else parents map (p => (p,getType(p))) map {
         case (tree,tpe) if tpe =:= tObjCObject || tpe.typeSymbol.isAbstract => tree
-        case (tree,tpe) if tpe <:< tObjCObject => q"$tree(__ptr)"
+        case (tree,tpe) if tpe <:< tObjCObject =>
+          if (data.requiresPtrImpl) q"$tree(__ptr)" else q"$tree(ptr)"
         case (tree,_) => tree
       }
 
