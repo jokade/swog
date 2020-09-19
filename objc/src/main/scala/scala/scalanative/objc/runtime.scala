@@ -189,7 +189,8 @@ object runtime {
 //  def objc_msgSend(self: Any, op: SEL, arg1: Any, arg2: Any, arg3: Any, arg4: Any, arg5: Any, arg6: Any, arg7: Any, arg8: Any): id = extern
 //  def objc_msgSend(self: Any, op: SEL, arg1: Any, arg2: Any, arg3: Any, arg4: Any, arg5: Any, arg6: Any, arg7: Any, arg8: Any, arg9: Any): id = extern
 
-//  def objc_msgSendSuper(objc_super: Ptr[objc_super], op: SEL, args: native.CVararg*): id = extern
+  def objc_msgSendSuper(objc_super: Ptr[objc_super], op: SEL): id = extern
+  def objc_msgSendSuper(objc_super: Ptr[objc_super], op: SEL, arg1: id): id = extern
 
   /**
    * Registers a method with the ObjC runtime system, maps the method name to a selector, and returns the selector value.

@@ -6,6 +6,8 @@
 package scala.scalanative.objc
 
 import runtime._
+import scala.scalanative.annotation.alwaysinline
+import scala.scalanative.cobj.CObjectWrapper
 import scalanative._
 import unsafe._
 import unsigned._
@@ -17,23 +19,25 @@ object helper {
   private val scalaInstanceIVar = c"s"
   val sel_alloc: SEL = sel_registerName(c"alloc")
   val sel_allocWithZone: SEL = sel_registerName(c"allocWithZone:")
-/* TODO:
+
+  @alwaysinline private def prepareSendSuper(self: id, op: SEL, obj: Ptr[objc_super]) = {
+    val super_class = class_getSuperclass(object_getClass(self))
+    obj._1 = self
+    obj._2 = super_class
+  }
+
   def msgSendSuper0(self: id, op: SEL): id = {
     val objc_super = stackalloc[objc_super]( sizeof[objc_super] )
-    val super_class = class_getSuperclass(object_getClass(self))
-    !objc_super._1 = self
-    !objc_super._2 = super_class
+    prepareSendSuper(self,op,objc_super)
     runtime.objc_msgSendSuper(objc_super,op)
   }
 
   def msgSendSuper1(self: id, op: SEL, arg1: Ptr[Byte]): id = {
     val objc_super = stackalloc[objc_super]( sizeof[objc_super] )
-    val super_class = class_getSuperclass(object_getClass(self))
-    !objc_super._1 = self
-    !objc_super._2 = super_class
+    prepareSendSuper(self,op,objc_super)
     runtime.objc_msgSendSuper(objc_super,op, arg1)
   }
-*/
+
   @inline def addScalaInstanceIVar(cls: ClassPtr): Boolean = runtime.class_addIvar(cls,scalaInstanceIVar,8,3.toUByte,null)
 
   @inline def setScalaInstanceIVar(obj: id, instance: Object): runtime.IVar =
@@ -45,13 +49,14 @@ object helper {
     runtime.object_getInstanceVariable(obj,scalaInstanceIVar,out)
     (!out).asInstanceOf[Object].asInstanceOf[T]
   }
-/*
-  def allocProxy(clsObj: id, instance: id=>Object): id = {
-    val obj = msgSendSuper0(clsObj,sel_alloc)
-    setScalaInstanceIVar(obj,instance(obj))
-    obj
-  }
-*/
+
+  /*
+    def allocProxy(clsObj: id, instance: id=>Object): id = {
+      val obj = msgSendSuper0(clsObj,sel_alloc)
+      setScalaInstanceIVar(obj,instance(obj))
+      obj
+    }
+  */
 //  implicit final class RichObjCObject(val o: ObjCObject) extends AnyVal {
     // due to https://github.com/scala-native/scala-native/issues/547 we currently can't pass on CVararg*
     // so we explicitly provide methods for multiple arg counts

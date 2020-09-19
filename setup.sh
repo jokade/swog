@@ -4,7 +4,7 @@
 # 
 # Sets this project up using a RAM disk for builds
 #
-RAMDISKSIZE=256  # in MB
+RAMDISKSIZE=512  # in MB
 mkdir -p ramdisk
 if [ -e .ramdevice ]
 then

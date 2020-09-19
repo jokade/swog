@@ -23,7 +23,7 @@ class NSObject extends ObjCObject {
 
 @ObjCClass
 @debug
-abstract class NSObjectClass extends ObjCObject {
+abstract class NSObjectClass {
   type InstanceType
   def __cls: id
   def __ptr = __cls

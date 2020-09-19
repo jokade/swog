@@ -9,6 +9,7 @@ import scala.scalanative.unsigned.UInt
 @extern
 object ext {
   def NSLog(s: Ptr[Byte]): Unit = extern
+  def run(): Unit = extern
 }
 
 @ObjC
@@ -17,6 +18,7 @@ class NSObject extends ObjCObject {
   @inline def hash: UInt = extern
   @returnsThis
   @inline def init(): this.type = extern
+  def foo(): CString = extern
   //  @inline def retain(): this.type = extern
   //  @inline def release(): Unit = extern
 }

@@ -214,7 +214,7 @@ trait ObjCMacroTools extends CommonMacroTools {
       ???
   }
 
-  protected[this] def genMsgSendName(scalaDef: DefDef): TermName = {
+  protected[this] def genNameWithTypeCodes(prefix: String)(scalaDef: DefDef): TermName = {
     val suffix = scalaDef.vparamss match {
       case Nil => ""
       case List(argdefs) => argdefs.map(p => genTypeCode(p.tpt)).mkString
@@ -224,8 +224,10 @@ trait ObjCMacroTools extends CommonMacroTools {
         ???
     }
     val retType = genTypeCode(scalaDef.tpt)
-    TermName("msgSend_"+retType+suffix)
+    TermName(prefix+retType+suffix)
   }
+
+  protected[this] def genMsgSendName = genNameWithTypeCodes("msgSend_") _
 
 
   protected[this] def genMsgSend(scalaDef: DefDef): External = {

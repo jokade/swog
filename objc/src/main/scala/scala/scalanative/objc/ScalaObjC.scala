@@ -14,8 +14,7 @@ class ScalaObjC() extends StaticAnnotation {
 object ScalaObjC {
 
   private[objc] class Macro(val c: whitebox.Context)
-    extends MacroAnnotationHandler
-      with ObjCMacroTools {
+    extends ObjC.BaseMacro {
     import c.universe._
 
     override val annotationName: String = "SNDefined"
@@ -23,78 +22,103 @@ object ScalaObjC {
     override val supportsTraits: Boolean = false
     override val supportsObjects: Boolean = true
     override val createCompanion: Boolean = true
+    override val isObjCClass: Boolean = false
+    override protected def tpeDefaultParent: c.universe.Tree = tpeObjCObject
 
     val tpeRetain = typeOf[retain]
 
+    implicit class ScalaObjCMacroData(var data: Map[String, Any]) {
+      type Data = Map[String, Any]
+
+      def selfRef: ValDef = data.getOrElse("selfRef", null).asInstanceOf[ValDef]
+      def withSelfRef(selfRef: ValDef): Data = data.updated("selfRef", selfRef)
+    }
+
     override def analyze: Analysis = super.analyze andThen {
       case (cls: ClassParts, data: Data) =>
-        // all public defs, vals, and vars are exposed to ObjC
+//        val selfRef = cls.params.headOption match {
+//          case Some(x:ValDef) => x
+//          case _ =>
+//            c.error(c.enclosingPosition,s"The first argument of @ScalaObjC classes must be a self reference, e.g.: class ${cls.name}(self: NSObject)")
+//            ???
+//        }
+
         val exposedMembers = getExposedMembers(cls.body)
 
-        // collect all required ObjC selectors (every selector is stored as a lazy val on the companion object)
-        val selectors = exposedMembers.map( _.selector ) ++
-          // add setter selectors for public vars
-          exposedMembers.filter(_.provideSetter).map{m =>
-            val name = genSetterSelectorName(m.name)
-            (name,genSelectorTerm(name)) //TermName("__sel_"+name))
-          }
-
-        // generate implicit wrapper if class is not abstract
-        val companionStmts =
-          if( cls.isClass && !cls.modifiers.hasFlag(Flag.ABSTRACT) )
-            List(genWrapperImplicit(cls.name,cls.tparams))
-          else
-            Nil
-
-        val updData = MacroData(data)
-        updData.selectors = data.selectors ++ selectors
-        updData.objcClassInits = allocDef(cls) ++
+        val classInits =
           objcClassDef(cls,exposedMembers) ++
           (exposedMembers map genExposedMethodProxy(cls)) ++
-          (exposedMembers filter(_.provideSetter) map genExposedVarSetterProxy(cls))
-        updData.additionalCompanionStmts = companionStmts
-        (cls,updData.data)
+          (exposedMembers filter(_.provideSetter) map genExposedVarSetterProxy(cls,data))
+//        // all public defs, vals, and vars are exposed to ObjC
+//
+//        // collect all required ObjC selectors (every selector is stored as a lazy val on the companion object)
+//        val selectors = exposedMembers.map( _.selector ) ++
+//          // add setter selectors for public vars
+//          exposedMembers.filter(_.provideSetter).map{m =>
+//            val name = genSetterSelectorName(m.name)
+//            (name,genSelectorTerm(name)) //TermName("__sel_"+name))
+//          }
+//
+//        // generate implicit wrapper if class is not abstract
+//        val companionStmts =
+//          if( cls.isClass && !cls.modifiers.hasFlag(Flag.ABSTRACT) )
+//            List(genWrapperImplicit(cls.name,cls.tparams))
+//          else
+//            Nil
+//
+//        val updData = MacroData(data)
+//        updData.selectors = data.selectors ++ selectors
+//        updData.objcClassInits = allocDef(cls) ++
+//          objcClassDef(cls,exposedMembers) ++
+//          (exposedMembers map genExposedMethodProxy(cls)) ++
+//          (exposedMembers filter(_.provideSetter) map genExposedVarSetterProxy(cls))
+//        updData.additionalCompanionStmts = companionStmts
+//        (cls,updData.data)
+        val updData =
+          data
+//            .withSelfRef(selfRef)
+            .withObjcClassInits(classInits)
+            .addCompanionStmts(allocDef(cls))
+        (cls,updData)
       case x => x
     }
 
 
-    override def transform: Transformation = super.transform andThen {
-      case cls: ClassTransformData =>
-        val self = cls.modParts.params.head match {
-          case x:ValDef => x
-        }
-        val updParents = (getType(cls.modParts.parents.head,false) match {
-          case x => q"$x(${self.name}.cast[scalanative.native.Ptr[Byte]])"
-        }) +: cls.modParts.parents.tail
-        cls.updParents(updParents)
-      /* transform companion object */
-      case obj: ObjectTransformData =>
-        val objcCls =
-          q"""lazy val __cls = {
-              import scalanative.native.objc
-              ..${obj.data.objcClassInits}
-              objc.runtime.objc_getClass(${cstring(obj.modParts.name.toString)})
-              }"""
-        // collect selector definitions from class and companion
-        val clsSelectors = obj.data.selectors
-        // collect selector definitions and statements (transformed ObjC-calls and other statements)
-        // from companion
-        val (objSelectors, objStmts) = obj.modParts.body
-          .map {
-            case t@DefDef(mods, name, types, args, rettype, Ident(TermName("extern"))) =>
-              val sel = genSelector(name, args)
-              val call = genCall(clsTarget, sel._2, args, rettype) //q"objc.objc_msgSend(_cls,$selectorVal,${paramNames(t)})"
-              (Some(sel), DefDef(mods, name, types, args, rettype, call))
-            case stmt => (None, stmt)
-          }.unzip
-        val selectorDefs = (clsSelectors ++ objSelectors.collect { case Some(sel) => sel })
-          .toMap
-          .map(p => genSelectorDef(p._1, p._2))
-        val transformedBody = Seq(ccastImport, objcCls) ++ selectorDefs ++ objStmts ++ obj.data.additionalCompanionStmts
-        obj.updBody(transformedBody)
-      /* default */
-      case default => default
-    }
+//    override def transform: Transformation = super.transform andThen {
+//      case cls: ClassTransformData =>
+////        val updParents = transformParents(cls.modParts.parents,cls.data)
+////        cls.updParents(updParents)
+//        cls
+//      /* transform companion object */
+//      case obj: ObjectTransformData =>
+//        val objcCls =
+//          q"""lazy val __cls = {
+//              import scalanative.objc
+//              ..${obj.data.objcClassInits}
+//              objc.runtime.objc_getClass(${cstring(obj.modParts.name.toString)})
+//              }"""
+//        // collect selector definitions from class and companion
+//        val clsSelectors = obj.data.selectors
+//        // collect selector definitions and statements (transformed ObjC-calls and other statements)
+//        // from companion
+//        val (objSelectors, objStmts) = obj.modParts.body
+//          .map {
+//            case t@DefDef(mods, name, types, args, rettype, Ident(TermName("extern"))) =>
+//              val sel = genSelector(name, args)
+//              val call = genCall(clsTarget, sel._2, args, rettype) //q"objc.objc_msgSend(_cls,$selectorVal,${paramNames(t)})"
+//              (Some(sel), DefDef(mods, name, types, args, rettype, call))
+//            case stmt => (None, stmt)
+//          }.unzip
+//        val selectorDefs = (clsSelectors ++ objSelectors.collect { case Some(sel) => sel })
+//          .toMap
+//          .map(p => genSelectorDef(p._1, p._2))
+//        val transformedBody = Seq(objcCls) ++ selectorDefs ++ objStmts ++ obj.data.additionalCompanionStmts
+//        obj.updBody(transformedBody)
+//      /* default */
+//      case default => default
+//    }
+
+
 
     // generate code to define the ObjC proxy class
     private def objcClassDef(cls: ClassParts, exposedMembers: Seq[ExposedMember]) = Seq[Tree] {
@@ -113,16 +137,32 @@ object ScalaObjC {
           registerExposedMember(
             m.copy(name = TermName(genSetterSelectorName(m.name)), params = List(ValDef(null,m.name,null,null)), isSetter = true)) )
 
-      q"""import scalanative.native._
+//      q"""import scalanative._
+//          import objc.runtime._
+//          import objc.helper._
+//          val newCls = objc_allocateClassPair($parent,$clsName,0)
+//          objc.helper.addScalaInstanceIVar(newCls)
+//          val metaCls = object_getClass(newCls)
+//          class_addMethod(
+//            metaCls,
+//            sel_allocWithZone,
+//            new CFuncPtr3[id,SEL,id,Unit]{ def apply(cls: id, sel: SEL, cb: id) = __allocWithZone(cls,sel,cb)},
+//            c"@:@")
+//          ..${exposedMembers map registerExposedMember}
+//          ..$exposedVarSetters
+//          objc_registerClassPair(newCls)
+//       """
+      q"""import scalanative._
           import objc.runtime._
           import objc.helper._
-
           val newCls = objc_allocateClassPair($parent,$clsName,0)
           objc.helper.addScalaInstanceIVar(newCls)
           val metaCls = object_getClass(newCls)
-          class_addMethod(metaCls,sel_allocWithZone,CFunctionPtr.fromFunction3(__allocWithZone),c"@:@")
-          ..${exposedMembers map registerExposedMember}
-          ..$exposedVarSetters
+          class_addMethod(
+            metaCls,
+            sel_allocWithZone,
+            __allocWithZone,
+            c"@:@")
           objc_registerClassPair(newCls)
        """
     }
@@ -130,29 +170,27 @@ object ScalaObjC {
 
     private def allocDef(cls: ClassParts) = Seq[Tree] {
       val clsName = cls.name
-      val retType = cls.name.toTypeName // q"$clsName"
-      val proxyType = cls.params match {
-        case List(ValDef(_,_,tpt,_)) => tpt
-        case _ =>
-          c.error(c.enclosingPosition,s"ScalaObjC classes must have exactly one constructor argument (self)")
-          ???
-      }
-      q"""def __allocWithZone(clsObj: objc.runtime.id, sel: objc.runtime.SEL, zone: objc.runtime.id): id = {
-            import scalanative.native.objc
-            import objc.helper._
-            val ref = objc.helper.msgSendSuper1(clsObj,sel_allocWithZone,zone)
-            val instance = new $clsName(ref)
-            setScalaInstanceIVar(ref,instance)
-            ref
-          }
+      q"""val __allocWithZone = {
+          import scalanative.objc.runtime._
+            new CFuncPtr3[id,SEL,id,Unit]{ def apply(cls: id, sel: SEL, cb: id) = {
+              import scalanative.objc
+              import objc.helper._
+              println("allocating")
+            }
+          }}
        """
+//      val ref = objc.helper.msgSendSuper1(clsObj,sel_allocWithZone,zone)
+//      val instance = new $clsName(ref)
+//      setScalaInstanceIVar(ref,instance)
+//      ref
     }
 
     private def registerExposedMember(m: ExposedMember): Tree = {
       val typeEncoding = cstring( genTypeEncoding(m) )
-      q"""class_addMethod(newCls,${m.selector._2},${exposedMethodCast(m)},$typeEncoding)"""
+      val funcPtr = genCFuncPtr(m.name,m.params,m.tpe.getOrElse(tUnit))
+      q"""class_addMethod(newCls,${m.selector._2},$funcPtr,$typeEncoding)"""
     }
-
+/*
     private def exposedMethodCast(m: ExposedMember): Tree = m.params.size match {
       case 0 => q"""CFunctionPtr.fromFunction2(${methodProxyName(m)})"""
       case 1 => q"""CFunctionPtr.fromFunction3(${methodProxyName(m)})"""
@@ -179,13 +217,14 @@ object ScalaObjC {
         c.error(c.enclosingPosition,s"Scala-defined ObjC methods with more than 20 parameters are not supported")
         ???
     }
-
+*/
 
     private def getExposedMembers(body: Seq[Tree]): Seq[ExposedMember] = body collect {
       case m: DefDef if isPublic(m.mods) =>
         val returnType = getType(m.tpt,withMacrosDisabled = true)
         ExposedMember(m.name,m.vparamss.headOption.getOrElse(Nil),m.vparamss.nonEmpty, tpe = Some(returnType), customSelector = findCustomSelector(m.mods.annotations))
       case p: ValDef if isPublic(p.mods) =>
+        println("member: "+p)
         val tpe =
           if(p.tpt.nonEmpty)
             c.typecheck(p.tpt,c.TYPEmode,withMacrosDisabled = true).tpe
@@ -217,50 +256,42 @@ object ScalaObjC {
        """
     }
 
-    private def genExposedVarSetterProxy(cls: ClassParts)(m: ExposedMember) = {
-      import m._
-      def setValue =
-        if(m.retain) {
-          val result = wrapResult(q"value.retain()",tpe)
-          q"""if(o.$name != null)
-                o.$name.release()
-              o.$name = $result
-           """
-        }
-        else {
-          val result = wrapResult(q"value",tpe)
-          q"""o.$name = $result"""
-        }
-
-      q"""def ${methodProxyName(genSetterSelectorName(m.name))}(self: scalanative.native.objc.runtime.id, sel: scalanative.native.objc.runtime.SEL, value: scalanative.native.objc.runtime.id) = {
-            val o = scalanative.native.objc.helper.getScalaInstanceIVar[${cls.name}](self)
-            $setValue
-          }
-       """
+    private def genExposedVarSetterProxy(cls: ClassParts, data: Data)(m: ExposedMember) = {
+      q""
+//      import m._
+//      def setValue =
+//        if(m.retain) {
+//          val result = wrapResult(q"value.retain()",tpe)
+////          val result = wrapExternalCallResult(q"value.retain()",tpe,data,isNullable = false, returnsThis = false)
+//          q"""if(o.$name != null)
+//                o.$name.release()
+//              o.$name = $result
+//           """
+//        }
+//        else {
+//          val result = wrapResult(q"value",tpe)
+//          q"""o.$name = $result"""
+//        }
+//
+//      q"""def ${methodProxyName(genSetterSelectorName(m.name))}(self: scalanative.native.objc.runtime.id, sel: scalanative.native.objc.runtime.SEL, value: scalanative.native.objc.runtime.id) = {
+//            val o = scalanative.native.objc.helper.getScalaInstanceIVar[${cls.name}](self)
+//            $setValue
+//          }
+//       """
     }
 
     private def genTypeEncoding(m: ExposedMember): String = {
       val returnType =
         if(m.isSetter) "v"
-        else genTypeCode(m.tpe)
+        else genTypeCode(m.tpe.getOrElse(tUnit))
 
       returnType + "@:" + m.params.map(genTypeCode).mkString
     }
 
-    private def genTypeCode(p: ValDef): String = genTypeCode(p.tpe)
-
-    private def genTypeCode(tpe: Option[Type]): String =
-      if(tpe.isEmpty) "v"
-      else genTypeCode(tpe.get)
-
-    private def genTypeCode(tpe: Type): String = "@"
-
-    private val _extern = q"scalanative.native.extern"
-
     private def isPublic(mods: Modifiers): Boolean =
       !( mods.hasFlag(Flag.PROTECTED) || mods.hasFlag(Flag.PRIVATE) )
 
-
+/*
     private def genCall(target: TermName, selectorVal: TermName, argsList: List[List[ValDef]], rettype: Tree): Tree =
       genCall(q"$target", q"$selectorVal", argsList, rettype)
 
@@ -328,17 +359,17 @@ object ScalaObjC {
     } catch {
       case _: Throwable => CastMode.TypeArg
     }
-
+*/
     private def genSetterSelectorName(name: TermName): String =
       "set" + name.toString.head.toUpper + name.toString.tail + ":"
-
+/*
     object CastMode extends Enumeration {
       val Direct = Value
       val Object = Value
       val InstanceOf = Value
       val TypeArg  = Value
     }
-
+*/
     def findCustomSelector(annots: Seq[Tree]): Option[String] = {
       findAnnotation(annots,"selector")
         .map(t => extractAnnotationParameters(t,Seq("name")) )

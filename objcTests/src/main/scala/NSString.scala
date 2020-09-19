@@ -5,7 +5,6 @@ import scala.scalanative.objc.{ObjC, ObjCClass}
 import scala.scalanative.unsafe.{CString, CUnsignedLong, extern}
 
 @ObjC
-@debug
 class NSString extends NSObject {
   type InstanceType = NSString
   @returnsThis
@@ -20,3 +19,4 @@ abstract class NSStringClass extends NSObjectClass {
 object NSString extends NSStringClass {
   override type InstanceType = NSString
 }
+

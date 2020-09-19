@@ -4,7 +4,7 @@ import de.surfice.smacrotools.MacroAnnotationHandler
 
 import scala.reflect.macros.{TypecheckException, whitebox}
 import scala.scalanative.cobj.{CEnum, CObject, CObjectWrapper, NamingConvention, ResultPtr, ResultValue}
-import scala.scalanative.unsafe.Ptr
+import scala.scalanative.unsafe.{CLongLong, CString, CUnsignedChar, CUnsignedLongLong, Ptr}
 import scala.scalanative.unsigned.{UByte, UInt, ULong, UShort}
 
 abstract class CommonHandler extends MacroAnnotationHandler {
@@ -55,6 +55,14 @@ abstract class CommonHandler extends MacroAnnotationHandler {
   protected val tpePtr = tq"$tPtr"
   protected val tChar = c.weakTypeOf[Char]
   protected val tpeChar = tq"$tChar"
+  protected val tUChar = c.weakTypeOf[CUnsignedChar]
+  protected val tpeUChar = tq"$tUChar"
+  protected val tLongLong = c.weakTypeOf[CLongLong]
+  protected val tpeLongLong = tq"$tLongLong"
+  protected val tULongLong = c.weakTypeOf[CUnsignedLongLong]
+  protected val tpeULongLong = tq"$tULongLong"
+  protected val tCString = c.weakTypeOf[CString]
+  protected val tpeCString = tq"$tCString"
   protected val tAnyVal = c.weakTypeOf[AnyVal]
 
   protected def tpeDefaultParent: Tree
@@ -90,7 +98,8 @@ abstract class CommonHandler extends MacroAnnotationHandler {
     def withRequiresPtrImpl(flag: Boolean): Data = data.updated("requiresPtrImpl",flag)
 
     def additionalCompanionStmts: Statements = data.getOrElse("compStmts", Nil).asInstanceOf[Statements]
-    def withAdditionalCompanionStmts(stmts: Statements): Data = data.updated("compStmts",stmts)
+    //def withAdditionalCompanionStmts(stmts: Statements): Data = data.updated("compStmts",stmts)
+    def addCompanionStmts(stmts: Statements): Data = data.updated("compStmts", additionalCompanionStmts ++ stmts)
   }
 
   // TODO: move all checks (isCRef, isAbstract, ... in here and store the results in data)
@@ -126,7 +135,7 @@ abstract class CommonHandler extends MacroAnnotationHandler {
     if(cls.data.requiresPtrImpl)
       (Seq(q"var __ptr: $tPtrByte"),cls.modParts.params)
     else
-      (Seq(q"ptr: $tPtrByte"),cls.modParts.params)
+      (Seq(q"private val ptr: $tPtrByte"),cls.modParts.params)
 
   protected def genTransformedParents(cls: TypeTransformData[TypeParts]): Seq[Tree] = {
     cls.modParts.parents map (p => (p,getType(p,true))) map {
@@ -148,7 +157,7 @@ abstract class CommonHandler extends MacroAnnotationHandler {
     val ctors = genSecondaryConstructor(t)
     val ptrAssign = t match {
       case cls: ClassTransformData =>
-        if(cls.data.parentIsCObj) Seq(q"foo")
+        if(!cls.data.requiresPtrImpl) Seq(q"this.__ptr = ptr")
         else Nil
       case _ => Nil
     }
@@ -453,6 +462,20 @@ abstract class CommonHandler extends MacroAnnotationHandler {
         }
       case _ =>
         c.error(c.enclosingPosition,"CObj / Cxx classes with more than two type parameters are not supported")
+        ???
+    }
+  }
+
+  protected def genCFuncPtr(termName: TermName, params: List[ValDef], resultType: Type): Tree = {
+    val argTypes = params.map( _.tpe )
+    val argNames = params.map( _.name )
+    params.length match {
+      case 0 => q"new scalanative.unsafe.CFuncPtr0[..$argTypes,$resultType] { def apply(..$params) = $termName(..$argNames) }"
+      case 1 => q"new scalanative.unsafe.CFuncPtr1[..$argTypes,$resultType] { def apply(..$params) = $termName(..$argNames) }"
+      case 2 => q"new scalanative.unsafe.CFuncPtr2[..$argTypes,$resultType] { def apply(..$params) = $termName(..$argNames) }"
+      case 3 => q"new scalanative.unsafe.CFuncPtr3[..$argTypes,$resultType] { def apply(..$params) = $termName(..$argNames) }"
+      case x =>
+        c.error(c.enclosingPosition,s"function pointers with $x arguments are not supported")
         ???
     }
   }

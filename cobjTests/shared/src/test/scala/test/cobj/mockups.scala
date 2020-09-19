@@ -6,7 +6,7 @@ import scala.scalanative.cobj.{ResultPtr, _}
 import scala.scalanative.unsafe._
 
 @CObj
-class Number {
+class Number extends CObject {
   def getValue(): CInt = extern
   def setValue(value: CInt): Unit = extern
   def free(): Unit = extern
@@ -21,6 +21,7 @@ object Number {
 
 
 @CObj
+@debug
 class Counter extends Number {
   def increment(): CInt = extern
 }

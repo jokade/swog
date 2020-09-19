@@ -9,7 +9,7 @@ scalaVersion in ThisBuild := "2.11.12"
 val Version = new {
   val jna         = "5.5.0"
   val smacrotools = "0.0.9-SNAPSHOT"
-  val utest       = "0.6.8-SNAPSHOT"
+  val utest       = "0.7.5"
 }
 
 
@@ -152,7 +152,9 @@ lazy val objcTests = project
   .settings(
     nativeLinkStubs := true,
     nbhMakeProjects += NBHMakeProject(baseDirectory.value / "src" / "test" / "objc" ,Seq(NBHMakeArtifact("mockups.o"))),
-    nbhLinkFrameworks += "Foundation"
+    nbhLinkFrameworks += "Foundation",
+    nativeCompileOptions ++= Seq("-g"),
+    nativeLinkingOptions ++= Seq("-g")
   )
 
 lazy val cxxTests = project

@@ -31,34 +31,6 @@ object ObjC {
     override protected def tpeDefaultParent: c.universe.Tree = tpeObjCObject
   }
 
-  // see https://developer.apple.com/library/archive/documentation/Cocoa/Conceptual/ObjCRuntimeGuide/Articles/ocrtTypeEncodings.html
-  sealed abstract class TypeCode(val code: String, // the Objective-C type code
-                                 val suffix: String // suffix used to generate distinctive names for msgSend signatures
-                                ) {
-    override def toString(): String = suffix
-  }
-  object TypeCode {
-    object byte extends TypeCode("c","y")
-    object ubyte extends TypeCode("C","Y")
-    object char extends TypeCode("c","c")
-    object uchar extends TypeCode("C","C")
-    object short extends TypeCode("s","s")
-    object ushort extends TypeCode("S","S")
-    object int extends TypeCode("i","i")
-    object uint extends TypeCode("I","I")
-    object long extends TypeCode("l","l")
-    object ulong extends TypeCode("L","L")
-    object longlong extends TypeCode("q","q")
-    object ulonglong extends TypeCode("Q","Q")
-    object float extends TypeCode("f","f")
-    object double extends TypeCode("d","d")
-    object bool extends TypeCode("B","B")
-    object void extends TypeCode("v","v")
-    object string extends TypeCode("*","a")
-    object obj extends TypeCode("@","p")
-    object unknown extends TypeCode("@","p") // type check failed -> unknonw; but we assume that it is represented as an object pointer
-  }
-
 
   // marks that a class wraps an ObjC-object in the __ptr var
   class Wrapper extends StaticAnnotation
@@ -79,10 +51,41 @@ object ObjC {
     protected val tpeId = tq"scalanative.objc.runtime.id"
     protected val tpeSEL = tq"scalanative.objc.runtime.SEL"
 
+    // see https://developer.apple.com/library/archive/documentation/Cocoa/Conceptual/ObjCRuntimeGuide/Articles/ocrtTypeEncodings.html
+    sealed abstract class TypeCode(val code: String, // the Objective-C type code
+                                   val suffix: String, // suffix used to generate distinctive names for msgSend signatures
+                                   val typeTree: Tree
+                                  ) {
+      override def toString(): String = suffix
+    }
+    object TypeCode {
+      object byte extends TypeCode("c","y",tpeByte)
+      object ubyte extends TypeCode("C","Y",tpeUByte)
+      object char extends TypeCode("c","c",tpeChar)
+      object uchar extends TypeCode("C","C",tpeUChar)
+      object short extends TypeCode("s","s",tpeShort)
+      object ushort extends TypeCode("S","S",tpeUShort)
+      object int extends TypeCode("i","i",tpeInt)
+      object uint extends TypeCode("I","I",tpeUInt)
+      object long extends TypeCode("l","l",tpeLong)
+      object ulong extends TypeCode("L","L",tpeULong)
+      object longlong extends TypeCode("q","q",tpeLongLong)
+      object ulonglong extends TypeCode("Q","Q",tpeULongLong)
+      object float extends TypeCode("f","f",tpeFloat)
+      object double extends TypeCode("d","d",tpeDouble)
+      object bool extends TypeCode("B","B",tpeBoolean)
+      object void extends TypeCode("v","v",tpeUnit)
+      object string extends TypeCode("*","a",tpeCString)
+      object obj extends TypeCode("@","p",tpePtrByte)
+      val ptr = obj
+      object unknown extends TypeCode("@","p",tpePtrByte) // type check failed -> unknonw; but we assume that it is represented as an object pointer
+
+    }
+
+
     implicit class ObjCMacroData(var data: Map[String, Any]) {
       type Data = Map[String, Any]
       type Selectors = Seq[(String, TermName)]
-//      type Externals = Set[External]
       type Statements = Seq[Tree]
 
       def companionName: TermName = data.getOrElse("companionName",null).asInstanceOf[TermName]
@@ -90,21 +93,12 @@ object ObjC {
 
       // selectors to be defined in the companion object
       def selectors: Selectors = data.getOrElse("selectors", Nil).asInstanceOf[Selectors]
-      def withSelectors(selectors: Selectors): Data = data.updated("selectors",selectors)
-
-      def selectors_=(selectors: Selectors): Data = {
-        data += "selectors" -> selectors
-        data
-      }
+      def addSelectors(selectors: Selectors): Data = data.updated("selectors",data.selectors ++ selectors)
 
       // statements to be executed during ObjC class intialization for @ScalaDefined classes
       // (i.e. the code required to define the ObjC class when the first call to a class method is issued)
       def objcClassInits: Statements = data.getOrElse("objcClassInits", Nil).asInstanceOf[Statements]
-
-      def objcClassInits_=(stmts: Statements): Data = {
-        data += "objcClassInits" -> stmts
-        data
-      }
+      def withObjcClassInits(inits: Statements): Data = data.updated("objcClassInits",inits)
 
       def replaceClassBody: Option[Statements] = data.getOrElse("replaceClsBody", None).asInstanceOf[Option[Statements]]
       def replaceClassBody_=(stmts: Option[Statements]): Data = {
@@ -133,15 +127,15 @@ object ObjC {
         // collect selectors and signatures of objc_msgSend() to be emitted into companion object body
         val (selectors,externals) = cls.body.collect {
           case t @ DefDef(mods, name, types, args, rettype, rhs) if isExtern(rhs) =>
-            (genSelector(name, args),genMsgSend(t))
+            (genSelector(name, args),genExternalCallWithTypeCode("objc_msgSend","msgSend_",t))
         }.unzip
 
         (cls,
           updData
             .withCompanionName(cls.name.toTermName)
-            .withSelectors(selectors)
+            .addSelectors(selectors)
             .addExternals(externals.toMap)
-            .withAdditionalCompanionStmts(companionStmts))
+            .addCompanionStmts(companionStmts))
       case default => default
     }
 
@@ -185,13 +179,7 @@ object ObjC {
       case obj: ObjectTransformData =>
         // val containing the class reference
         val clsName = obj.modParts.name.toString
-        val objcCls =
-          q"""lazy val __cls = {
-              import scalanative._
-              import unsafe._
-              ..${obj.data.objcClassInits}
-              objc.runtime.objc_getClass(CQuote(StringContext($clsName)).c() )
-              }"""
+        val objcCls = genClsDefn(obj, clsName)
         // collect selector definitions from class
         val clsSelectors = obj.data.selectors
         // collect selector definitions and statements (transformed ObjC-calls and other statements)
@@ -216,8 +204,16 @@ object ObjC {
       case default => default
     }
 
-    private def transformBody(body: Seq[Tree], typeName: TypeName)(implicit data: Data): Seq[Tree] = {
-//      (if (data.parentIsCObj && !data.requiresPtrImpl) Seq(q"this.__ptr = ptr") else Nil) ++
+    protected[objc] def genClsDefn(obj: ObjectTransformData, clsName: String): Tree = {
+      q"""lazy val __cls = {
+            import scalanative._
+            import unsafe._
+            ..${obj.data.objcClassInits}
+            objc.runtime.objc_getClass(CQuote(StringContext($clsName)).c() )
+          }"""
+    }
+
+    protected[objc] def transformBody(body: Seq[Tree], typeName: TypeName)(implicit data: Data): Seq[Tree] = {
       (if (data.replaceClassBody.isDefined)
         data.replaceClassBody.get
       else body)
@@ -235,7 +231,7 @@ object ObjC {
     }
 
 
-    private def isObjCObject(tpt: Tree): Boolean =
+    protected[objc] def isObjCObject(tpt: Tree): Boolean =
       try{
         val tpe = getType(tpt,true)
         isObjCObject(tpe)
@@ -244,14 +240,10 @@ object ObjC {
         case _: Throwable => true
       }
 
-    private def isObjCObject(tpe: Type): Boolean = tpe.baseClasses.map(_.asType.toType).exists( t => t <:< tObjCObject )
-
-//    private def transformCtorParams(params: Seq[Tree]): Seq[Tree] =
-//      if(isObjCClass) Nil
-//      else Seq(q"var __ptr: scalanative.unsafe.Ptr[Byte]")
+    protected[objc] def isObjCObject(tpe: Type): Boolean = tpe.baseClasses.map(_.asType.toType).exists( t => t <:< tObjCObject )
 
     // TODO: can we use CommonHandler.transformParents instead?
-    private def transformParents(parents: Seq[Tree], data: Data): Seq[Tree] =
+    protected[objc] def transformParents(parents: Seq[Tree], data: Data): Seq[Tree] =
       if(isObjCClass) parents
       else parents map (p => (p,getType(p))) map {
         case (tree,tpe) if tpe =:= tObjCObject || tpe.typeSymbol.isAbstract => tree
@@ -261,10 +253,10 @@ object ObjC {
       }
 
 
-    private def genCall(target: TermName, selectorVal: TermName, scalaDef: DefDef)(implicit data: Data): Tree =
+    protected[objc] def genCall(target: TermName, selectorVal: TermName, scalaDef: DefDef)(implicit data: Data): Tree =
       genCall(q"$target",q"$selectorVal",scalaDef)
 
-    private def genCall(target: Tree, selectorVal: Tree, scalaDef: DefDef)(implicit data: Data): Tree = {
+    protected[objc] def genCall(target: Tree, selectorVal: Tree, scalaDef: DefDef)(implicit data: Data): Tree = {
       val (argList,wrappers) = (scalaDef.vparamss match {
         case Nil =>
           (Nil,Nil)
@@ -287,7 +279,7 @@ object ObjC {
       val argNames = (1 to args.size).map(p => TermName("arg"+p))
       val argDefs = argNames.zip(args).map(p => q"val ${p._1} = ${p._2}")
 
-      val msgSendName = genMsgSendName(scalaDef)
+      val msgSendName = genNameWithTypeCodes("msgSend_",scalaDef)
 
       val call = q"""${data.companionName}.__ext.$msgSendName($target,$selectorVal,..$argNames)"""
 
@@ -296,51 +288,55 @@ object ObjC {
     }
 
 
-    private def genSelectorDef(selector: String, selectorTerm: TermName) =
+    protected[objc] def genSelectorDef(selector: String, selectorTerm: TermName) =
       q"protected lazy val $selectorTerm = scalanative.objc.runtime.sel_registerName(scalanative.unsafe.CQuote(StringContext($selector)).c())"
 
-    private def genSelector(name: TermName, args: List[List[ValDef]]): (String, TermName) = {
+    protected[objc] def genSelector(name: TermName, args: List[List[ValDef]]): (String, TermName) = {
       val s = genSelectorString(name, args)
       (s, genSelectorTerm(s))
     }
 
 
-    private def genSelectorTermString(selectorString: String): String =
+    protected[objc] def genSelectorTermString(selectorString: String): String =
       "__sel_"+selectorString.replaceAll(":","_")
 
-    private def genSelectorTerm(selectorString: String): TermName = {
+    protected[objc] def genSelectorTerm(selectorString: String): TermName = {
       TermName(genSelectorTermString(selectorString))
     }
 
 
-    private def genSelectorString(name: TermName, args: List[List[ValDef]]): String =
+    protected[objc] def genSelectorString(name: TermName, args: List[List[ValDef]]): String =
       name.toString.replaceAll("_",":")
 
 
-    private def genTypeCode(tpt: Tree): TypeCode =
+    protected[objc] def genTypeCode(tpt: Tree): TypeCode =
       try{
-        getType(tpt, true).dealias match {
-          case t if t <:< tByte => TypeCode.byte
-          case t if t <:< tUByte => TypeCode.ubyte
-          case t if t <:< tShort => TypeCode.short
-          case t if t <:< tUShort => TypeCode.ushort
-          case t if t <:< tInt => TypeCode.int
-          case t if t <:< tUInt => TypeCode.uint
-          case t if t <:< tLong => TypeCode.long
-          case t if t <:< tULong => TypeCode.ulong
-          case t if t <:< tBoolean => TypeCode.bool
-          case t if t <:< tChar => TypeCode.char
-          case t if t <:< tDouble => TypeCode.double
-          case t if t <:< tFloat => TypeCode.float
-          case t if t <:< tObjCObject || t <:< tPtr => TypeCode.obj
-          case t if t <:< tUnit => TypeCode.void
-          case _ =>
-            c.error(c.enclosingPosition, s"unsupported type: $tpt")
-            ???
-        }
+        genTypeCode( getType(tpt, true) )
       } catch {
         // if type check fails => return 'unknown'
         case ex: TypecheckException => TypeCode.unknown
+      }
+
+    protected[objc] def genTypeCode(tpe: Type): TypeCode =
+      tpe.dealias match {
+        case t if t <:< tByte => TypeCode.byte
+        case t if t <:< tUByte => TypeCode.ubyte
+        case t if t <:< tShort => TypeCode.short
+        case t if t <:< tUShort => TypeCode.ushort
+        case t if t <:< tInt => TypeCode.int
+        case t if t <:< tUInt => TypeCode.uint
+        case t if t <:< tLong => TypeCode.long
+        case t if t <:< tULong => TypeCode.ulong
+        case t if t <:< tBoolean => TypeCode.bool
+        case t if t <:< tChar => TypeCode.char
+        case t if t <:< tDouble => TypeCode.double
+        case t if t <:< tFloat => TypeCode.float
+        case t if t <:< tObjCObject => TypeCode.obj
+        case t if t <:< tPtr => TypeCode.ptr
+        case t if t <:< tUnit => TypeCode.void
+        case _ =>
+          c.error(c.enclosingPosition, s"unsupported type: $tpe")
+          ???
       }
 
     private def mapTypeForExternalCall(tpt: Tree): Tree = getType(tpt,true) match {
@@ -351,7 +347,14 @@ object ObjC {
         ???
     }
 
-    private def genMsgSendName(scalaDef: DefDef): TermName = {
+    /**
+     * Generates a method name using the provided prefix and the signature of the passed DefDef.
+     *
+     * @example
+     *  For the method signature `foo(i: Int, f: Boolean): Ptr[Byte]`
+     *  and the prefix `msgSend_` the result will be 'msgSend_piB'
+     */
+    protected[objc] def genNameWithTypeCodes(prefix: String, scalaDef: DefDef): TermName = {
       val suffix = scalaDef.vparamss match {
         case ArgsAndWrappers(None,_) => ""
         case ArgsAndWrappers(Some(argdefs), _) => argdefs.map(p => genTypeCode(p.tpt)).mkString
@@ -360,12 +363,13 @@ object ObjC {
           ???
       }
       val retType = genTypeCode(scalaDef.tpt)
-      TermName("msgSend_"+retType+suffix)
+      TermName(prefix+retType+suffix)
     }
 
+    protected[objc] def genExternalCallWithTypeCode(externalName: String, methodPrefix: String, scalaDef: DefDef): External = {
+      val name = genNameWithTypeCodes(methodPrefix, scalaDef)
 
-    private def genMsgSend(scalaDef: DefDef): External = {
-      val name = genMsgSendName(scalaDef)
+      val nameAnnot = Modifiers(NoFlags,typeNames.EMPTY,List(q"new name(${Literal(Constant(externalName))})"))
 
       val (args, wrappers) = scalaDef.vparamss match {
         case ArgsAndWrappers(None,wrappers) =>
@@ -381,38 +385,9 @@ object ObjC {
           ???
       }
 
-      val (externalName,annot,rettype) =
-        genTypeCode(scalaDef.tpt) match {
-          case TypeCode.byte =>
-            ("objc_msgSend",msgSendNameAnnot,tpeByte)
-          case TypeCode.ubyte =>
-            ("objc_msgSend",msgSendNameAnnot,tpeUByte)
-          case TypeCode.short =>
-            ("objc_msgSend",msgSendNameAnnot,tpeShort)
-          case TypeCode.ushort =>
-            ("objc_msgSend",msgSendNameAnnot,tpeUShort)
-          case TypeCode.int =>
-            ("objc_msgSend",msgSendNameAnnot,tpeInt)
-          case TypeCode.uint =>
-            ("objc_msgSend",msgSendNameAnnot,tpeUInt)
-          case TypeCode.long =>
-            ("objc_msgSend",msgSendNameAnnot,tpeLong)
-          case TypeCode.ulong =>
-            ("objc_msgSend",msgSendNameAnnot,tpeULong)
-          case TypeCode.bool =>
-            ("objc_msgSend",msgSendNameAnnot,tpeBoolean)
-          case TypeCode.double =>
-            ("objc_msgSendFpret",msgSendFpretNameAnnot,tpeDouble)
-          case TypeCode.float =>
-            ("objc_msgSendFpret",msgSendFpretNameAnnot,tpeFloat)
-          case TypeCode.char =>
-            ("objc_msgSend",msgSendNameAnnot,tpeChar)
-          case TypeCode.void =>
-            ("objc_msgSend",msgSendNameAnnot,tpeUnit)
-          case TypeCode.obj | TypeCode.unknown =>
-            ("objc_msgSend",msgSendNameAnnot,tpePtrByte)
-        }
-        name.toString -> (externalName -> q"$annot def $name(self: $tpeId, sel: $tpeSEL, ..$args): $rettype = $expExtern" )
+      val rettype = genTypeCode(scalaDef.tpt).typeTree
+
+      name.toString -> (externalName -> q"$nameAnnot def $name(self: $tpeId, sel: $tpeSEL, ..$args): $rettype = $expExtern" )
     }
 
 

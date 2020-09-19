@@ -65,7 +65,7 @@ abstract class CObjBase extends CommonHandler {
         Nil
     data
       //        .withConstructors( Seq( (genExternalName(data.externalPrefix,data.newSuffix,data.namingConvention),cls.params.asInstanceOf[List[ValDef]]) ) )
-      .withAdditionalCompanionStmts(data.additionalCompanionStmts ++ companionStmts)
+      .addCompanionStmts(companionStmts)
   }
 
   protected def genPrefixName(clsName: String): String =
