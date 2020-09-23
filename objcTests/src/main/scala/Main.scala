@@ -14,31 +14,24 @@ import scala.scalanative.cobj.CObjectWrapper
 
 void run() {
   NSLog(@"called");
-  id cls = objc_getClass("Foo");
-  NSObject* foo = [cls alloc];
-  NSLog(@"%@",foo);
+  id cls = objc_lookUpClass("Bar");
+  NSObject* bar = [[cls alloc] init];
+//  [bar foo];
+  NSLog(@"OK3");
+//  NSLog(@"%@",bar);
 }
 """)
 object Main {
   def main(args: Array[String]): Unit = {
     Foo.__cls
+    Bar.__cls
+//    val foo = Foo.alloc().init()
+//    val bar = Bar.alloc()
+    
     ext.run()
   }
+  
 }
 
 
-@ScalaObjC
-@debug
-class Foo extends NSObject {
-}
 
-@ObjCClass
-abstract class FooClass extends NSObjectClass
-
-object Foo extends FooClass {
-  override type InstanceType = Foo
-  def myAlloc()(implicit w: CObjectWrapper[InstanceType]): InstanceType = {
-    println("mark4")
-    alloc()
-  }
-}

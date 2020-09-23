@@ -8,6 +8,7 @@ import scala.language.experimental.macros
 
 final class ResultPtr[T](val ptr: Ptr[T]) extends CObject {
   @inline def __ptr: Ptr[Byte] = ptr.asInstanceOf[Ptr[Byte]]
+  @inline def __ptr_=(ptr: Ptr[Byte]) = ???
   @inline def isDefined: Boolean = ??? //!ptr != null
   @inline def isEmpty: Boolean = !isDefined
 

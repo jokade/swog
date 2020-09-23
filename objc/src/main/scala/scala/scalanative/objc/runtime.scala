@@ -3,6 +3,7 @@
 // Description: Bindings to the ObjC runtime defined in objc/*.h
 package scala.scalanative.objc
 
+import scala.scalanative.runtime.RawPtr
 import scalanative._
 import unsafe._
 import unsigned._
@@ -18,13 +19,13 @@ object runtime {
 
   type BOOL = Boolean
 
-//  type id =  Ptr[Byte] //CUnsignedLong
-  type id =  Ptr[Byte] //CUnsignedLong
-
   /**
    * An opaque type that represents an Objective-C class.
    */
   type ClassPtr = Ptr[Byte]
+  
+  type id =  Ptr[Byte] //Ptr[CStruct1[ClassPtr]] //CUnsignedLong
+
 
   /**
    * Defines an opaque type that represents an Objective-C method selector
@@ -137,7 +138,7 @@ object runtime {
    * @param obj
    * @return class of the object, or
    */
-  def object_getClass(obj: id): ClassPtr = extern
+  def object_getClass(obj: Ptr[Byte]): ClassPtr = extern
 
   /**
    * Returns the class definition of the specified class.
@@ -167,8 +168,10 @@ object runtime {
   // non-generated runtime code. All signatures required by methods defined in @ObjC classes are generated with the
   // class on the fly.
   def objc_msgSend(self: id, op: SEL): id = extern
+  def objc_msgSend(self: Ptr[Byte], op: SEL, arg1: Ptr[Byte]): id = extern
 //  def objc_msgSend(self: Any, op: SEL, args: CVarArg*): id = extern
 
+  def objc_lookUpClass(name: CString): ClassPtr = extern
 /* TODO: replace with signatures generated with the ObjC classes on the fly
   def objc_msgSend(self: Any, op: SEL, args: native.CVararg*): id = extern
   @name("objc_msgSend")
@@ -178,7 +181,8 @@ object runtime {
   def objc_msgSend_Float(self: Any, op: SEL, args: native.CVararg*): Float = extern
   */
 //  def objc_msgSend(self: Any, op: SEL): id = extern
-//  def objc_msgSend(self: Any, op: SEL, arg1: Any): id = extern
+//  @name("objc_msgSend")
+//  def objc_msgSend1(self: Any, op: SEL, arg1: Ptr[Byte]): id = extern
 //  def objc_msgSend(self: Any, op: SEL, arg1: Any, arg2: Any): id = extern
 //
 //  def objc_msgSend(self: Any, op: SEL, arg1: Any, arg2: Any, arg3: Any): id = extern
@@ -190,7 +194,7 @@ object runtime {
 //  def objc_msgSend(self: Any, op: SEL, arg1: Any, arg2: Any, arg3: Any, arg4: Any, arg5: Any, arg6: Any, arg7: Any, arg8: Any, arg9: Any): id = extern
 
   def objc_msgSendSuper(objc_super: Ptr[objc_super], op: SEL): id = extern
-  def objc_msgSendSuper(objc_super: Ptr[objc_super], op: SEL, arg1: id): id = extern
+  def objc_msgSendSuper(objc_super: Ptr[objc_super], op: SEL, arg1: Ptr[Byte]): id = extern
 
   /**
    * Registers a method with the ObjC runtime system, maps the method name to a selector, and returns the selector value.

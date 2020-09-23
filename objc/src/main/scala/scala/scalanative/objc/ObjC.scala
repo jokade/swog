@@ -48,7 +48,7 @@ object ObjC {
     protected val msgSendNameAnnot = Modifiers(NoFlags,typeNames.EMPTY,List(q"new name(${Literal(Constant("objc_msgSend"))})"))
     protected val msgSendFpretNameAnnot = Modifiers(NoFlags,typeNames.EMPTY,List(q"new name(${Literal(Constant("objc_msgSend_fpret"))})"))
     protected val clsTarget = TermName("__cls")
-    protected val tpeId = tq"scalanative.objc.runtime.id"
+    protected val tpeId = tq"scalanative.unsafe.Ptr[Byte]"
     protected val tpeSEL = tq"scalanative.objc.runtime.SEL"
 
     // see https://developer.apple.com/library/archive/documentation/Cocoa/Conceptual/ObjCRuntimeGuide/Articles/ocrtTypeEncodings.html
@@ -311,13 +311,13 @@ object ObjC {
 
     protected[objc] def genTypeCode(tpt: Tree): TypeCode =
       try{
-        genTypeCode( getType(tpt, true) )
+        val typed = getType(tpt, true)
+        genTypeCode( typed )
       } catch {
-        // if type check fails => return 'unknown'
         case ex: TypecheckException => TypeCode.unknown
       }
 
-    protected[objc] def genTypeCode(tpe: Type): TypeCode =
+    protected[objc] def genTypeCode(tpe: Type): TypeCode = {
       tpe.dealias match {
         case t if t <:< tByte => TypeCode.byte
         case t if t <:< tUByte => TypeCode.ubyte
@@ -338,6 +338,7 @@ object ObjC {
           c.error(c.enclosingPosition, s"unsupported type: $tpe")
           ???
       }
+    }
 
     private def mapTypeForExternalCall(tpt: Tree): Tree = getType(tpt,true) match {
       case t if t <:< tAnyVal || t <:< tUByte || t <:< tUShort || t <:< tUInt || t <:< tULong => tpt

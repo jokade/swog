@@ -106,7 +106,7 @@ abstract class CommonHandler extends MacroAnnotationHandler {
   protected def analyzeTypes(tpe: TypeParts)(data: Data): Data = {
     val isAbstract = tpe.modifiers.hasFlag(Flag.ABSTRACT)
     val parentIsCObj = isExternalObject(tpe.parents.head,data)
-    val ptrImpl = ! hasPtrImpl(tpe.parents.head,data)
+    val ptrImpl = ! hasPtrImpl(tpe.parents.head)
     data
       .withIsAbstract(isAbstract)
       .withCurrentType(tpe.fullName)
@@ -144,7 +144,7 @@ abstract class CommonHandler extends MacroAnnotationHandler {
         tpeDefaultParent
       case (tree,tpe) if tpe =:= tCObject || tpe.typeSymbol.asClass.isTrait => tree
       case (tree,tpe) if tpe <:< tCObject =>
-        if(cls.data.requiresPtrImpl) q"$tree(__ptr)" else q"ptr"
+        if(cls.data.requiresPtrImpl) q"$tree" else q"$tree(ptr)"
       case (tree,_) => tree
     }
   }
@@ -474,6 +474,12 @@ abstract class CommonHandler extends MacroAnnotationHandler {
       case 1 => q"new scalanative.unsafe.CFuncPtr1[..$argTypes,$resultType] { def apply(..$params) = $termName(..$argNames) }"
       case 2 => q"new scalanative.unsafe.CFuncPtr2[..$argTypes,$resultType] { def apply(..$params) = $termName(..$argNames) }"
       case 3 => q"new scalanative.unsafe.CFuncPtr3[..$argTypes,$resultType] { def apply(..$params) = $termName(..$argNames) }"
+      case 4 => q"new scalanative.unsafe.CFuncPtr4[..$argTypes,$resultType] { def apply(..$params) = $termName(..$argNames) }"
+      case 5 => q"new scalanative.unsafe.CFuncPtr5[..$argTypes,$resultType] { def apply(..$params) = $termName(..$argNames) }"
+      case 6 => q"new scalanative.unsafe.CFuncPtr6[..$argTypes,$resultType] { def apply(..$params) = $termName(..$argNames) }"
+      case 7 => q"new scalanative.unsafe.CFuncPtr7[..$argTypes,$resultType] { def apply(..$params) = $termName(..$argNames) }"
+      case 8 => q"new scalanative.unsafe.CFuncPtr8[..$argTypes,$resultType] { def apply(..$params) = $termName(..$argNames) }"
+      case 9 => q"new scalanative.unsafe.CFuncPtr9[..$argTypes,$resultType] { def apply(..$params) = $termName(..$argNames) }"
       case x =>
         c.error(c.enclosingPosition,s"function pointers with $x arguments are not supported")
         ???
@@ -489,10 +495,12 @@ abstract class CommonHandler extends MacroAnnotationHandler {
       false
   }
 
-  protected def hasPtrImpl(tpt: Tree, data: Data): Boolean =
+  private val namePtr = TermName("__ptr")
+
+  protected def hasPtrImpl(tpt: Tree): Boolean =
     try {
       val typed = getType(tpt,true)
-      ! typed.member(TermName("__ptr")).isAbstract
+      ! typed.member(namePtr).isAbstract
     } catch {
       case ex: TypecheckException => true // the type check fails for type parameters => we assume that they represent an external Object
     }
