@@ -2,7 +2,7 @@ import de.surfice.smacrotools.debug
 
 import scala.scalanative.cobj.{CObjectWrapper, returnsThis}
 import scala.scalanative.objc.runtime.id
-import scala.scalanative.objc.{ObjC, ObjCClass, ObjCObject}
+import scala.scalanative.objc.{ObjC, ObjCClass, ObjCObject, ScalaObjC}
 import scala.scalanative.unsafe._
 import scala.scalanative.unsigned.UInt
 
@@ -18,7 +18,6 @@ class NSObject extends ObjCObject {
   @inline def hash: UInt = extern
   @returnsThis
   @inline def init(): this.type = extern
-  def foo(): CString = extern
   //  @inline def retain(): this.type = extern
   //  @inline def release(): Unit = extern
 }

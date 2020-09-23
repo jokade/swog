@@ -474,6 +474,12 @@ abstract class CommonHandler extends MacroAnnotationHandler {
       case 1 => q"new scalanative.unsafe.CFuncPtr1[..$argTypes,$resultType] { def apply(..$params) = $termName(..$argNames) }"
       case 2 => q"new scalanative.unsafe.CFuncPtr2[..$argTypes,$resultType] { def apply(..$params) = $termName(..$argNames) }"
       case 3 => q"new scalanative.unsafe.CFuncPtr3[..$argTypes,$resultType] { def apply(..$params) = $termName(..$argNames) }"
+      case 4 => q"new scalanative.unsafe.CFuncPtr4[..$argTypes,$resultType] { def apply(..$params) = $termName(..$argNames) }"
+      case 5 => q"new scalanative.unsafe.CFuncPtr5[..$argTypes,$resultType] { def apply(..$params) = $termName(..$argNames) }"
+      case 6 => q"new scalanative.unsafe.CFuncPtr6[..$argTypes,$resultType] { def apply(..$params) = $termName(..$argNames) }"
+      case 7 => q"new scalanative.unsafe.CFuncPtr7[..$argTypes,$resultType] { def apply(..$params) = $termName(..$argNames) }"
+      case 8 => q"new scalanative.unsafe.CFuncPtr8[..$argTypes,$resultType] { def apply(..$params) = $termName(..$argNames) }"
+      case 9 => q"new scalanative.unsafe.CFuncPtr9[..$argTypes,$resultType] { def apply(..$params) = $termName(..$argNames) }"
       case x =>
         c.error(c.enclosingPosition,s"function pointers with $x arguments are not supported")
         ???

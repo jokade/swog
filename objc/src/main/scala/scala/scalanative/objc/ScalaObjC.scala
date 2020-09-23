@@ -36,23 +36,17 @@ object ScalaObjC {
 
     override def analyze: Analysis = super.analyze andThen {
       case (cls: ClassParts, data: Data) =>
-//        val selfRef = cls.params.headOption match {
-//          case Some(x:ValDef) => x
-//          case _ =>
-//            c.error(c.enclosingPosition,s"The first argument of @ScalaObjC classes must be a self reference, e.g.: class ${cls.name}(self: NSObject)")
-//            ???
-//        }
 
         val exposedMembers = getExposedMembers(cls.body)
 
         val classInits =
           objcClassDef(cls,exposedMembers) ++
-          (exposedMembers map genExposedMethodProxy(cls)) ++
+          (exposedMembers map genExposedMethodProxy(cls)) //++
           (exposedMembers filter(_.provideSetter) map genExposedVarSetterProxy(cls,data))
 //        // all public defs, vals, and vars are exposed to ObjC
 //
-//        // collect all required ObjC selectors (every selector is stored as a lazy val on the companion object)
-//        val selectors = exposedMembers.map( _.selector ) ++
+        // collect all required ObjC selectors (every selector is stored as a lazy val on the companion object)
+        val selectors = exposedMembers.map( _.selector ) //++
 //          // add setter selectors for public vars
 //          exposedMembers.filter(_.provideSetter).map{m =>
 //            val name = genSetterSelectorName(m.name)
@@ -76,16 +70,15 @@ object ScalaObjC {
 //        (cls,updData.data)
         val updData =
           data
-//            .withSelfRef(selfRef)
             .withObjcClassInits(classInits)
             .addCompanionStmts(allocDef(cls))
+            .addSelectors(selectors)
         (cls,updData)
       case x => x
     }
 
 
 //    override def transform: Transformation = super.transform andThen {
-//      case cls: ClassTransformData =>
 ////        val updParents = transformParents(cls.modParts.parents,cls.data)
 ////        cls.updParents(updParents)
 //        cls
@@ -124,18 +117,18 @@ object ScalaObjC {
     private def objcClassDef(cls: ClassParts, exposedMembers: Seq[ExposedMember]) = Seq[Tree] {
       val clsName = cstring(cls.name.toString)
       val parent = c.typecheck(cls.parents.head,c.TYPEmode).tpe match {
-        case p if p =:= weakTypeOf[Object] => q"scalanative.native.objc.defaultRootObject"
+        case p if p =:= weakTypeOf[Object] => q"scalanative.objc.defaultRootObject"
         case p if p <:< weakTypeOf[ObjCObject] => q"${p.typeSymbol.companion}.__cls"
         case _ =>
           error("@ScalaObjC class must be a descendant of ObjCObject")
           ???
       }
 
-      val exposedVarSetters = exposedMembers
-        .filter(_.provideSetter)
-        .map(m =>
-          registerExposedMember(
-            m.copy(name = TermName(genSetterSelectorName(m.name)), params = List(ValDef(null,m.name,null,null)), isSetter = true)) )
+      val exposedVarSetters = Nil //exposedMembers
+//        .filter(_.provideSetter)
+//        .map(m =>
+//          registerExposedMember(cls.name)(
+//            m.copy(name = TermName(genSetterSelectorName(m.name)), params = List(ValDef(null,m.name,null,null)), isSetter = true)) )
 
 //      q"""import scalanative._
 //          import objc.runtime._
@@ -163,74 +156,73 @@ object ScalaObjC {
             sel_allocWithZone,
             __allocWithZone,
             c"@:@")
+          ..${exposedMembers map registerExposedMember(cls.name)}
           objc_registerClassPair(newCls)
        """
     }
-    //class_addMethod(metaCls,sel_alloc,CFunctionPtr.fromFunction1(__alloc),c"@:")
 
     private def allocDef(cls: ClassParts) = Seq[Tree] {
       val clsName = cls.name
-      q"""val __allocWithZone = {
+      q"""val __allocWithZone: scalanative.objc.runtime.IMP = {
+          import scalanative.unsafe._
           import scalanative.objc.runtime._
-            new CFuncPtr3[id,SEL,id,Unit]{ def apply(cls: id, sel: SEL, cb: id) = {
+            new CFuncPtr3[id,SEL,id,id]{ def apply(cls: id, sel: SEL, zone: id) = {
               import scalanative.objc
-              import objc.helper._
-              println("allocating")
+              val ref = objc.helper.allocWithZone(zone,__cls)
+              val instance = new $clsName(ref)
+              objc.helper.setScalaInstanceIVar(ref,instance)
+              ref
             }
           }}
        """
-//      val ref = objc.helper.msgSendSuper1(clsObj,sel_allocWithZone,zone)
-//      val instance = new $clsName(ref)
-//      setScalaInstanceIVar(ref,instance)
-//      ref
     }
 
-    private def registerExposedMember(m: ExposedMember): Tree = {
+
+    private def registerExposedMember(clsName: TypeName)(m: ExposedMember): Tree = {
       val typeEncoding = cstring( genTypeEncoding(m) )
-      val funcPtr = genCFuncPtr(m.name,m.params,m.tpe.getOrElse(tUnit))
+      val ivar = q"val o = scalanative.objc.helper.getScalaInstanceIVar[${clsName}](id)"
+      val argTypes =  m.params.map( _.tpe )
+      val argNames = m.params.map( _.name )
+      val call = if(m.hasParamList) q"o.${m.name}(..$argNames)" else q"o.${m.name}"
+      val apply = q"def apply(id: id, sel: SEL, ..${m.params}) = { $ivar; $call }"
+        val funcPtr = m.params.length match {
+        case 0 => q"new scalanative.unsafe.CFuncPtr2[id,SEL,..$argTypes,${m.tpe.get}] { $apply }"
+        case 1 => q"new scalanative.unsafe.CFuncPtr3[id,SEL,..$argTypes,${m.tpe.get}] { $apply }"
+        case 2 => q"new scalanative.unsafe.CFuncPtr4[id,SEL,..$argTypes,${m.tpe.get}] { $apply }"
+        case 3 => q"new scalanative.unsafe.CFuncPtr5[id,SEL,..$argTypes,${m.tpe.get}] { $apply }"
+        case 4 => q"new scalanative.unsafe.CFuncPtr6[id,SEL,..$argTypes,${m.tpe.get}] { $apply }"
+        case 5 => q"new scalanative.unsafe.CFuncPtr7[id,SEL,..$argTypes,${m.tpe.get}] { $apply }"
+        case 6 => q"new scalanative.unsafe.CFuncPtr8[id,SEL,..$argTypes,${m.tpe.get}] { $apply }"
+        case 7 => q"new scalanative.unsafe.CFuncPtr9[id,SEL,..$argTypes,${m.tpe.get}] { $apply }"
+        case 8 => q"new scalanative.unsafe.CFuncPtr10[id,SEL,..$argTypes,${m.tpe.get}] { $apply }"
+        case 9 => q"new scalanative.unsafe.CFuncPtr11[id,SEL,..$argTypes,${m.tpe.get}] { $apply }"
+        case 10 => q"new scalanative.unsafe.CFuncPtr12[id,SEL,..$argTypes,${m.tpe.get}] { $apply }"
+        case 11 => q"new scalanative.unsafe.CFuncPtr13[id,SEL,..$argTypes,${m.tpe.get}] { $apply }"
+        case 12 => q"new scalanative.unsafe.CFuncPtr14[id,SEL,..$argTypes,${m.tpe.get}] { $apply }"
+        case 13 => q"new scalanative.unsafe.CFuncPtr15[id,SEL,..$argTypes,${m.tpe.get}] { $apply }"
+        case 14 => q"new scalanative.unsafe.CFuncPtr16[id,SEL,..$argTypes,${m.tpe.get}] { $apply }"
+        case 15 => q"new scalanative.unsafe.CFuncPtr17[id,SEL,..$argTypes,${m.tpe.get}] { $apply }"
+        case 16 => q"new scalanative.unsafe.CFuncPtr18[id,SEL,..$argTypes,${m.tpe.get}] { $apply }"
+        case 17 => q"new scalanative.unsafe.CFuncPtr19[id,SEL,..$argTypes,${m.tpe.get}] { $apply }"
+        case 18 => q"new scalanative.unsafe.CFuncPtr20[id,SEL,..$argTypes,${m.tpe.get}] { $apply }"
+        case 19 => q"new scalanative.unsafe.CFuncPtr21[id,SEL,..$argTypes,${m.tpe.get}] { $apply }"
+        case 20 => q"new scalanative.unsafe.CFuncPtr22[id,SEL,..$argTypes,${m.tpe.get}] { $apply }"
+        case x =>
+          c.error(c.enclosingPosition, s"function pointers with $x arguments are not supported")
+          ???
+      }
       q"""class_addMethod(newCls,${m.selector._2},$funcPtr,$typeEncoding)"""
     }
-/*
-    private def exposedMethodCast(m: ExposedMember): Tree = m.params.size match {
-      case 0 => q"""CFunctionPtr.fromFunction2(${methodProxyName(m)})"""
-      case 1 => q"""CFunctionPtr.fromFunction3(${methodProxyName(m)})"""
-      case 2 => q"""CFunctionPtr.fromFunction4(${methodProxyName(m)})"""
-      case 3 => q"""CFunctionPtr.fromFunction5(${methodProxyName(m)})"""
-      case 4 => q"""CFunctionPtr.fromFunction6(${methodProxyName(m)})"""
-      case 5 => q"""CFunctionPtr.fromFunction7(${methodProxyName(m)})"""
-      case 6 => q"""CFunctionPtr.fromFunction8(${methodProxyName(m)})"""
-      case 7 => q"""CFunctionPtr.fromFunction9(${methodProxyName(m)})"""
-      case 8 => q"""CFunctionPtr.fromFunction10(${methodProxyName(m)})"""
-      case 9 => q"""CFunctionPtr.fromFunction11(${methodProxyName(m)})"""
-      case 10 => q"""CFunctionPtr.fromFunction12(${methodProxyName(m)})"""
-      case 11 => q"""CFunctionPtr.fromFunction13(${methodProxyName(m)})"""
-      case 12 => q"""CFunctionPtr.fromFunction14(${methodProxyName(m)})"""
-      case 13 => q"""CFunctionPtr.fromFunction15(${methodProxyName(m)})"""
-      case 14 => q"""CFunctionPtr.fromFunction16(${methodProxyName(m)})"""
-      case 15 => q"""CFunctionPtr.fromFunction17(${methodProxyName(m)})"""
-      case 16 => q"""CFunctionPtr.fromFunction18(${methodProxyName(m)})"""
-      case 17 => q"""CFunctionPtr.fromFunction19(${methodProxyName(m)})"""
-      case 18 => q"""CFunctionPtr.fromFunction20(${methodProxyName(m)})"""
-      case 19 => q"""CFunctionPtr.fromFunction21(${methodProxyName(m)})"""
-      case 20 => q"""CFunctionPtr.fromFunction22(${methodProxyName(m)})"""
-      case x =>
-        c.error(c.enclosingPosition,s"Scala-defined ObjC methods with more than 20 parameters are not supported")
-        ???
-    }
-*/
+
 
     private def getExposedMembers(body: Seq[Tree]): Seq[ExposedMember] = body collect {
       case m: DefDef if isPublic(m.mods) =>
         val returnType = getType(m.tpt,withMacrosDisabled = true)
         ExposedMember(m.name,m.vparamss.headOption.getOrElse(Nil),m.vparamss.nonEmpty, tpe = Some(returnType), customSelector = findCustomSelector(m.mods.annotations))
       case p: ValDef if isPublic(p.mods) =>
-        println("member: "+p)
-        val tpe =
-          if(p.tpt.nonEmpty)
-            c.typecheck(p.tpt,c.TYPEmode,withMacrosDisabled = true).tpe
-          else
-            c.typecheck(p.rhs,c.TERMmode,withMacrosDisabled = true).tpe
-        ExposedMember(p.name,Nil,hasParamList = false, provideSetter = p.mods.hasFlag(Flag.MUTABLE), tpe = Some(tpe), retain = hasAnnotation(p.mods.annotations,tpeRetain) )
+        val tpe = getType(p.tpt,withMacrosDisabled = true)
+        val exp = ExposedMember(p.name,Nil,hasParamList = false, provideSetter = p.mods.hasFlag(Flag.MUTABLE), tpe = Some(tpe), retain = hasAnnotation(p.mods.annotations,tpeRetain) )
+        exp
     }
 
 
@@ -249,8 +241,8 @@ object ScalaObjC {
         case Some(t) if t <:< tObjCObject => q"$call.__ptr"
         case _ => call
       }
-      q"""def ${methodProxyName(m)}(self: scalanative.native.objc.runtime.id, sel: scalanative.native.objc.runtime.SEL, ..$params) = {
-            val o = scalanative.native.objc.helper.getScalaInstanceIVar[${cls.name}](self)
+      q"""def ${methodProxyName(m)}(self: scalanative.objc.runtime.id, sel: scalanative.objc.runtime.SEL, ..$params) = {
+            val o = scalanative.objc.helper.getScalaInstanceIVar[${cls.name}](self)
             $result
           }
        """

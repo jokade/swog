@@ -48,7 +48,7 @@ object ObjC {
     protected val msgSendNameAnnot = Modifiers(NoFlags,typeNames.EMPTY,List(q"new name(${Literal(Constant("objc_msgSend"))})"))
     protected val msgSendFpretNameAnnot = Modifiers(NoFlags,typeNames.EMPTY,List(q"new name(${Literal(Constant("objc_msgSend_fpret"))})"))
     protected val clsTarget = TermName("__cls")
-    protected val tpeId = tq"scalanative.objc.runtime.id"
+    protected val tpeId = tq"scalanative.unsafe.Ptr[Byte]"
     protected val tpeSEL = tq"scalanative.objc.runtime.SEL"
 
     // see https://developer.apple.com/library/archive/documentation/Cocoa/Conceptual/ObjCRuntimeGuide/Articles/ocrtTypeEncodings.html
